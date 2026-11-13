@@ -1,3 +1,9 @@
+# Текущая цель — восстановить адресный перечень после параллельной выкладки
+
+Owner15.11.2026 сообщил404 и попросил проверить параллельныйPR. Подтверждено: production shared web/assets/asset-controller bytes точно равныPR2944cdd3d5 и потеряли регистрации address-register; остальные16runtime files сохранены. Новый dedicated worktree restore-address-register-after-perf объединяет publishedPR294 + два reviewed address commits локально, не меняет чужой worktree/ветку/PR. Root bounded correction author; independent final review до точечного восстановления3shared files. Старые разрешения production-first сохраняются; данные/settings не менять. Full local suite запрещён.
+
+---
+
 # Текущая цель — исправить весь production performance audit
 
 Поручение владельца 15.11.2026: «Исправь все прямо на проде, потом прогони правки по гейтам через наш CI до мерджа в мейн». Это явное разрешение на scoped production deployment, последующее прохождение гейтов, PR/push/merge после exact-source CI. Scope — все F01–F12 аудита performance-audit-20261114, без очистки данных/истории или изменения финансовой допустимости.
@@ -110,4 +116,14 @@ WIP №257 и остальные worktrees сохранить. Полные ло
 Поставка выполнена14.11.2026 00:18МСК:15runtime files, independent final APPROVED, focused HTTP/browser/preferences и architecture GREEN,309objects/7pages read-only qualification, external health200. [Delivery record](address-register-20261114.md). Ожидать обратной связи владельца; полный Git pipeline остаётся следующим этапом, не GREEN.
 
 По дополнительному поручению владельца постоянный маршрут production сохранён в [production-access.md](production-access.md). Предыдущая очередь ниже — история, не scope этой ветки.
+
+
+
+---
+
+# Текущая коррекция — вёрстка адресного перечня на штатных shlz-ui компонентах
+
+Owner14.11.2026 отверг поставленный UI: серый самодельный блок настроек, прилипание к краям, два вертикальных скролла, недостаточное использование shlz-ui. Это bounded presentation correction действующего контракта, root автор regression/tests/implementation по разрешённому ordinary bounded fix route; independent final review обязателен. Продолжаем существующий delivery worktree, base e52457801ab38c16995567f6aee9c78077acd7e5, production-first authorization сохраняется. Данные/права/preferences storage не меняются. Прежнее визуальное APPROVED опровергнуто владельцем и не принимается как доказательство этой коррекции.
+
+Исправление поставлено14.11.2026 00:45МСК:4runtime files, publicSHLZ drawers/select, white single-scroll viewport, preserved preferences; fresh independent APPROVED и focused browser/architecture PASS. [Коррекция](address-register-ui-repair-20261114.md). Ждать пользовательской проверки; fullCI остаётся следующим этапом.
 

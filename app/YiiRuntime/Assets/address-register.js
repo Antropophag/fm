@@ -1,3 +1,5 @@
+import { enhanceDrawers, enhanceSelects } from '/pilot/assets/shlz-behaviors.js';
+
 const root = document.querySelector('[data-register]');
 
 if (root) {
@@ -10,7 +12,15 @@ if (root) {
   const parse = (selector) => JSON.parse(root.querySelector(selector).textContent);
   let persisted = parse('[data-register-state]');
   const defaults = parse('[data-register-defaults]');
-  let returnFocus = open;
+  enhanceDrawers(root);
+  const notice = root.querySelector('[data-register-notice]');
+  const filter = root.querySelector('[data-register-filter-dialog]');
+  const filterSelect = enhanceSelects(filter)[0];
+  const appliedStage = filter.querySelector('input[name=status]').value;
+  root.querySelector('[data-register-filter-open]').addEventListener('click', () => {
+    filter.querySelector('input[name=q]').value = root.querySelector('input[type=search][name=q]').value;
+  }, {capture: true});
+  filter.addEventListener('close', () => filterSelect.setValue(appliedStage));
 
   const rows = () => [...list.querySelectorAll('[data-column-key]')];
   const control = (row, type) => row.querySelector(`input[type=${type}]`);
@@ -29,6 +39,7 @@ if (root) {
       control(row, 'checkbox').checked = state.visible.includes(key);
       control(row, 'number').value = state.widths[key];
     });
+    root.querySelector('[data-register-selected-count]').textContent = `Выбрано ${state.visible.length} из ${Object.keys(state.widths).length}`;
     if (!table) return;
     orderedKeys(state).forEach((key) => {
       table.querySelectorAll(`[data-column="${CSS.escape(key)}"]`).forEach((cell) => cell.parentElement.append(cell));
@@ -40,33 +51,15 @@ if (root) {
     });
   }
 
-  function setPanel(show) {
-    panel.hidden = !show;
-    open.setAttribute('aria-expanded', String(show));
-    if (show) {
-      returnFocus = document.activeElement;
-      panel.querySelector('[data-register-column-search]').focus();
-    } else if (returnFocus instanceof HTMLElement) returnFocus.focus();
-  }
   function message(text, kind = '') {
     status.textContent = text;
     status.dataset.kind = kind;
   }
   function restore() { apply(persisted); message(''); }
 
-  open.addEventListener('click', () => {
-    if (!panel.hidden) {
-      restore();
-      setPanel(false);
-      return;
-    }
-    setPanel(true);
-  });
-  root.querySelector('[data-register-cancel]').addEventListener('click', () => { restore(); setPanel(false); });
+  open.addEventListener('click', restore, {capture: true});
+  panel.addEventListener('close', restore);
   root.querySelector('[data-register-reset]').addEventListener('click', () => { apply({...defaults, revision: persisted.revision}); message('Изменения по умолчанию ещё не сохранены.'); });
-  panel.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') { event.preventDefault(); restore(); setPanel(false); }
-  });
   panel.querySelector('[data-register-column-search]').addEventListener('input', (event) => {
     const value = event.target.value.trim().toLocaleLowerCase('ru');
     rows().forEach((row) => { row.hidden = value !== '' && !row.dataset.columnLabel.includes(value); });
@@ -112,7 +105,8 @@ if (root) {
       if (!response.ok || !Number.isInteger(result.revision) || !Array.isArray(result.visible) || typeof result.widths !== 'object') throw new Error('save failed');
       persisted = result;
       apply(persisted);
-      message('Настройки сохранены.', 'success');
+      notice.textContent = 'Вид сохранён';
+      panel.close('saved');
     } catch (_) {
       message('Не удалось сохранить настройки. Повторите позже.', 'error');
     } finally { save.disabled = false; }

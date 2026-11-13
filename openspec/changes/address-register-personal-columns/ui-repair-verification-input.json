@@ -1,0 +1,24 @@
+{
+  "change": "address-register-ui-repair",
+  "planned_paths": [
+    "app/YiiRuntime/Views/address-register.php",
+    "app/YiiRuntime/Assets/address-register.css",
+    "app/YiiRuntime/Assets/address-register.js",
+    "app/YiiRuntime/Assets/shlz-icons/filter.svg",
+    "specs/ADDRESS-REGISTER-001.md",
+    "tests/Yii2/address_register_browser.mjs",
+    "tests/Yii2/yii2_address_register_browser_001_test.php",
+    "docs/operations/current-delivery-goal.md"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "ADDRESS-REGISTER-001",
+      "acceptance_id": "A5R",
+      "spec_path": "specs/ADDRESS-REGISTER-001.md",
+      "seam": "real Yii browser single viewport, public SHLZ drawer/select and persisted personal columns",
+      "tests": [
+        "tests/Yii2/yii2_address_register_browser_001_test.php"
+      ]
+    }
+  ]
+}
