@@ -234,6 +234,7 @@ db	php	tests/Yii2/production_performance_assets_001_test.php	integration
 db	php	tests/Yii2/production_performance_concurrency_001_test.php	integration
 db	php	tests/Yii2/production_performance_reads_001_test.php	integration
 db	php	tests/Yii2/yii2_activation_password_20261029_test.php	integration
+db	php	tests/Yii2/yii2_address_register_001_test.php	integration
 db	php	tests/Yii2/yii2_authentication_001_test.php	integration
 db	php	tests/Yii2/yii2_bitrix_documentation_status_001_test.php	integration
 db	php	tests/Yii2/yii2_bitrix_order_document_links_001_test.php	integration
@@ -366,6 +367,7 @@ e2e	php	tests/Runtime/runtime_settlement_compatibility_001_test.php	e2e
 e2e	php	tests/Support/ObjectRegisterPagingBrowserFixture.php	e2e
 e2e	php	tests/Yii2/excel_publication_browser_001_test.php	e2e
 e2e	php	tests/Yii2/production_performance_browser_001_test.php	e2e
+e2e	php	tests/Yii2/yii2_address_register_browser_001_test.php	e2e
 e2e	php	tests/Yii2/yii2_calendar_003_browser_test.php	e2e
 e2e	php	tests/Yii2/yii2_checklist_photo_viewing_browser_001_test.php	e2e
 e2e	php	tests/Yii2/yii2_completion_document_register_001_test.php	e2e
@@ -400,6 +402,7 @@ e2e	php	tests/Yii2/yii2_stand_backup_ownership_001_test.php	e2e
 e2e	php	tests/Yii2/yii2_stand_restore_console_001_test.php	e2e
 e2e	php	tests/Yii2/yii2_stand_restore_reconcile_console_001_test.php	e2e
 e2e	php	tests/Yii2/yii2_user_access_browser_001_test.php	e2e
+unit	php	tests/AddressRegister/column_preferences_001_test.php	unit
 unit	php	tests/Architecture/initial_owner_local_resume_route_001_test.php	unit
 unit	python3	tests/Architecture/yii2_clean_stand_runtime_closure_001_test.py	unit
 unit	python3	tests/Architecture/yii2_local_quickstart_boundary_001_test.py	unit

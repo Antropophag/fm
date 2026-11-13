@@ -6,6 +6,8 @@
       ],
       "name": "bounded-ui",
       "patterns": [
+        "app/YiiRuntime/Assets/address-register.css",
+        "app/YiiRuntime/Assets/address-register.js",
         "app/YiiRuntime/Assets/calendar.js",
         "app/YiiRuntime/Assets/completion-register.css",
         "app/YiiRuntime/Assets/inspection-schedule.js",
@@ -114,6 +116,7 @@
       ],
       "name": "application-code",
       "patterns": [
+        "app/AddressRegister/**",
         "app/AssignmentOrderComposition/**",
         "app/AssignmentOrderOriginal/**",
         "app/InspectionEvidence/**",
@@ -275,6 +278,24 @@
     }
   ],
   "capability_ownership": [
+    {
+      "name": "address-register",
+      "patterns": [
+        "app/AddressRegister/**",
+        "app/InstallationProcess/MariaDbAddressRegister.php",
+        "app/YiiRuntime/Controllers/AddressRegisterController.php",
+        "app/YiiRuntime/Views/address-register.php",
+        "app/YiiRuntime/Assets/AddressRegisterAssetBundle.php",
+        "app/YiiRuntime/Assets/address-register.js",
+        "app/YiiRuntime/Assets/address-register.css"
+      ],
+      "verifiers": [
+        "tests/AddressRegister/column_preferences_001_test.php",
+        "tests/Yii2/yii2_address_register_001_test.php",
+        "tests/Yii2/yii2_address_register_browser_001_test.php"
+      ],
+      "consumers": []
+    },
     {
       "name": "architecture-sql-ownership",
       "patterns": [

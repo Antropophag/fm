@@ -1,0 +1,12 @@
+# Design
+Наследуем действующую светлую оболочку FMonitor/shlz-ui, Golos и плотность операционных таблиц. Mode Operate; табличный перечень занимает всю доступную ширину, без dashboard-карточек. Адрес закреплён, данные остаются читаемыми при горизонтальной прокрутке. Настройки раскрываются отдельной панелью над таблицей, без навязывания на первом входе.
+
+Dedicated AddressRegister read seam авторизует objects.read, читает текущую страницу и batch-enrich из подтверждённых existing owners/projections. Не переиспользовать OTIZ permission, не открывать произвольные legacy columns, не добавлять domain logic в rapid-pilot. Настройки — отдельный file-backed application owner в existing private state root, integer actor partition, revision CAS, immutable accepted versions. Никаких новых SQL tables/readiness frontier. Existing state backups автоматически включают этот subtree; file restore переносит историю целиком.
+
+Контракт A1–A8 охватывает data/auth/UX/replay/concurrency/return/adjacent queue. API/source inventory и focused tests входят в harness plan. Строгий CI lane/review selection остаётся planner-owned; production-first owner exception откладывает formal gates/full CI. Риски: malformed legacy values fail unknown; file storage inaccessible отдаёт recoverable503; two tabs conflict409. Primary evidence сохраняется внеGit. Browser QA desktop/mobile и independent final review обязательны перед production patch. Источник визуальной истины — существующие objects.php/pilot.css и публичные shlz-ui exports; переписывать общие tokens нельзя.
+
+## Visual system documentation
+
+Режим поверхности — **Operate**. Адресный перечень продолжает действующую систему `objects.php`/`pilot.css`: Golos Text, светлую рабочую оболочку, плотную таблицу и публичные shlz-ui tokens для полей, кнопок, checkbox, таблицы и пагинации. Новых визуальных tokens или отдельного визуального мира этот срез не вводит.
+
+Desktop сохраняет широкую таблицу внутри ограниченной горизонтальной прокрутки и существующую иерархию рабочей очереди. На mobile таблица остаётся таблицей, а sticky footer настроек с действиями «Сохранить», «По умолчанию» и «Отмена» располагается выше фиксированной навигации с учётом safe-area. Сравнение четырёх утверждённых desktop/mobile captures с действующей поверхностью выполнено; evidence сохранён вне Git в private delivery storage. Визуального drift относительно incumbent system не обнаружено.

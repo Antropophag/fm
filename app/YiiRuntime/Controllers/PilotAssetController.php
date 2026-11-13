@@ -15,7 +15,7 @@ final class PilotAssetController extends PilotController
     {
         $root = dirname(__DIR__) . '/Assets';
         $map = [];
-        foreach (['sidebar-bootstrap.js','navigation.js','calendar.js','preloader.js','users.js','object-queue.js','inspection-schedule.js','preopening.js','template-offer.js','checklist.js','control-queue.js','otiz.js'] as $file) {
+        foreach (['sidebar-bootstrap.js','navigation.js','calendar.js','preloader.js','users.js','object-queue.js','inspection-schedule.js','preopening.js','template-offer.js','checklist.js','control-queue.js','otiz.js','address-register.js'] as $file) {
             $map[$file] = [$root . '/' . $file,'text/javascript; charset=UTF-8',3600];
         }$shlzRoot=(string)(getenv('FMONITOR_SHLZ_UI_ROOT')?:dirname(__DIR__,4).'/shlz-ui');
         $map['shlz-behaviors.js']=[$shlzRoot.'/packages/behaviors/dist/browser.js','text/javascript; charset=UTF-8',3600];
@@ -23,7 +23,7 @@ final class PilotAssetController extends PilotController
             $map['shlz-file-types/'.$file.'.svg']=[$shlzRoot.'/packages/icons/dist/file-types/'.$file.'.svg','image/svg+xml; charset=UTF-8',3600];
         }
         foreach(['download','eye','close','arrow-left-md','arrow-right-md']as$icon)$map['shlz-icons/'.$icon.'.svg']=[$shlzRoot.'/packages/icons/dist/icons/'.$icon.'.svg','image/svg+xml; charset=UTF-8',3600];
-        $map['completion-register.css']=[$root.'/completion-register.css','text/css; charset=UTF-8',3600];$map['checklist-sw.js']=[$root.'/checklist-sw.js','text/javascript; charset=UTF-8',0];foreach (['shlz.css','pilot.css','preopening.css'] as $file) {
+        $map['address-register.css']=[$root.'/address-register.css','text/css; charset=UTF-8',3600];$map['completion-register.css']=[$root.'/completion-register.css','text/css; charset=UTF-8',3600];$map['checklist-sw.js']=[$root.'/checklist-sw.js','text/javascript; charset=UTF-8',0];foreach (['shlz.css','pilot.css','preopening.css'] as $file) {
             $map[$file] = [$root . '/' . $file,'text/css; charset=UTF-8',3600];
         }foreach (['calendar-sidebar.svg','calendar-interface.svg','logout.svg','search.svg','chevron-left-duo.svg','chevron-right-duo.svg','cloud-upload.svg','plus-alt-2.svg','delivery-box.svg','folder-file-open.svg'] as $file) {
             $map['shlz-icons/'.$file]=[$root.'/shlz-icons/'.$file,'image/svg+xml; charset=UTF-8',31536000];

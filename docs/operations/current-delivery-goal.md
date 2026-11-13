@@ -97,3 +97,17 @@ WIP №257 и остальные worktrees сохранить. Полные ло
 Не входят №157 `compact-task-context-manifest`, завершённый hotfix №258/PR №282, параллельный отдельный worktree/PR №276 `reconcile-completed-installation-state`, application/product behavior, production deployment, изменение CI admission, автоматическая правка Docker Desktop settings, глобальный prune, удаление persistent stand/foreign resources и угадывание владельца исторических anonymous volumes. Предыдущие и параллельные цели сохранены в Git history и не включаются в этот candidate.
 
 Текущее состояние, PR и CI читаются только через `python3 tools/delivery/harness.py state`. Merge/deploy/settings не выполнять.
+
+
+---
+
+# Parallel address-register delivery history
+
+# Текущая цель этой ветки — адресный перечень с персональными колонками
+
+Поручение владельца 13.11.2026: спроектировать и поставить на production отдельный адресный перечень для пользователей широких Excel-таблиц; каждый пользователь настраивает свои колонки, интерфейс использует shlz-ui. Владелец явно задал production-first с последующим Git pipeline. Worktree `fmonitor-2-address-register-personal-columns`; независимые parallel sessions/production patches сохраняются. Root пишет контракт/tests, отдельный sol/low executor реализует, independent final review и bounded focused checks сохраняются. Полный local make test/verify запрещён, формальная последовательность Gates/CI отложена владельцем и не объявляется GREEN. Очистка базы/смена прав не входят в scope.
+
+Поставка выполнена14.11.2026 00:18МСК:15runtime files, independent final APPROVED, focused HTTP/browser/preferences и architecture GREEN,309objects/7pages read-only qualification, external health200. [Delivery record](address-register-20261114.md). Ожидать обратной связи владельца; полный Git pipeline остаётся следующим этапом, не GREEN.
+
+По дополнительному поручению владельца постоянный маршрут production сохранён в [production-access.md](production-access.md). Предыдущая очередь ниже — история, не scope этой ветки.
+
