@@ -13,29 +13,29 @@ final class ColumnPreferences
         $this->authorized=$authorized;
     }
 
-    /** @return array{revision:int,visible:list<string>,widths:array<string,int>} */
+    /** @return array{revision:int,visible:list<string>,layoutVersion:int} */
     public function read(int $actor):array
     {
         $this->authorize($actor);$this->ensureRoot();
         $directory=$this->actorDirectory($actor,false);
         if($directory===null)return Columns::defaults();
         $lock=$this->lock($directory);
-        try{if(!flock($lock,LOCK_SH))throw new \RuntimeException('Preference lock unavailable.');return $this->readCurrent($directory);}
+        try{if(!flock($lock,LOCK_SH))throw new \RuntimeException('Preference lock unavailable.');return $this->readCurrent($directory)['state'];}
         finally{@flock($lock,LOCK_UN);fclose($lock);}
     }
 
-    /** @return array{revision:int,visible:list<string>,widths:array<string,int>} */
-    public function save(int $actor,int $expectedRevision,array $visible,array $widths):array
+    /** @return array{revision:int,visible:list<string>,layoutVersion:int} */
+    public function save(int $actor,int $expectedRevision,array $visible):array
     {
-        $this->authorize($actor);$normalized=$this->validate($expectedRevision,$visible,$widths);$this->ensureRoot();
+        $this->authorize($actor);$normalized=$this->validateV2($expectedRevision,$visible);$this->ensureRoot();
         $directory=$this->actorDirectory($actor,true);if($directory===null)throw new \RuntimeException('Preference directory unavailable.');
         $lock=$this->lock($directory);
         try{
             if(!flock($lock,LOCK_EX))throw new \RuntimeException('Preference lock unavailable.');
             $current=$this->readCurrent($directory);
-            if($current['revision']!==$expectedRevision)throw new PreferenceConflict('Preference revision is stale.');
-            if($current['visible']===$normalized['visible']&&$current['widths']===$normalized['widths'])return$current;
-            $next=['revision'=>$expectedRevision+1,'visible'=>$normalized['visible'],'widths'=>$normalized['widths']];
+            if($current['state']['revision']!==$expectedRevision)throw new PreferenceConflict('Preference revision is stale.');
+            if(!$current['legacy']&&$current['state']['visible']===$normalized['visible'])return$current['state'];
+            $next=['revision'=>$expectedRevision+1,'visible'=>$normalized['visible'],'layoutVersion'=>2];
             $bytes=$this->encode($next);$history=$directory.'/revision-'.sprintf('%010d',$next['revision']).'.json';
             $this->publishNew($history,$bytes);
             return$next;
@@ -74,31 +74,40 @@ final class ColumnPreferences
         $handle=@fopen($path,'c+b');if(!is_resource($handle)||!chmod($path,0600)){if(is_resource($handle))fclose($handle);throw new \RuntimeException('Preference lock unavailable.');}return$handle;
     }
 
-    /** @return array{revision:int,visible:list<string>,widths:array<string,int>} */
+    /** @return array{state:array{revision:int,visible:list<string>,layoutVersion:int},legacy:bool} */
     private function readCurrent(string $directory):array
     {
         $entries=scandir($directory);if(!is_array($entries))throw new \RuntimeException('Preference directory unavailable.');$versions=[];
         foreach($entries as$entry)if(preg_match('/^revision-([0-9]{10})\.json$/D',$entry,$match)===1)$versions[(int)$match[1]]=$directory.'/'.$entry;
-        if($versions===[])return Columns::defaults();ksort($versions,SORT_NUMERIC);$revision=(int)array_key_last($versions);$path=$versions[$revision];
+        if($versions===[])return ['state'=>Columns::defaults(),'legacy'=>false];ksort($versions,SORT_NUMERIC);$revision=(int)array_key_last($versions);$path=$versions[$revision];
         if(is_link($path)||!is_file($path)||filesize($path)===false||filesize($path)>65536)throw new \RuntimeException('Preference snapshot is invalid.');
         $bytes=file_get_contents($path);if(!is_string($bytes))throw new \RuntimeException('Preference snapshot unavailable.');
         try{$value=json_decode($bytes,true,32,JSON_THROW_ON_ERROR);}catch(\Throwable $error){throw new \RuntimeException('Preference snapshot is corrupt.',0,$error);}
-        if(!is_array($value)||array_keys($value)!==['revision','visible','widths']||!is_int($value['revision'])||$value['revision']!==$revision)throw new \RuntimeException('Preference snapshot is corrupt.');
-        if(!is_array($value['visible'])||!is_array($value['widths']))throw new \RuntimeException('Preference snapshot is corrupt.');
-        try{return $this->validate($value['revision'],$value['visible'],$value['widths']);}catch(\Throwable $error){throw new \RuntimeException('Preference snapshot is corrupt.',0,$error);}
+        if(!is_array($value)||!is_int($value['revision']??null)||$value['revision']!==$revision)throw new \RuntimeException('Preference snapshot is corrupt.');
+        try{
+            if(array_keys($value)===['revision','visible','layoutVersion']&&$value['layoutVersion']===2)return ['state'=>$this->validateV2($revision,$value['visible']),'legacy'=>false];
+            if(array_keys($value)===['revision','visible','widths']){$this->validateV1($revision,$value['visible'],$value['widths']);$state=Columns::defaults();$state['revision']=$revision;return ['state'=>$state,'legacy'=>true];}
+            throw new \InvalidArgumentException('Unknown preference schema.');
+        }catch(\Throwable $error){throw new \RuntimeException('Preference snapshot is corrupt.',0,$error);}
     }
 
-    /** @return array{revision:int,visible:list<string>,widths:array<string,int>} */
-    private function validate(int $revision,array $visible,array $widths):array
+    /** @return array{revision:int,visible:list<string>,layoutVersion:int} */
+    private function validateV2(int $revision,mixed $visible):array
     {
         if($revision<0||$revision>PHP_INT_MAX-1)throw new \InvalidArgumentException('Invalid preference revision.');
         $catalogue=Columns::catalogue();$keys=array_keys($catalogue);
-        if($visible===[]||!array_is_list($visible)||count($visible)>count($keys)||$visible[0]!=='address')throw new \InvalidArgumentException('Invalid visible columns.');
+        if(!is_array($visible)||$visible===[]||!array_is_list($visible)||count($visible)>count($keys)||$visible[0]!=='registrationNumber')throw new \InvalidArgumentException('Invalid visible columns.');
         $seen=[];foreach($visible as$key){if(!is_string($key)||!isset($catalogue[$key])||isset($seen[$key]))throw new \InvalidArgumentException('Invalid visible columns.');$seen[$key]=true;}
-        $widthKeys=array_keys($widths);sort($widthKeys,SORT_STRING);$expectedKeys=$keys;sort($expectedKeys,SORT_STRING);if($widthKeys!==$expectedKeys)throw new \InvalidArgumentException('Invalid column widths.');
-        foreach($widths as$width)if(!is_int($width)||$width<80||$width>640)throw new \InvalidArgumentException('Invalid column width.');
-        $ordered=[];foreach($keys as$key)$ordered[$key]=$widths[$key];
-        return['revision'=>$revision,'visible'=>array_values($visible),'widths'=>$ordered];
+        return['revision'=>$revision,'visible'=>array_values($visible),'layoutVersion'=>2];
+    }
+
+    private function validateV1(int $revision,mixed $visible,mixed $widths):void
+    {
+        if($revision<0||!is_array($visible)||!array_is_list($visible)||$visible===[]||$visible[0]!=='address'||!is_array($widths)||array_is_list($widths))throw new \InvalidArgumentException('Invalid legacy preferences.');
+        $legacyKeys=['address','entrance','registrationNumber','factoryNumber','status','completionProgress','plannedStartDate','plannedFinishDate','actualStartDate','actualFinishDate','controlEngineer','installers','floors','weight','speed','lift_type','pittype','pitmaterial','paired','ptoDate','declarationDate','comment'];
+        $seen=[];foreach($visible as$key){if(!is_string($key)||!in_array($key,$legacyKeys,true)||isset($seen[$key]))throw new \InvalidArgumentException('Invalid legacy visible columns.');$seen[$key]=true;}
+        $actual=array_keys($widths);sort($actual,SORT_STRING);$expected=$legacyKeys;sort($expected,SORT_STRING);if($actual!==$expected)throw new \InvalidArgumentException('Invalid legacy widths.');
+        foreach($widths as$width)if(!is_int($width)||$width<80||$width>640)throw new \InvalidArgumentException('Invalid legacy width.');
     }
 
     private function encode(array $value):string

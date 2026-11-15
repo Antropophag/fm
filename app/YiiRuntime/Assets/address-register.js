@@ -27,9 +27,10 @@ if (root) {
   const snapshot = () => ({
     revision: persisted.revision,
     visible: rows().filter((row) => control(row, 'checkbox').checked).map((row) => row.dataset.columnKey),
-    widths: Object.fromEntries(rows().map((row) => [row.dataset.columnKey, Number(control(row, 'number').value)])),
+    layoutVersion: 2,
   });
-  const orderedKeys = (state) => [...state.visible, ...Object.keys(state.widths).filter((key) => !state.visible.includes(key))];
+  const catalogueKeys = rows().map((row) => row.dataset.columnKey);
+  const orderedKeys = (state) => [...state.visible, ...catalogueKeys.filter((key) => !state.visible.includes(key))];
 
   function apply(state) {
     const byKey = new Map(rows().map((row) => [row.dataset.columnKey, row]));
@@ -37,9 +38,8 @@ if (root) {
     rows().forEach((row) => {
       const key = row.dataset.columnKey;
       control(row, 'checkbox').checked = state.visible.includes(key);
-      control(row, 'number').value = state.widths[key];
     });
-    root.querySelector('[data-register-selected-count]').textContent = `Выбрано ${state.visible.length} из ${Object.keys(state.widths).length}`;
+    root.querySelector('[data-register-selected-count]').textContent = `Выбрано ${state.visible.length} из ${catalogueKeys.length}`;
     if (!table) return;
     orderedKeys(state).forEach((key) => {
       table.querySelectorAll(`[data-column="${CSS.escape(key)}"]`).forEach((cell) => cell.parentElement.append(cell));
@@ -47,7 +47,6 @@ if (root) {
     table.querySelectorAll('[data-column]').forEach((cell) => {
       const key = cell.dataset.column;
       cell.hidden = !state.visible.includes(key);
-      cell.style.setProperty('--register-column-width', `${state.widths[key]}px`);
     });
   }
 
@@ -70,7 +69,7 @@ if (root) {
     if (!button) return;
     const row = button.closest('[data-column-key]');
     const sibling = button.hasAttribute('data-column-up') ? row.previousElementSibling : row.nextElementSibling;
-    if (!sibling || sibling.dataset.columnKey === 'address') return;
+    if (!sibling || sibling.dataset.columnKey === 'registrationNumber') return;
     if (button.hasAttribute('data-column-up')) list.insertBefore(row, sibling);
     else list.insertBefore(sibling, row);
     apply(snapshot());
@@ -78,8 +77,8 @@ if (root) {
   });
   save.addEventListener('click', async () => {
     const draft = snapshot();
-    if (draft.visible[0] !== 'address' || Object.values(draft.widths).some((width) => !Number.isInteger(width) || width < 80 || width > 640)) {
-      message('Проверьте выбранные колонки и ширину от 80 до 640 px.', 'error');
+    if (draft.visible[0] !== 'registrationNumber') {
+      message('Регистрационный номер должен оставаться первой колонкой.', 'error');
       return;
     }
     save.disabled = true;
@@ -89,7 +88,6 @@ if (root) {
       [csrf.name]: csrf.value,
       expectedRevision: String(persisted.revision),
       visible: JSON.stringify(draft.visible),
-      widths: JSON.stringify(draft.widths),
     });
     try {
       const response = await fetch('/pilot/address-register/preferences', {
@@ -102,7 +100,7 @@ if (root) {
         message('Настройки изменились в другой вкладке. Обновите страницу и повторите.', 'error');
         return;
       }
-      if (!response.ok || !Number.isInteger(result.revision) || !Array.isArray(result.visible) || typeof result.widths !== 'object') throw new Error('save failed');
+      if (!response.ok || !Number.isInteger(result.revision) || !Array.isArray(result.visible) || result.layoutVersion !== 2) throw new Error('save failed');
       persisted = result;
       apply(persisted);
       notice.textContent = 'Вид сохранён';

@@ -73,18 +73,22 @@ final class AddressRegisterController extends PilotController
         $response->headers->set('Cache-Control', 'no-store');
         try {
             $fields = Yii::$app->request->post();
-            if (!is_array($fields) || array_diff(array_keys($fields), ['_csrf', 'expectedRevision', 'visible', 'widths']) !== []
-                || array_diff(['expectedRevision', 'visible', 'widths'], array_keys($fields)) !== []) {
+            if (is_array($fields) && array_key_exists('widths', $fields)) {
+                $response->statusCode = 422;
+                $response->data = ['error' => 'preferences_client_outdated', 'action' => 'reload'];
+                return $response;
+            }
+            if (!is_array($fields) || array_diff(array_keys($fields), ['_csrf', 'expectedRevision', 'visible']) !== []
+                || array_diff(['expectedRevision', 'visible'], array_keys($fields)) !== []) {
                 throw new \InvalidArgumentException();
             }
-            foreach (['expectedRevision', 'visible', 'widths'] as $key) {
+            foreach (['expectedRevision', 'visible'] as $key) {
                 if (!is_string($fields[$key])) throw new \InvalidArgumentException();
             }
             if (preg_match('/^(?:0|[1-9][0-9]{0,18})$/D', $fields['expectedRevision']) !== 1) throw new \InvalidArgumentException();
             $visible = json_decode($fields['visible'], true, 64, JSON_THROW_ON_ERROR);
-            $widths = json_decode($fields['widths'], true, 64, JSON_THROW_ON_ERROR);
-            if (!is_array($visible) || !array_is_list($visible) || !is_array($widths) || array_is_list($widths)) throw new \InvalidArgumentException();
-            $response->data = $this->preferences()->save($actor, (int) $fields['expectedRevision'], $visible, $widths);
+            if (!is_array($visible) || !array_is_list($visible)) throw new \InvalidArgumentException();
+            $response->data = $this->preferences()->save($actor, (int) $fields['expectedRevision'], $visible);
             return $response;
         } catch (PreferenceConflict) {
             $response->statusCode = 409;

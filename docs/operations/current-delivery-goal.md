@@ -1,3 +1,11 @@
+# Текущая цель — все колонки, регномер первым, адаптивная ширина
+
+Owner15.11.2026 просит первым регномер, показать все колонки, убрать настройку пикселей, сделать адаптив и проверить ячейку нескольких монтажников. Desktop приоритет; телефон не требует отдельной полировки. Dedicated worktree address-register-adaptive-columns на aeaca219, включает сохранённое восстановление послеPR294. Root scope/spec/tests; отдельный sol/low implementation; independent final review. Production-first authorization сохраняется, full local suite запрещён, полныйGitCI позже. Legacy preferences history сохраняется, новая v2 presentation не переписывает файлы, domain data не меняется.
+
+Поставлено15.11 22:46МСК:regnumberfirst/all22/autowidth/full multiline crews, currentimage `fmonitor2-runtime:address-register-adaptive-20261115-092f3fa944e9`. [Delivery](address-register-adaptive-20261115.md). Scopedchecks/finalreview PASS,1043otherfiles retained from latest parallel image; fullCI deferred. After v2 saves, do not code-only rollback to v1reader; use forward-compatible recovery and preserve all history.
+
+---
+
 # Текущая цель — восстановить адресный перечень после параллельной выкладки
 
 Owner15.11.2026 сообщил404 и попросил проверить параллельныйPR. Подтверждено: production shared web/assets/asset-controller bytes точно равныPR2944cdd3d5 и потеряли регистрации address-register; остальные16runtime files сохранены. Новый dedicated worktree restore-address-register-after-perf объединяет publishedPR294 + два reviewed address commits локально, не меняет чужой worktree/ветку/PR. Root bounded correction author; independent final review до точечного восстановления3shared files. Старые разрешения production-first сохраняются; данные/settings не менять. Full local suite запрещён.

@@ -12,36 +12,44 @@ function snapshot(string $root):array{$r=[];if(!is_dir($root))return$r;foreach(n
 try {
  $store=new ColumnPreferences($root,$auth);$initial=$store->read(101);
  assertSameValue(0,$initial['revision'],'initial revision');
- assertSameValue(['address','entrance','registrationNumber','status','completionProgress','plannedStartDate','plannedFinishDate','actualStartDate','actualFinishDate','controlEngineer','installers'],$initial['visible'],'useful confirmed default');
- assertSameValue(300,$initial['widths']['address'],'default address width');
+ assertSameValue(['registrationNumber','address','entrance','factoryNumber','status','completionProgress','plannedStartDate','plannedFinishDate','actualStartDate','actualFinishDate','controlEngineer','installers','floors','weight','speed','lift_type','pittype','pitmaterial','paired','ptoDate','declarationDate','comment'],$initial['visible'],'useful confirmed default');
+ assertSameValue(['revision','visible','layoutVersion'],array_keys($initial),'width-free public state');assertSameValue(2,$initial['layoutVersion'],'adaptive layout version');
  rejects(DomainException::class,fn()=>$store->read(303),'denied read');
- $visible=['address','registrationNumber','factoryNumber','comment'];$widths=$initial['widths'];$widths['address']=480;$widths['comment']=640;
- $saved=$store->save(101,0,$visible,$widths);
- assertSameValue(['revision'=>1,'visible'=>$visible,'widths'=>$widths],$saved,'exact first snapshot');
+ $visible=['registrationNumber','address','factoryNumber','comment'];
+ $saved=$store->save(101,0,$visible);
+ assertSameValue(['revision'=>1,'visible'=>$visible,'layoutVersion'=>2],$saved,'exact first snapshot');
  assertSameValue($saved,(new ColumnPreferences($root,$auth))->read(101),'new instance same account');
  assertSameValue($initial,$store->read(202),'account isolation');$before=snapshot($root);
- assertSameValue($saved,$store->save(101,1,$visible,$widths),'no-op replay does not advance');
- rejects(PreferenceConflict::class,fn()=>$store->save(101,0,$visible,$widths),'stale tab');
- rejects(DomainException::class,fn()=>$store->save(303,0,$visible,$widths),'denied write');
- foreach([[],['comment'],['comment','address'],['address','address'],['address','secret'],['address',17]]as$bad)rejects(InvalidArgumentException::class,fn()=>$store->save(101,1,$bad,$widths),'invalid columns');
- foreach([79,641,100.5,'120',null]as$bad){$badWidths=$widths;$badWidths['address']=$bad;rejects(InvalidArgumentException::class,fn()=>$store->save(101,1,$visible,$badWidths),'invalid width');}
- $badWidths=$widths;$badWidths['secret']=120;rejects(InvalidArgumentException::class,fn()=>$store->save(101,1,$visible,$badWidths),'unknown width key');
- rejects(InvalidArgumentException::class,fn()=>$store->save(101,-1,$visible,$widths),'negative revision');
+ assertSameValue($saved,$store->save(101,1,$visible),'no-op replay does not advance');
+ rejects(PreferenceConflict::class,fn()=>$store->save(101,0,$visible),'stale tab');
+ rejects(DomainException::class,fn()=>$store->save(303,0,$visible),'denied write');
+ foreach([[],['comment'],['address','registrationNumber'],['registrationNumber','registrationNumber'],['registrationNumber','secret'],['registrationNumber',17]]as$bad)rejects(InvalidArgumentException::class,fn()=>$store->save(101,1,$bad),'invalid columns');
+ rejects(InvalidArgumentException::class,fn()=>$store->save(101,-1,$visible),'negative revision');
  assertSameValue($saved,$store->read(101),'all rejections preserve view');assertSameValue($before,snapshot($root),'all rejections/no-op preserve file bytes');
- $next=$store->save(101,1,['address','comment'],$widths);assertSameValue(2,$next['revision'],'second revision');
+ $next=$store->save(101,1,['registrationNumber','comment']);assertSameValue(2,$next['revision'],'second revision');
  $after=snapshot($root);foreach($before as$path=>$hash)assertSameValue($hash,$after[$path]??null,'prior immutable artifact '.$path);
- $revoked=new ColumnPreferences($root,static fn(int$id):bool=>false);rejects(DomainException::class,fn()=>$revoked->read(101),'revoked read');rejects(DomainException::class,fn()=>$revoked->save(101,2,$visible,$widths),'revoked save');
+ $revoked=new ColumnPreferences($root,static fn(int$id):bool=>false);rejects(DomainException::class,fn()=>$revoked->read(101),'revoked read');rejects(DomainException::class,fn()=>$revoked->save(101,2,$visible),'revoked save');
  // A competing writer carrying the same revision must lose without changing the winner.
- $other=new ColumnPreferences($root,$auth);rejects(PreferenceConflict::class,fn()=>$other->save(101,1,$visible,$widths),'second writer loses CAS');assertSameValue($next,$store->read(101),'winner retained');
+ $other=new ColumnPreferences($root,$auth);rejects(PreferenceConflict::class,fn()=>$other->save(101,1,$visible),'second writer loses CAS');assertSameValue($next,$store->read(101),'winner retained');
  foreach(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root,FilesystemIterator::SKIP_DOTS))as$f)if($f->isFile())assertSameValue(0600,fileperms($f->getPathname())&0777,'private file mode');
  $link=$root.'-link';symlink($root,$link);rejects(RuntimeException::class,fn()=>(new ColumnPreferences($link,$auth))->read(101),'symlink root rejected');unlink($link);
 
  // Two separate OS processes race the first save of a fresh account.
  $children=[];$gate=$root.'/race-go';$autoload=dirname(__DIR__,2).'/app/autoload.php';
- foreach(['comment','factoryNumber']as$column){$code='require '.var_export($autoload,true).';while(!file_exists('.var_export($gate,true).'))usleep(1000);$s=new FMonitor2\\AddressRegister\\ColumnPreferences('.var_export($root,true).',fn(int$id)=>true);try{$v=$s->save(202,0,["address",'.var_export($column,true).'],FMonitor2\\AddressRegister\\Columns::defaults()["widths"]);echo "saved";}catch(FMonitor2\\AddressRegister\\PreferenceConflict){echo "conflict";}';$proc=proc_open([PHP_BINARY,'-r',$code],[0=>['file','/dev/null','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);assertSameValue(true,is_resource($proc),'race child spawn');$children[]=[$proc,$pipes];}
+ foreach(['comment','factoryNumber']as$column){$code='require '.var_export($autoload,true).';while(!file_exists('.var_export($gate,true).'))usleep(1000);$s=new FMonitor2\\AddressRegister\\ColumnPreferences('.var_export($root,true).',fn(int$id)=>true);try{$v=$s->save(202,0,["registrationNumber",'.var_export($column,true).']);echo "saved";}catch(FMonitor2\\AddressRegister\\PreferenceConflict){echo "conflict";}';$proc=proc_open([PHP_BINARY,'-r',$code],[0=>['file','/dev/null','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes);assertSameValue(true,is_resource($proc),'race child spawn');$children[]=[$proc,$pipes];}
  file_put_contents($gate,'go');chmod($gate,0600);$results=[];foreach($children as[$proc,$pipes]){$out=stream_get_contents($pipes[1]);$err=stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);$exit=proc_close($proc);assertSameValue(0,$exit,'race child '.$err);$results[]=$out;}sort($results);assertSameValue(['conflict','saved'],$results,'concurrent first saves exactly one winner');unlink($gate);assertSameValue(1,$store->read(202)['revision'],'one published revision');
  // Corrupt the latest accepted JSON with valid JSON but wrong field types.
  $latest=null;foreach(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root,FilesystemIterator::SKIP_DOTS))as$f)if($f->isFile()&&str_ends_with($f->getFilename(),'.json')){$v=json_decode(file_get_contents($f->getPathname()),true);if(is_array($v)&&($v['revision']??null)===2)$latest=$f->getPathname();}
- assertSameValue(true,is_string($latest),'accepted history retained');$bytes=file_get_contents($latest);file_put_contents($latest,'{"revision":2,"visible":"bad","widths":[]}');rejects(RuntimeException::class,fn()=>$store->read(101),'typed corruption fails closed');file_put_contents($latest,$bytes);assertSameValue($next,$store->read(101),'restored durable snapshot readable');
+ assertSameValue(true,is_string($latest),'accepted history retained');$bytes=file_get_contents($latest);file_put_contents($latest,'{"revision":2,"visible":"bad","layoutVersion":2}');rejects(RuntimeException::class,fn()=>$store->read(101),'typed corruption fails closed');file_put_contents($latest,$bytes);assertSameValue($next,$store->read(101),'restored durable snapshot readable');
+
+ // A previous deployment's immutable pixel layout remains intact on read.
+ $legacyRoot=$root.'/legacy';mkdir($legacyRoot,0700);mkdir($legacyRoot.'/user-101',0700);
+ $oldKeys=['address','entrance','registrationNumber','factoryNumber','status','completionProgress','plannedStartDate','plannedFinishDate','actualStartDate','actualFinishDate','controlEngineer','installers','floors','weight','speed','lift_type','pittype','pitmaterial','paired','ptoDate','declarationDate','comment'];
+ $old=['revision'=>7,'visible'=>['address','comment'],'widths'=>array_fill_keys($oldKeys,200)];$oldFile=$legacyRoot.'/user-101/revision-0000000007.json';file_put_contents($oldFile,json_encode($old));chmod($oldFile,0600);$oldHash=hash_file('sha256',$oldFile);
+ $upgrade=new ColumnPreferences($legacyRoot,$auth);$projected=$upgrade->read(101);assertSameValue(['revision'=>7,'visible'=>$initial['visible'],'layoutVersion'=>2],$projected,'old users see complete adaptive layout');assertSameValue($oldHash,hash_file('sha256',$oldFile),'compatibility read never rewrites history');assertSameValue(1,count(glob($legacyRoot.'/user-101/*.json')),'no read-time upgrade write');
+ $confirmed=$upgrade->save(101,7,$projected['visible']);assertSameValue(8,$confirmed['revision'],'explicit save appends adaptive version');assertSameValue($confirmed,$upgrade->save(101,8,$confirmed['visible']),'v2 same save is no-op');assertSameValue($oldHash,hash_file('sha256',$oldFile),'old pixel snapshot retained');assertSameValue(false,array_key_exists('widths',$confirmed),'new state has no pixel map');
+ $personal=$upgrade->save(101,8,['registrationNumber','installers','address']);assertSameValue($personal,(new ColumnPreferences($legacyRoot,$auth))->read(101),'new personal selection survives reload');
+ // An invalid legacy record must not silently become a reset/default layout.
+ $badRoot=$root.'/bad-legacy';mkdir($badRoot,0700);mkdir($badRoot.'/user-101',0700);$old['widths']['address']=9000;file_put_contents($badRoot.'/user-101/revision-0000000007.json',json_encode($old));rejects(RuntimeException::class,fn()=>(new ColumnPreferences($badRoot,$auth))->read(101),'corrupt legacy fail closed');
  echo "PASS: ADDRESS-REGISTER-001 preferences isolation, CAS, validation, persistence, history\n";
 }finally{if(is_dir($root)){foreach(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root,FilesystemIterator::SKIP_DOTS),RecursiveIteratorIterator::CHILD_FIRST)as$f){if($f->isDir()&&!$f->isLink())rmdir($f->getPathname());else unlink($f->getPathname());}rmdir($root);}}
