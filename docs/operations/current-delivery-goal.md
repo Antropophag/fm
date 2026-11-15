@@ -1,3 +1,15 @@
+# Текущая цель — исправить весь production performance audit
+
+Поручение владельца 15.11.2026: «Исправь все прямо на проде, потом прогони правки по гейтам через наш CI до мерджа в мейн». Это явное разрешение на scoped production deployment, последующее прохождение гейтов, PR/push/merge после exact-source CI. Scope — все F01–F12 аудита performance-audit-20261114, без очистки данных/истории или изменения финансовой допустимости.
+
+Worktree: `fmonitor-2-fix-prod-performance-20261115`; change `fix-prod-performance`; контракт `PRODUCTION-PERFORMANCE-001`. Root — scope/spec/tests/интеграция и выкладка; отдельные gpt-5.6-sol/low executors — backend, checklist, UI; независимый reviewer не является автором. До каждой выкладки — focused checks, полный список файлов, CAS по production hashes, private backup/rollback и независимое ревью. Обычная очередность формальных gates owner-deferred до production delivery; ретроспективный Gate3 честно обозначается, не выдаётся за preimplementation approval. После поставки — обязательные reviews и один полный exact-source GitHub CI; при failure сначала полный inventory, затем corrections. Full local make test/verify запрещён.
+
+Primary logs/captures вне Git: `~/.local/share/fmonitor-2/fix-prod-performance-20261115/`. Navigation checkout read-only. Соседние worktrees/WIP и два ранее отличавшихся runtime-файла dashboard сохранить; не включать их в поставку без нового фактического основания. Точное source/PR/CI — harness state; UNKNOWN не означает GREEN.
+
+Предыдущая очередь сохранена ниже как история.
+
+---
+
 # Текущая цель — PR292 и PR293 до merge в main
 
 Поручение владельца13 ноября2026: оформить последние production-first правки и довести обе ветки до merge. Это явное разрешение на PR/push/merge после независимого ревью и полного exact-source CI; новый production deployment/reset данных не входит. Работа ведётся в отдельных worktrees persistent-month-session и actual-start-from-assignment-order. Navigation checkout read-only.

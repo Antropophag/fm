@@ -107,7 +107,7 @@
   const form = document.querySelector('[data-original-upload-form]');
   if (!form) return;
   const field = name => form.elements.namedItem(name), fields = form.querySelector('[data-original-fields]');
-  const button = form.querySelector('[data-original-submit]'), status = form.querySelector('[data-original-status]'), fileInput = field('original');
+  const button = form.querySelector('[data-original-submit]'), status = form.querySelector('[data-original-status]'), progress = form.querySelector('[data-original-progress]'), fileInput = field('original');
   const fileDrop = form.querySelector('[data-file-drop]'), fileName = form.querySelector('[data-file-name]');
   if (!button || !status || !fileInput) return;
   let busy = false;
@@ -120,6 +120,22 @@
     originalFilename: file.name});
   const encode = value => { const bytes = new TextEncoder().encode(JSON.stringify(value)); let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte); return btoa(binary); };
   const disable = value => { if (fields) fields.disabled = value; button.disabled = value; };
+  const upload = (file, data, onProgress) => new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('POST', form.action);
+    request.responseType = 'json';
+    request.withCredentials = true;
+    request.setRequestHeader('Content-Type', 'application/pdf');
+    request.setRequestHeader('X-CSRF-Token', data.csrfToken);
+    request.setRequestHeader('X-FMonitor-Original', encode(data));
+    request.upload.addEventListener('progress', event => onProgress(event));
+    request.upload.addEventListener('load', () => onProgress({lengthComputable: true, loaded: file.size, total: file.size, complete: true}));
+    request.addEventListener('load', () => resolve({status: request.status, value: request.response}));
+    request.addEventListener('error', () => reject(new Error('network')));
+    request.addEventListener('timeout', () => reject(new Error('timeout')));
+    request.addEventListener('abort', () => reject(new Error('abort')));
+    request.send(file);
+  });
   disable(false);
   fileInput.addEventListener('change', () => { const file = fileInput.files[0]; fileDrop?.classList.toggle('fm2-file-drop--selected', Boolean(file)); if (fileName) fileName.textContent = file ? file.name : 'PDF, не более 20 МиБ'; });
   form.addEventListener('input', renew); form.addEventListener('change', renew);
@@ -129,10 +145,10 @@
     if (!file) { status.textContent = 'Выберите один PDF-файл.'; return; }
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) { status.textContent = messages.not_pdf; return; }
     if (file.size > 20 * 1024 * 1024) { status.textContent = messages.REQUEST_TOO_LARGE; return; }
-    const data = metadata(file); busy = true; disable(true); status.textContent = 'Оригинал загружается…'; let changedIntent = false, response = null;
+    const data = metadata(file); busy = true; disable(true); status.textContent = 'Передаём оригинал…'; if (progress) { progress.hidden = false; progress.removeAttribute('value'); } let changedIntent = false, response = null;
     try {
-      response = await fetch(form.action, {method: 'POST', credentials: 'same-origin', redirect: 'error', headers: {'Content-Type': 'application/pdf', 'X-CSRF-Token': data.csrfToken, 'X-FMonitor-Original': encode(data)}, body: file});
-      const value = await response.json(), accepted = response.status === 201 && value.status === 'accepted', replayed = response.status === 200 && value.status === 'replayed';
+      const received = await upload(file, data, event => { if (event.lengthComputable && event.total > 0) { const percent = Math.min(100, Math.round(event.loaded / event.total * 100)); if (progress) progress.value = percent; status.textContent = event.complete || percent === 100 ? 'Файл передан. Сервер проверяет оригинал…' : `Передаём оригинал: ${percent}%`; } });
+      response = {status: received.status}; const value = received.value, accepted = response.status === 201 && value.status === 'accepted', replayed = response.status === 200 && value.status === 'replayed';
       const receipt = value.requestId === data.requestId && value.reasonCode === null && value.retryable === false && typeof value.rootOriginalId === 'string' && typeof value.currentRevisionId === 'string' && Number.isInteger(value.revisionNumber) && value.revisionNumber > 0;
       if ((accepted || replayed) && receipt) { location.assign(form.dataset.returnUrl); return; }
       changedIntent = response.status >= 400 && response.status < 500;
@@ -140,9 +156,9 @@
       status.textContent = pending ? 'Оригинал сохранён, но открытие работ не завершено. Не меняйте файл и данные: повторите загрузку с тем же запросом.' : (changedIntent ? (messages[value.reasonCode || value.error] || 'Не удалось принять оригинал. Проверьте форму и повторите загрузку.') : 'Не удалось подтвердить сохранение. Повторите загрузку с тем же файлом и данными.');
     } catch {
       changedIntent = Boolean(response && response.status >= 400 && response.status < 500);
-      status.textContent = changedIntent ? 'Не удалось принять оригинал. Проверьте форму и повторите загрузку.' : 'Не удалось подтвердить сохранение. Проверьте связь и повторите загрузку.';
+      status.textContent = changedIntent ? 'Не удалось принять оригинал. Проверьте форму и повторите загрузку.' : 'Результат загрузки неизвестен. Не меняйте файл и данные: повторите с тем же запросом.';
     }
-    finally { busy = false; disable(false); if (changedIntent) renew(); }
+    finally { busy = false; disable(false); if (progress) progress.hidden = true; if (changedIntent) renew(); }
   });
 })();
 const detailsDialog=document.querySelector('[data-object-details-dialog]');

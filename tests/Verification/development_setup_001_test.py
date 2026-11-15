@@ -184,7 +184,7 @@ exit 0
         required = {"PHP_VERSION": "8.5", "NODE_VERSION": "22.22.0",
                     "NPM_VERSION": "10.9.4",
                     "PYTHON_VERSION": "3.12.11", "SHLZ_UI_REVISION": PIN,
-                    "PHP_EXTENSIONS": "mysqli,pcntl,dom,mbstring,curl,posix"}
+                    "PHP_EXTENSIONS": "mysqli,pcntl,dom,mbstring,curl,posix,gd,zip"}
         self.assertEqual(required, {key: values.get(key) for key in required})
         self.assertNotIn("TCPDF_VERSION", values)
         self.assertNotIn("TCPDF_REVISION", values)

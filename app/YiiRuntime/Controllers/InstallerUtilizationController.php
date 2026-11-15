@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FMonitor2\YiiRuntime\Controllers;
 
 use FMonitor2\Workforce\MariaDbInstallerUtilization;
+use FMonitor2\YiiRuntime\ReadOnlySession;
 use Yii;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
@@ -41,8 +42,9 @@ final class InstallerUtilizationController extends PilotController
     private function respond(callable $load, string $view): string|Response
     {
         try {
+            $identity=Yii::$app->user->identity;$csrf=Yii::$app->request->csrfToken;ReadOnlySession::release();
             $read=new MariaDbInstallerUtilization(Yii::$app->db,(string)(getenv('FMONITOR_PROCESS_TABLE_PREFIX')?:''),(string)(getenv('FMONITOR_LEGACY_TABLE_PREFIX')?:''));
-            $model=$load($read);return $this->stableCsrf($this->render($view,$model+['identity'=>Yii::$app->user->identity]));
+            $model=$load($read);return $this->stableCsrf($this->render($view,$model+['identity'=>$identity,'csrf'=>$csrf]),$csrf);
         } catch (\OutOfRangeException) {throw new BadRequestHttpException();}
         catch (\DomainException $e) {throw $e;}
         catch (\Throwable) {$response=Yii::$app->response;$response->statusCode=503;$response->format=Response::FORMAT_RAW;$response->headers->set('Retry-After','60');$response->content="Service unavailable.\n";return $response;}
@@ -63,8 +65,8 @@ final class InstallerUtilizationController extends PilotController
         if(mb_strlen($allowed['q'])>120||!in_array($allowed['current'],['','present','absent'],true)||!in_array($allowed['upcoming'],['','present','absent'],true))throw new BadRequestHttpException();$this->positive($allowed['page']);$kept=array_intersect_key($allowed,$seen);$parts=[];foreach($kept as$key=>$item)$parts[]=$key.'='.$this->queryValue($item);return'/pilot/installers'.($parts===[]?'':'?'.implode('&',$parts));
     }
     private function queryValue(string$value):string{return preg_replace_callback('/[^\pL\pN_.~-]/u',static fn(array$match):string=>rawurlencode($match[0]),$value)??throw new BadRequestHttpException();}
-    private function stableCsrf(string$html):string
+    private function stableCsrf(string$html,string$masked):string
     {
-        $masked=Yii::$app->request->csrfToken;if(!is_string($masked)||$masked==='')return$html;$raw=Yii::$app->security->unmaskToken($masked);if($raw==='')return$html;$mask=substr(hash('sha256','installer-utilization-card-v1'.$raw,true),0,strlen($raw));$stable=rtrim(strtr(base64_encode($mask.($mask^$raw)),'+/','-_'),'=');return str_replace('value="'.htmlspecialchars($masked,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8').'"','value="'.$stable.'"',$html);
+        if($masked==='')return$html;$raw=Yii::$app->security->unmaskToken($masked);if($raw==='')return$html;$mask=substr(hash('sha256','installer-utilization-card-v1'.$raw,true),0,strlen($raw));$stable=rtrim(strtr(base64_encode($mask.($mask^$raw)),'+/','-_'),'=');return str_replace('value="'.htmlspecialchars($masked,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8').'"','value="'.$stable.'"',$html);
     }
 }

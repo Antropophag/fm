@@ -1,0 +1,59 @@
+{
+  "change": "fix-prod-performance-ci-repair",
+  "planned_paths": [
+    ".quality-graph/verification-policy.json",
+    "app/InspectionEvidence/InspectionPhotoThumbnail.php",
+    "app/YiiRuntime/Assets/AssetVersion.php",
+    "app/YiiRuntime/Assets/otiz.js",
+    "app/YiiRuntime/Controllers/PilotAssetController.php",
+    "app/YiiRuntime/Views/otiz-calculation-v2.php",
+    "app/YiiRuntime/Views/otiz-editor.php",
+    "app/YiiRuntime/Views/user-editor.php",
+    "docs/operations/production-performance-delivery-20261115.md",
+    "openspec/changes/fix-prod-performance/ci-repair-input.json",
+    "openspec/changes/fix-prod-performance/orientation-input.json",
+    "reviews/code/PRODUCTION-PERFORMANCE-ORIENTATION-001.md",
+    "reviews/tests/PRODUCTION-PERFORMANCE-ORIENTATION-001.md",
+    "specs/PRODUCTION-PERFORMANCE-001.md",
+    "tests/InspectionEvidence/production_performance_thumbnail_orientation_001_test.php",
+    "tests/Runtime/production_runtime_browser_001_test.php",
+    "tests/Support/yii2_production_web_cutover_contract.php",
+    "tests/Verification/change_verification_sensitive_offline_132_test.py",
+    "tests/Verification/development_setup_001_test.py",
+    "tests/Verification/registered_yii2_focused_bootstrap_001_test.py",
+    "tests/Yii2/otiz_filters_decisions_20261029_browser.mjs",
+    "tests/Yii2/yii2_legacy_identity_link_001_test.php",
+    "tests/Yii2/yii2_main_navigation_001_test.php",
+    "tests/Yii2/yii2_shlz_select_001_test.php",
+    "tests/Yii2/yii2_sidebar_state_icons_001_test.php",
+    "tests/Yii2/yii2_user_access_edges_001_test.php",
+    "tools/delivery/Dockerfile.focused-checks",
+    "tools/verification/suites.tsv"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "PRODUCTION-PERFORMANCE-001",
+      "acceptance_id": "A03,A08,A10,A12",
+      "spec_path": "specs/PRODUCTION-PERFORMANCE-001.md",
+      "seam": "preserved public recovery, no-JS user/financial editors, content versions, fixed-asset cache and reproducible runtime consumers",
+      "tests": [
+        "tests/Runtime/production_runtime_browser_001_test.php",
+        "tests/Runtime/yii2_production_web_cutover_001_test.php",
+        "tests/Verification/canonical_integration_runtime_001_test.py",
+        "tests/Verification/change_verification_sensitive_offline_132_test.py",
+        "tests/Verification/development_setup_001_test.py",
+        "tests/Verification/registered_yii2_focused_bootstrap_001_test.py",
+        "tests/Yii2/yii2_legacy_identity_link_001_test.php",
+        "tests/Yii2/yii2_main_navigation_001_test.php",
+        "tests/Yii2/yii2_operational_dashboard_bar_charts_001_test.php",
+        "tests/Yii2/yii2_otiz_decision_preview_20261030_test.php",
+        "tests/Yii2/yii2_otiz_filters_decisions_20261029_test.php",
+        "tests/Yii2/yii2_otiz_v2_acceptance_001_test.php",
+        "tests/Yii2/yii2_shlz_select_001_test.php",
+        "tests/Yii2/yii2_sidebar_state_icons_001_test.php",
+        "tests/Yii2/yii2_user_access_edges_001_test.php",
+        "tests/InspectionEvidence/production_performance_thumbnail_orientation_001_test.php"
+      ]
+    }
+  ]
+}

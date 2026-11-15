@@ -92,8 +92,11 @@ try {
         $document=new DOMDocument();assertSameValue(true,$document->loadXML($bytes),'pinned shlz icon parses '.$name);
         return $svgSignature($document->documentElement);
     };
-    $assetVersionSource=(string)file_get_contents(dirname(__DIR__,2).'/app/YiiRuntime/Assets/AssetVersion.php');
-    assertSameValue(true,str_contains($assetVersionSource,"hash_file('sha256'")&&str_contains($assetVersionSource,"substr("),'INTENDED_RED asset version derives from exact CSS content');
+    assertSameValue(
+        'pilot.css?v=' . substr(hash_file('sha256', $root . '/app/YiiRuntime/Assets/pilot.css'), 0, 12),
+        \FMonitor2\YiiRuntime\Assets\AssetVersion::file('pilot.css'),
+        'asset version derives from exact CSS content'
+    );
     foreach(['ShellAssetBundle.php','ObjectQueueAssetBundle.php','InstallerDirectoryAssetBundle.php','PreopeningAssetBundle.php','AuthAssetBundle.php']as$bundle){$bytes=(string)file_get_contents(dirname(__DIR__,2).'/app/YiiRuntime/Assets/'.$bundle);assertSameValue(true,str_contains($bytes,'AssetVersion::file'),'INTENDED_RED shared content-derived pilot.css version '.$bundle);assertSameValue(false,str_contains($bytes,'dashboard-prototype'),'no fixed prototype asset version '.$bundle);}
     $assertMatrix = static function (array $expectedSections, array $availableRoutes) use ($http, &$cookies, $navigation, $labels, $svgSignature, $sourceSignature): void {
         // Public documentation stays visible regardless of process permissions.

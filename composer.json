@@ -3,6 +3,7 @@
     "description": "FMonitor 2.0 Yii2 application",
     "license": "proprietary",
     "require": {
+        "ext-gd": "*",
         "tecnickcom/tcpdf": "6.11.4",
         "php": ">=8.4 <8.6",
         "yiisoft/yii2": "2.0.55"

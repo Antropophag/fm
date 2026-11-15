@@ -13,7 +13,7 @@ try {
  await page.goto(c.origin+'/pilot/otiz/payments');await page.locator('input[name=email]').fill(c.email);await Promise.all([page.waitForNavigation(),page.locator('button[type=submit]').click()]);await page.locator('input[name=password]').fill(c.password);await Promise.all([page.waitForNavigation(),page.locator('button[type=submit]').click()]);
  const url=c.origin+'/pilot/otiz/calculations/'+c.draft.calculationId;
  await page.goto(url);
- for(const id of ['A','B','C'])assert.equal(await page.locator('[data-recovery-decision] [name=employeeId][value="'+id+'"]').count(),id==='B'?2:1,'every employee has decision editor');
+ assert.equal(await page.locator('form[data-recovery-decision]').count(),1,'one shared decision form');for(const id of ['A','B','C'])assert.equal(await page.locator(`[data-v2-decision-open][data-employee-id="${id}"]`).evaluateAll(es=>new Set(es.map(e=>e.dataset.objectId)).size),id==='B'?2:1,'every employee/object pair remains addressable');
  assert.match(await page.locator('body').innerText(),/Сохранённая доля|Сохранено|резерв/i);
  for(const filter of ['excludeFrame','excludeCompleted','excludeDismissed','onlyReserved'])assert.equal(await page.locator('input[name='+filter+']').count(),1,'usable filter '+filter);
  await page.locator('[data-otiz-group-toggle]').first().click();

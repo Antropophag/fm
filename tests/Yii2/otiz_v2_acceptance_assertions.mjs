@@ -50,7 +50,7 @@ export async function verifyDraftWorkflow(page, config) {
   const decision = () => page.locator('dialog[open] form[action$="/decisions"]');
   const openDecision = async () => {
     await openRowDecision(page);
-    assert.equal(await decision().count(),1,'one opened editor for exact selected pair');assert.equal(await decision().locator('[name=objectId]').inputValue(),'4512');assert.equal(await decision().locator('[name=employeeId]').inputValue(),'B');assert.equal(await page.locator('form[action$="/decisions"]').count(),4,'each of four object/installer pairs has its own editor');
+    assert.equal(await decision().count(),1,'one opened editor for exact selected pair');assert.equal(await decision().locator('[name=objectId]').inputValue(),'4512');assert.equal(await decision().locator('[name=employeeId]').inputValue(),'B');assert.equal(await page.locator('form[action$="/decisions"]').count(),1,'one shared editor for all four object/installer pairs');assert.deepEqual(await page.locator('[data-v2-decision-open]').evaluateAll(es=>[...new Set(es.map(e=>e.dataset.objectId+':'+e.dataset.employeeId))].sort()),['4512:A','4512:B','4513:B','4513:C'],'all four pairs still have exact-context entry points');
   };
   await openDecision();
   const revision = await decision().locator('[name="expectedRevision"]').inputValue();

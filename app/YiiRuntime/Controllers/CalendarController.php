@@ -52,23 +52,26 @@ final class CalendarController extends PilotController
         if ($dateParameters > 1) {
             throw new BadRequestHttpException('Укажите одну дату в формате ГГГГ-ММ-ДД.');
         }
-        if (array_diff(array_keys($query), ['date']) !== []) {
+        if (array_diff(array_keys($query), ['date', 'format']) !== []) {
             throw new BadRequestHttpException('Некорректные параметры календаря.');
         }
+        $format = $query['format'] ?? null;
+        if ($format !== null && $format !== 'fragment') throw new BadRequestHttpException('Некорректный формат календаря.');
         $today = $this->now()->setTime(0, 0);
-        $first = $today->modify('-30 days');
-        $last = $today->modify('+6 months');
+        $rangeFirst = $today->modify('-30 days');
+        $rangeLast = $today->modify('+6 months');
         $selected = $today;
         if (array_key_exists('date', $query)) {
             if (!is_string($query['date'])) {
                 throw new BadRequestHttpException('Укажите одну дату в формате ГГГГ-ММ-ДД.');
             }
             $selected = DateTimeImmutable::createFromFormat('!Y-m-d', $query['date'], new DateTimeZone(self::ZONE));
-            if ($selected === false || $selected->format('Y-m-d') !== $query['date'] || $selected < $first) {
+            if ($selected === false || $selected->format('Y-m-d') !== $query['date'] || $selected < $rangeFirst) {
                 throw new BadRequestHttpException('Выбранный день не входит в доступный период календаря.');
             }
-            if ($selected > $last) {$first=$selected;$last=$selected;}
         }
+        if ($selected > $rangeLast) {$first=$selected;$last=$selected;$rangeLast=$selected;}
+        else {$first=$selected->modify('-14 days');$last=$selected->modify('+20 days');if($first<$rangeFirst){$first=$rangeFirst;$last=$first->modify('+34 days');}if($last>$rangeLast){$last=$rangeLast;$first=$last->modify('-34 days');}}
 
         try {
             $events = InstallationProcessFactory::calendar(
@@ -88,6 +91,9 @@ final class CalendarController extends PilotController
             'last' => $last,
             'selected' => $selected,
             'events' => $events,
+            'rangeFirst' => $rangeFirst,
+            'rangeLast' => $rangeLast,
+            'fragment' => $format === 'fragment',
         ]);
     }
 

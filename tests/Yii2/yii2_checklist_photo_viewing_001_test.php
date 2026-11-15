@@ -68,6 +68,12 @@ try {
     assertSameValue($before,$http->facts(),'all photo reads preserve facts');
     assertSameValue($files,checklistPhotoViewingFiles($http->base->privateRoot),'all photo reads preserve private files');
 
+    // PRODUCTION-PERFORMANCE-001 A03: same authenticated boundary, derivative only.
+    $thumbUrl=$url.'?variant=thumbnail';assertSameValue($thumbUrl,$photo['thumbnailUrl']??null,'projection exposes distinct thumbnail URL');
+    $thumb=$http->request('GET',$thumbUrl,[],$fixture->cookies);assertSameValue(200,$thumb['status'],'authenticated thumbnail');$geometry=getimagesizefromstring($thumb['body']);assertSameValue(true,is_array($geometry)&&max($geometry[0],$geometry[1])<=640,'bounded valid derivative');
+    assertSameValue('private, no-store',$thumb['headers']['cache-control'][0]??null,'thumbnail remains private');$th=$http->request('HEAD',$thumbUrl,[],$fixture->cookies);assertSameValue([200,'',$thumb['headers']['content-length'][0]],[$th['status'],$th['body'],$th['headers']['content-length'][0]??null],'thumbnail HEAD parity');
+    assertSameValue(403,$http->request('GET',$thumbUrl,[],$denied)['status'],'thumbnail forbidden parity');$anonymous=[];assertSameValue(303,$http->request('GET',$thumbUrl,[],$anonymous)['status'],'thumbnail guest parity');assertSameValue(200,$http->request('GET',$thumbUrl,[],$reader)['status'],'another authorized user may view thumbnail');
+    assertSameValue(404,$http->request('GET',$url.'?variant=arbitrary',[],$fixture->cookies)['status'],'unknown variant rejected');assertSameValue($png,$http->request('GET',$url,[],$fixture->cookies)['body'],'thumbnail never modifies original');assertSameValue($before,$http->facts(),'thumbnail is not business evidence or operation');
     $row=$http->rows('fm2_checklist_photos')[0];$path=$http->base->privateRoot.'/checklist/'.$row['storage_name'];$original=file_get_contents($path);
     foreach(['missing','size','unsafe','symlink']as$failure){
         if($failure==='missing')rename($path,$path.'.saved');
@@ -82,7 +88,7 @@ try {
 
     $beforeRow=$http->rows('fm2_checklist_photos')[0];$beforeOperations=$http->rows('fm2_checklist_operations');$revoke=array_replace(InspectionFixture::operation(702,$accepted['revision']),['type'=>'photo_revoked','photoId'=>$photo['id'],'reason'=>'Fixture revoke']);
     unset($revoke['itemId'],$revoke['installerTabIds']);
-    $revoked=InspectionFixture::result($fixture->send($revoke,$csrf),200,'accepted');
+    $revoked=InspectionFixture::result($fixture->send($revoke,$csrf),200,'accepted');assertSameValue(404,$http->request('GET',$thumbUrl,[],$fixture->cookies)['status'],'revoked thumbnail is inaccessible despite cached derivative');
     assertSameValue([],array_column($revoked['projection']['photos'],'id'),'revoked photo absent from active projection');
     assertSameValue(404,$http->request('GET',$url,[],$reader)['status'],'revoked URL no longer returns bytes');
     $afterRow=$http->rows('fm2_checklist_photos')[0];$expectedRow=$beforeRow;$expectedRow['revoked_at']=$afterRow['revoked_at'];assertSameValue($expectedRow,$afterRow,'revoke changes only revoked_at on photo row');assertSameValue(count($beforeOperations)+1,count($http->rows('fm2_checklist_operations')),'revoke appends exactly one history fact');

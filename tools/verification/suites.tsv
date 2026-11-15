@@ -230,6 +230,9 @@ db	php	tests/Workforce/installer_utilization_forecast_001_test.php	integration
 db	php	tests/Workforce/installer_utilization_observations_001_test.php	integration
 db	php	tests/Yii2/deadline_transfer_certificate_http_001_test.php	integration
 db	php	tests/Yii2/legacy_control_engineer_reads_001_test.php	integration
+db	php	tests/Yii2/production_performance_assets_001_test.php	integration
+db	php	tests/Yii2/production_performance_concurrency_001_test.php	integration
+db	php	tests/Yii2/production_performance_reads_001_test.php	integration
 db	php	tests/Yii2/yii2_activation_password_20261029_test.php	integration
 db	php	tests/Yii2/yii2_authentication_001_test.php	integration
 db	php	tests/Yii2/yii2_bitrix_documentation_status_001_test.php	integration
@@ -362,6 +365,7 @@ e2e	php	tests/Runtime/production_runtime_compose_001_test.php	e2e
 e2e	php	tests/Runtime/runtime_settlement_compatibility_001_test.php	e2e
 e2e	php	tests/Support/ObjectRegisterPagingBrowserFixture.php	e2e
 e2e	php	tests/Yii2/excel_publication_browser_001_test.php	e2e
+e2e	php	tests/Yii2/production_performance_browser_001_test.php	e2e
 e2e	php	tests/Yii2/yii2_calendar_003_browser_test.php	e2e
 e2e	php	tests/Yii2/yii2_checklist_photo_viewing_browser_001_test.php	e2e
 e2e	php	tests/Yii2/yii2_completion_document_register_001_test.php	e2e
@@ -415,6 +419,8 @@ unit	python3	tests/Deployment/yii2_imports_workforce_package_001_test.py	unit
 unit	python3	tests/Deployment/yii2_local_data_bootstrap_001_test.py	unit
 unit	python3	tests/Deployment/yii2_local_integration_config_001_test.py	unit
 unit	python3	tests/Deployment/yii2_workforce_sync_package_001_test.py	unit
+unit	php	tests/InspectionEvidence/production_performance_thumbnail_001_test.php	unit
+unit	php	tests/InspectionEvidence/production_performance_thumbnail_orientation_001_test.php	unit
 unit	php	tests/InstallationProcess/assignment_order_original_attempt_audit_001_test.php	unit
 unit	php	tests/InstallationProcess/assignment_order_original_command_lifecycle_001_test.php	unit
 unit	php	tests/InstallationProcess/assignment_order_original_command_shape_001_test.php	unit
@@ -539,9 +545,11 @@ unit	php	tests/Jobs/weekly_fkr_report_delivery_001_test.php	integration
 unit	php	tests/Jobs/weekly_fkr_unknown_delivery_001_test.php	integration
 unit	php	tests/Otiz/excel_calculation_001_test.php	unit
 unit	php	tests/Otiz/legacy_premium_calculation_001_test.php	unit
+unit	php	tests/Otiz/production_performance_register_001_test.php	unit
 unit	php	tests/Otiz/report_filters_20261029_test.php	unit
 unit	php	tests/Otiz/settlement_v2_001_test.php	unit
 unit	php	tests/Otiz/settlement_v2_workbook_001_test.php	unit
+unit	php	tests/Runtime/production_performance_session_001_test.php	unit
 unit	php	tests/Runtime/production_runtime_contract_001_test.php	unit
 unit	php	tests/Runtime/weekly_fkr_smtp_configuration_001_test.php	unit
 unit	php	tests/Runtime/yii2_production_web_cutover_architecture_001_test.php	unit
@@ -581,6 +589,8 @@ unit	php	tests/Verification/yii2_worktree_autoload_001_test.php	governance
 unit	php	tests/WeeklyFkrReport/weekly_report_001_test.php	integration
 unit	php	tests/WeeklyFkrReport/weekly_schedule_001_test.php	integration
 unit	node	tests/Yii2/checklist_service_worker_navigation_001_test.mjs	unit
+unit	node	tests/Yii2/production_performance_sw_001_test.mjs	unit
+unit	node	tests/Yii2/production_performance_upload_001_test.mjs	unit
 unit	php	tests/Yii2/yii2_bitrix_order_document_links_console_001_test.php	unit
 unit	php	tests/Yii2/yii2_canonical_migrations_ownership_001_test.php	unit
 unit	php	tests/Yii2/yii2_completed_checklist_admission_001_test.php	integration

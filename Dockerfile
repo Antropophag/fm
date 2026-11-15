@@ -20,8 +20,9 @@ RUN npm ci --no-audit --no-fund \
 FROM php:8.5-cli-bookworm
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends socat curl unzip \
-    && docker-php-ext-install -j"$(nproc)" mysqli pdo_mysql pcntl \
+    && apt-get install -y --no-install-recommends socat curl unzip libjpeg62-turbo-dev libpng-dev libwebp-dev \
+    && docker-php-ext-configure gd --with-jpeg --with-webp \
+    && docker-php-ext-install -j"$(nproc)" gd mysqli pdo_mysql pcntl \
     && groupadd --gid 10001 fmonitor \
     && useradd --uid 10001 --gid 10001 --home-dir /home/fmonitor --create-home --shell /usr/sbin/nologin fmonitor \
     && mkdir -p /home/fmonitor/.local/state/fmonitor2 \

@@ -17,7 +17,7 @@ foreach (['certificateDate', 'newDeadline', 'correctionReason', 'pdf'] as $name)
     $expect(preg_match('/<label class="shlz-field"[^>]*>[\s\S]*?<[^>]+name="' . preg_quote($name, '/') . '"/u', $certificates) === 1, 'V07 deadline certificate field ' . $name . ' uses one shared Field');
 }
 
-$users = $view('users.php');
+$users = $view('user-editor.php');
 $expect(preg_match('/<label class="shlz-field"[^>]*>[\s\S]*?<input[^>]+name="legacyUserId"/u', $users) === 1, 'V07 legacy identity link uses shared Field');
 
 $checklist = $view('checklist.php');

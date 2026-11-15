@@ -3,7 +3,6 @@ import { enhanceSelects } from '/pilot/assets/shlz-behaviors.js';
 import { enhanceTabs } from '/pilot/assets/shlz-behaviors.js';
 import { DatePickerController } from '/pilot/assets/shlz-behaviors.js';
 
-enhanceSelects(document);
 enhanceCalendarGrids(document);
 enhanceTabs(document);
 export const enhanceDatePickers = (root = document) => {
@@ -42,7 +41,8 @@ const choiceAtom = 'sel' + 'ect';
 const choiceRootQuery = `[data-shlz-${choiceAtom}]`;
 const fallbackQuery = `.shlz-${choiceAtom}-fallback ${choiceAtom}`;
 const requiredAttribute = `data-shlz-${choiceAtom}-required`;
-for (const root of document.querySelectorAll(choiceRootQuery)) {
+export const enhanceFormControls = (scope = document) => {enhanceSelects(scope);for (const root of scope.querySelectorAll(choiceRootQuery)) {
+  if(root.dataset.fm2ChoiceBound==='true')continue;root.dataset.fm2ChoiceBound='true';
   root.classList.add('is-enhanced');
   const submittedValue = root.querySelector('input[type="hidden"]');
   const fallback = root.querySelector(fallbackQuery);
@@ -64,7 +64,8 @@ for (const root of document.querySelectorAll(choiceRootQuery)) {
       trigger?.focus();
     });
   }
-}
+}};
+enhanceFormControls(document);
 
 (() => {
   const state = document.getElementsByClassName('fm2-nav-state')[0];
