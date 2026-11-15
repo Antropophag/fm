@@ -12,7 +12,8 @@ try {
     $f->db->query("INSERT INTO {$p}users_roles VALUES(42,'Строительный контроль',1)");
     $f->db->query("INSERT INTO {$p}legacy_users_source VALUES(8001,'Legacy <Engineer>','old@example.test',42,1,'legacy-secret-hash')");
     $facts=static fn()=>array_merge($f->facts(),['legacyLinks'=>$f->rows('fm2_legacy_identity_links'),'legacyLinkEvents'=>$f->rows('fm2_legacy_identity_link_events')]);
-    $page=$f->page($admin);
+    $page=$f->request('GET','/pilot/admin/users/9403/editor',[],$admin);
+    assertSameValue([200,['no-store']],[$page['status'],$page['headers']['cache-control']??[]],'exact user editor private');
     assertSameValue(true,str_contains($page['body'],'legacyUserId'),'INTENDED_RED link control rendered');
     if(getenv('FMONITOR_FIXTURE_REACHABILITY')==='yii-legacy-link-post-red-fixture'){
         assertSameValue(true,str_contains($page['body'],'_csrf'),'post-red Yii page fixture readable');
@@ -27,7 +28,7 @@ try {
     assertSameValue([303,'/pilot/admin/users'],[$r['status'],$r['headers']['location'][0]??null],'link redirect');
     $linkedFacts=$facts();assertSameValue(303,$f->post('/pilot/admin/users/9403/legacy-link',['requestId'=>'20202020-0002-4020-8020-000000000001','legacyUserId'=>'8001'],$admin)['status'],'HTTP replay');assertSameValue($linkedFacts,$facts(),'HTTP replay no facts');
     assertSameValue(409,$f->post('/pilot/admin/users/9403/legacy-link',['requestId'=>'20202020-0002-4020-8020-000000000001','legacyUserId'=>'8002'],$admin)['status'],'request conflict 409');assertSameValue($linkedFacts,$facts(),'HTTP conflict no facts');
-    $linked=$f->page($admin);assertSameValue(true,str_contains($linked['body'],'8001'),'linked ID visible');assertSameValue(true,str_contains($linked['body'],'Legacy &lt;Engineer&gt;'),'snapshot escaped');assertSameValue(false,str_contains($linked['body'],'legacy-secret-hash'),'legacy credential hidden');
+    $linked=$f->request('GET','/pilot/admin/users/9403/editor',[],$admin);assertSameValue(true,str_contains($linked['body'],'8001'),'linked ID visible');assertSameValue(true,str_contains($linked['body'],'Legacy &lt;Engineer&gt;'),'snapshot escaped');assertSameValue(false,str_contains($linked['body'],'legacy-secret-hash'),'legacy credential hidden');
     assertSameValue(400,$f->request('POST','/pilot/admin/users/9403/legacy-link',['_csrf'=>'bad','requestId'=>'20202020-0002-4020-8020-000000000002','legacyUserId'=>'8001'],$admin)['status'],'CSRF required');
     $csrf=$f->csrf($f->page($admin)['body']);assertSameValue(415,$f->request('POST','/pilot/admin/users/9403/legacy-link',[],$admin,['Content-Type: application/json'])['status'],'content type bound');assertSameValue(413,$f->request('POST','/pilot/admin/users/9403/legacy-link',['_csrf'=>$csrf,'requestId'=>'20202020-0002-4020-8020-000000000099','legacyUserId'=>'8001','padding'=>str_repeat('x',9000)],$admin)['status'],'body size bound');
     foreach([[['requestId'=>'bad','legacyUserId'=>'8001'],400],[['requestId'=>'20202020-0002-4020-8020-000000000003','legacyUserId'=>'0'],422],[['requestId'=>'20202020-0002-4020-8020-000000000004','legacyUserId'=>'9999'],422]] as[$fields,$expected]){$before=$facts();assertSameValue($expected,$f->post('/pilot/admin/users/9403/legacy-link',$fields,$admin)['status'],'HTTP rejection mapping');assertSameValue($before,$facts(),'HTTP rejection atomic');}

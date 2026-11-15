@@ -986,6 +986,7 @@
   },
   "focused_command_profiles": {
     "tests/Runtime/production_performance_session_001_test.php": "browser",
+    "tests/Runtime/yii2_production_web_cutover_001_test.php": "browser",
     "tests/Runtime/yii2_safe_error_correlation_001_test.php": "integration",
     "tests/Yii2/production_performance_assets_001_test.php": "browser",
     "tests/Yii2/production_performance_browser_001_test.php": "browser",
@@ -998,13 +999,20 @@
     "tests/Yii2/yii2_construction_control_shipment_indicator_001_test.php": "integration",
     "tests/Yii2/yii2_inspection_browser_001_test.php": "browser",
     "tests/Yii2/yii2_installer_utilization_stage_one_001_test.php": "browser",
+    "tests/Yii2/yii2_legacy_identity_link_001_test.php": "browser",
     "tests/Yii2/yii2_main_navigation_001_test.php": "browser",
     "tests/Yii2/yii2_month_session_001_test.php": "browser",
+    "tests/Yii2/yii2_operational_dashboard_bar_charts_001_test.php": "browser",
+    "tests/Yii2/yii2_otiz_decision_preview_20261030_test.php": "browser",
+    "tests/Yii2/yii2_otiz_filters_decisions_20261029_test.php": "browser",
     "tests/Yii2/yii2_otiz_settlement_v2_001_test.php": "browser",
     "tests/Yii2/yii2_otiz_settlement_v2_browser_001_test.php": "browser",
+    "tests/Yii2/yii2_otiz_v2_acceptance_001_test.php": "browser",
     "tests/Yii2/yii2_session_failure_001_test.php": "browser",
+    "tests/Yii2/yii2_shlz_select_001_test.php": "browser",
     "tests/Yii2/yii2_user_access_001_test.php": "browser",
-    "tests/Yii2/yii2_user_access_browser_001_test.php": "browser"
+    "tests/Yii2/yii2_user_access_browser_001_test.php": "browser",
+    "tests/Yii2/yii2_user_access_edges_001_test.php": "browser"
   },
   "semantic_surfaces": [
     {

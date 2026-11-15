@@ -68,6 +68,8 @@ FROM common AS governance
 ENV FMONITOR_PROFILE=governance
 
 FROM common AS integration
+# Yii HTTP rendering hashes the public module dependency even without a browser.
+COPY --from=shlz-ui /shlz-ui/packages/behaviors/dist /shlz-ui/packages/behaviors/dist
 ENV FMONITOR_PROFILE=integration
 
 FROM common AS browser

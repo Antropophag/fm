@@ -1,0 +1,28 @@
+{
+  "change": "fix-prod-performance-orientation-correction",
+  "planned_paths": [
+    "app/InspectionEvidence/InspectionPhotoThumbnail.php",
+    "tests/InspectionEvidence/production_performance_thumbnail_orientation_001_test.php",
+    "tests/InspectionEvidence/production_performance_thumbnail_001_test.php",
+    "specs/PRODUCTION-PERFORMANCE-001.md",
+    "docs/operations/production-performance-delivery-20261115.md",
+    "tools/verification/suites.tsv",
+    "openspec/changes/fix-prod-performance/orientation-input.json"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "PRODUCTION-PERFORMANCE-001",
+      "acceptance_id": "A03",
+      "spec_path": "specs/PRODUCTION-PERFORMANCE-001.md",
+      "seam": "public protected raster derivative preserves browser-visible orientation and immutable original",
+      "tests": [
+        "tests/InspectionEvidence/production_performance_thumbnail_orientation_001_test.php",
+        "tests/InspectionEvidence/production_performance_thumbnail_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InspectionEvidence/production_performance_thumbnail_orientation_001_test.php": "INTENDED_RED",
+        "tests/InspectionEvidence/production_performance_thumbnail_001_test.php": "GREEN"
+      }
+    }
+  ]
+}

@@ -130,7 +130,7 @@ try{
     prbOk(prbCommand([...$base,'--profile','deployment','run','--rm','prepare'],$environment,$repo),'runtime prepare');
     prbOk(prbCommand([...$base,'--profile','deployment','run','--rm','migrate'],$environment,$repo),'canonical repeat through deployment seam');
     prbOk(prbCommand([...$base,'up','--detach','--wait','php','web'],$environment,$repo),'production nginx/FPM start');
-    $artifacts=$overrideRoot.'/browser';mkdir($artifacts,0700);file_put_contents($artifacts.'/photo.png',base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='));file_put_contents($artifacts.'/original.pdf',SelectedOriginalFixture::pdf());
+    $artifacts=$overrideRoot.'/browser';mkdir($artifacts,0700);if(!extension_loaded('gd'))throw new TestFailure('SETUP_FAILURE: GD photo fixture required');$photo=imagecreatetruecolor(8,8);imagefill($photo,0,0,imagecolorallocate($photo,30,100,160));imagepng($photo,$artifacts.'/photo.png');unset($photo);file_put_contents($artifacts.'/original.pdf',SelectedOriginalFixture::pdf());
     $result=$artifacts.'/result.json';$node=getenv('FMONITOR_TEST_NODE_BINARY')?:trim((string)shell_exec('command -v node'));$playwright=getenv('FMONITOR_TEST_PLAYWRIGHT_MODULE')?:dirname($repo).'/shlz-ui/node_modules/playwright';
     $browser=prbCommand([$node,$repo.'/tests/Support/pilot_current_flow_browser.cjs',(string)$httpPort,$playwright,$artifacts,$result],$environment,$repo,180);
     $diagnostic=is_file($result)?(string)file_get_contents($result):'';

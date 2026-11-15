@@ -420,6 +420,7 @@ unit	python3	tests/Deployment/yii2_local_data_bootstrap_001_test.py	unit
 unit	python3	tests/Deployment/yii2_local_integration_config_001_test.py	unit
 unit	python3	tests/Deployment/yii2_workforce_sync_package_001_test.py	unit
 unit	php	tests/InspectionEvidence/production_performance_thumbnail_001_test.php	unit
+unit	php	tests/InspectionEvidence/production_performance_thumbnail_orientation_001_test.php	unit
 unit	php	tests/InstallationProcess/assignment_order_original_attempt_audit_001_test.php	unit
 unit	php	tests/InstallationProcess/assignment_order_original_command_lifecycle_001_test.php	unit
 unit	php	tests/InstallationProcess/assignment_order_original_command_shape_001_test.php	unit

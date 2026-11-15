@@ -23,8 +23,9 @@ final class AssetVersion
         }
         $bytes=file_get_contents($path);
         if (!is_string($bytes)) throw new \RuntimeException('Asset unavailable.');
+        if (!str_ends_with($name,'.js')) return hash('sha256',$bytes);
         $dependencies=[];
-        if (str_ends_with($name,'.js') && preg_match_all("~(?:from\\s*|import\\s*)['\"](?:/pilot/assets/)?([A-Za-z0-9.-]+\\.js)['\"]~",$bytes,$matches)) {
+        if (preg_match_all("~(?:from\\s*|import\\s*)['\"](?:/pilot/assets/)?([A-Za-z0-9.-]+\\.js)['\"]~",$bytes,$matches)) {
             foreach(array_unique($matches[1])as$dependency)$dependencies[]=$dependency.':'.self::digest($dependency,$seen);
         }
         sort($dependencies);

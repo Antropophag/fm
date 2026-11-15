@@ -39,7 +39,7 @@ final class PilotAssetController extends PilotController
             throw new \RuntimeException();
         }if(str_ends_with($path,'.js'))$bytes=preg_replace_callback("~((?:from\\s*|import\\s*)['\"])/pilot/assets/([A-Za-z0-9.-]+\\.js)(['\"])~",static fn(array$m):string=>$m[1].'/pilot/assets/'.AssetVersion::file($m[2]).$m[3],$bytes)??$bytes;
         $requested=Yii::$app->request->get('v');$expected=null;if(preg_match('/\\.(?:css|js)$/D',$path)===1){$versioned=AssetVersion::file($path);$expected=substr($versioned,strpos($versioned,'?v=')+3);}
-        $immutable=is_string($requested)&&$expected!==null&&hash_equals($expected,$requested);
+        $immutable=($expected!==null&&is_string($requested)&&hash_equals($expected,$requested))||($expected===null&&$entry[2]===31536000);
         $r = Yii::$app->response;
         $r->format = Response::FORMAT_RAW;
         $r->headers->set('Content-Type', $entry[1]);

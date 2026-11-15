@@ -97,7 +97,7 @@ class SensitiveOfflineClassification(unittest.TestCase):
                 self.assertEqual("CRITICAL", plan["verification_lane"])
                 self.assertEqual(["gate3", "final"], plan["required_reviews"])
                 self.assertIn({"lane": "CRITICAL", "reason": "sensitive-offline-ui"}, plan["escalations"])
-                self.assertIn(["php", self.ORACLE], [item["argv"] for item in plan["commands"]])
+                self.assertIn(["tools/delivery/run-in-profile", "browser", "--with-services", "php", self.ORACLE], [item["argv"] for item in plan["commands"]])
                 self.command("git", "restore", ".", check=True)
 
     def test_d_i_sensitive_plus_ui_and_green_oracle_cannot_restore_fast(self):
