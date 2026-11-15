@@ -7,6 +7,7 @@ namespace FMonitor2\YiiRuntime\Controllers;
 use Yii;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
+use FMonitor2\YiiRuntime\Assets\AssetVersion;
 
 final class PilotAssetController extends PilotController
 {
@@ -14,7 +15,7 @@ final class PilotAssetController extends PilotController
     {
         $root = dirname(__DIR__) . '/Assets';
         $map = [];
-        foreach (['sidebar-bootstrap.js','navigation.js','preloader.js','users.js','object-queue.js','inspection-schedule.js','preopening.js','template-offer.js','checklist.js','control-queue.js','otiz.js'] as $file) {
+        foreach (['sidebar-bootstrap.js','navigation.js','calendar.js','preloader.js','users.js','object-queue.js','inspection-schedule.js','preopening.js','template-offer.js','checklist.js','control-queue.js','otiz.js'] as $file) {
             $map[$file] = [$root . '/' . $file,'text/javascript; charset=UTF-8',3600];
         }$shlzRoot=(string)(getenv('FMONITOR_SHLZ_UI_ROOT')?:dirname(__DIR__,4).'/shlz-ui');
         $map['shlz-behaviors.js']=[$shlzRoot.'/packages/behaviors/dist/browser.js','text/javascript; charset=UTF-8',3600];
@@ -36,10 +37,13 @@ final class PilotAssetController extends PilotController
         }$bytes = file_get_contents($entry[0]);
         if (!is_string($bytes)) {
             throw new \RuntimeException();
-        }$r = Yii::$app->response;
+        }if(str_ends_with($path,'.js'))$bytes=preg_replace_callback("~((?:from\\s*|import\\s*)['\"])/pilot/assets/([A-Za-z0-9.-]+\\.js)(['\"])~",static fn(array$m):string=>$m[1].'/pilot/assets/'.AssetVersion::file($m[2]).$m[3],$bytes)??$bytes;
+        $requested=Yii::$app->request->get('v');$expected=null;if(preg_match('/\\.(?:css|js)$/D',$path)===1){$versioned=AssetVersion::file($path);$expected=substr($versioned,strpos($versioned,'?v=')+3);}
+        $immutable=is_string($requested)&&$expected!==null&&hash_equals($expected,$requested);
+        $r = Yii::$app->response;
         $r->format = Response::FORMAT_RAW;
         $r->headers->set('Content-Type', $entry[1]);
-        $r->headers->set('Cache-Control', 'public, max-age=' . $entry[2] . ($entry[2] === 31536000 ? ', immutable' : ''));
+        $r->headers->set('Cache-Control',$immutable?'public, max-age=31536000, immutable':'public, max-age='.$entry[2]);
         $r->headers->set('X-Content-Type-Options', 'nosniff');
         $r->headers->set('Cross-Origin-Resource-Policy', 'same-origin');
         if($path==='checklist-sw.js')$r->headers->set('Service-Worker-Allowed','/pilot/');

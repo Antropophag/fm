@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace FMonitor2\YiiRuntime\Controllers;
 
 use FMonitor2\YiiRuntime\InstallationProcessFactory;
+use FMonitor2\YiiRuntime\ReadOnlySession;
 use FMonitor2\Workforce\MariaDbYiiInstallerDirectory;
 use FMonitor2\YiiRuntime\PreopeningResources;
 use FMonitor2\InstallationProcess\MariaDbYiiCompletionQuery;
@@ -35,13 +36,22 @@ final class ObjectCardController extends PreopeningController
         if ($id === null) return $this->status(404);
         if (!$this->cap('objects.read')) return $this->status(403);
         try {
+            $identity=Yii::$app->user->identity;
+            $actor=$this->actor();
+            $csrf=Yii::$app->request->csrfToken;
+            $canEditDetails=$this->processCap('objects.details.edit');
+            $canSelect=$this->processCap('assignment_order.composition.select');
+            $canAssignEngineer=$this->processCap('control_engineer.assign');
+            $canOpen=$this->cap('installation.open');
+            $canReadDeadlineCertificate=$this->cap('deadline_certificate.read');
+            if(Yii::$app->request->getIsGet()||Yii::$app->request->getIsHead())ReadOnlySession::release();
             $card = InstallationProcessFactory::card(
                 Yii::$app->db,
                 (string) getenv('FMONITOR_PROCESS_TABLE_PREFIX'),
                 (string) getenv('FMONITOR_LEGACY_TABLE_PREFIX'),
-            )->read($this->actor(), $id,is_string(Yii::$app->request->get('history'))?Yii::$app->request->get('history'):null);
+            )->read($actor, $id,is_string(Yii::$app->request->get('history'))?Yii::$app->request->get('history'):null);
             if ($card === null) return $this->status(404);
-            $card['detailEditor']['allowed']=$this->processCap('objects.details.edit');
+            $card['detailEditor']['allowed']=$canEditDetails;
             $card['commentEditor']=['allowed'=>$card['detailEditor']['allowed']];
             if($this->detailsValidation!==null){$card['detailEditor']['values']=$this->detailsValidation['values'];$card['detailEditor']['errors']=$this->detailsValidation['errors'];$card['detailEditor']['open']=true;}
             if($this->commentValidation!==null)$card['commentEditor']+=$this->commentValidation;
@@ -50,7 +60,6 @@ final class ObjectCardController extends PreopeningController
             if ($documentAccess['status'] === 'unavailable') return $this->status(503, true);
             $completionQuery = new MariaDbYiiCompletionQuery(Yii::$app->db, (string) getenv('FMONITOR_PROCESS_TABLE_PREFIX'));
             $completion = $completionQuery->read($id);
-            $canReadDeadlineCertificate = $this->cap('deadline_certificate.read');
             $deadlineCertificate = null;
             if ($canReadDeadlineCertificate) {
                 $deadlineResources = new PreopeningResources(Yii::$app->db);
@@ -69,7 +78,7 @@ final class ObjectCardController extends PreopeningController
                         static fn (): string => gmdate('Y-m-d\TH:i:s\Z'),
                     ]);
                     try {
-                        $deadlineCertificate = $deadlineService->read($this->actor(), $deadlineObject['caseId'])['current'];
+                        $deadlineCertificate = $deadlineService->read($actor, $deadlineObject['caseId'])['current'];
                     } catch (\DomainException $error) {
                         if ($error->getMessage() === 'FORBIDDEN') throw $error;
                         throw new \RuntimeException('Deadline certificate evidence unavailable.', 0, $error);
@@ -78,17 +87,17 @@ final class ObjectCardController extends PreopeningController
                     $deadlineResources->close();
                 }
             }
-            $checklistAccess = $this->checklistOwner()->access($this->actor(), $id);
+            $checklistAccess = $this->checklistOwner()->access($actor, $id);
             $identityStore = Yii::$app->localIdentity;
             if (!$identityStore instanceof MariaDbYiiLocalIdentityStore) throw new \RuntimeException('Identity store unavailable.');
             $resources=new PreopeningResources(Yii::$app->db);try{$assignment=$resources->assignmentReader()->read($id);}finally{$resources->close();}
             if($assignment['status']==='unavailable')return $this->status(503,true);
             $engineers=Yii::$app->db->createCommand("SELECT u.user_id,u.full_name FROM `".(string)getenv('FMONITOR_PROCESS_TABLE_PREFIX')."fm2_pilot_users` u JOIN `".(string)getenv('FMONITOR_PROCESS_TABLE_PREFIX')."fm2_pilot_user_roles` ur ON ur.user_id=u.user_id JOIN `".(string)getenv('FMONITOR_PROCESS_TABLE_PREFIX')."fm2_pilot_roles` r ON r.role_id=ur.role_id WHERE u.status=1 AND BINARY u.activation_state='active' AND r.status=1 AND BINARY r.code='construction_control_engineer' ORDER BY u.user_id")->queryAll();
             return $this->render('@app/app/YiiRuntime/Views/object-card', $card + [
-                'identity' => Yii::$app->user->identity,
-                'canSelect' => $this->processCap('assignment_order.composition.select'),
-                'currentEngineerAssignment'=>$assignment,'canAssignEngineer'=>$this->processCap('control_engineer.assign'),'eligibleEngineers'=>$engineers,
-                'canOpen' => $this->cap('installation.open'),
+                'identity' => $identity,
+                'canSelect' => $canSelect,
+                'currentEngineerAssignment'=>$assignment,'canAssignEngineer'=>$canAssignEngineer,'eligibleEngineers'=>$engineers,
+                'canOpen' => $canOpen,
                 'canUpload' => $documentAccess['canUpload'],
                 'canCorrect' => $documentAccess['canCorrect'],
                 'canReadOriginal' => $documentAccess['canRead'],
@@ -98,12 +107,12 @@ final class ObjectCardController extends PreopeningController
                 'deadlineCertificate' => $deadlineCertificate,
                 'initialTab' => Yii::$app->request->get('tab') === 'team' ? 'team' : 'readiness',
                 // Completion capabilities are not yet in the canonical RBAC registry; grants() is the existing exact active-grant read seam.
-                'canRecordPto' => $card['completionWritable'] && $identityStore->grants($this->actor(), 'installation.completion.pto.record'),
-                'canRecordDeclaration' => $card['completionWritable'] && $identityStore->grants($this->actor(), 'installation.completion.declaration.record'),
-                'canCorrectPto' => $card['completionCorrectable'] && $identityStore->grants($this->actor(), 'installation.completion.pto.correct'),
-                'canCorrectDeclaration' => $card['completionCorrectable'] && $identityStore->grants($this->actor(), 'installation.completion.declaration.correct'),
+                'canRecordPto' => $card['completionWritable'] && $identityStore->grants($actor, 'installation.completion.pto.record'),
+                'canRecordDeclaration' => $card['completionWritable'] && $identityStore->grants($actor, 'installation.completion.declaration.record'),
+                'canCorrectPto' => $card['completionCorrectable'] && $identityStore->grants($actor, 'installation.completion.pto.correct'),
+                'canCorrectDeclaration' => $card['completionCorrectable'] && $identityStore->grants($actor, 'installation.completion.declaration.correct'),
                 'today' => (new \DateTimeImmutable('now', new \DateTimeZone('Europe/Moscow')))->format('Y-m-d'),
-                'csrf' => Yii::$app->request->csrfToken,
+                'csrf' => $csrf,
                 'completionFormState' => $this->completionFormState,
             ]);
         } catch (\DomainException) {
@@ -197,25 +206,8 @@ final class ObjectCardController extends PreopeningController
             (string) getenv('FMONITOR_PROCESS_TABLE_PREFIX'),
             (string) getenv('FMONITOR_LEGACY_TABLE_PREFIX'),
         );
-        $statuses = [];
-        $today = (new \DateTimeImmutable('now', new \DateTimeZone('Europe/Moscow')))->format('Y-m-d');
-        foreach ($tabIds as $tabId) {
-            $result = $directory->read($today, [
-                'q' => (string) $tabId,
-                'tab' => (string) $tabId,
-                'status' => '',
-                'availability' => '',
-                'page' => 1,
-            ]);
-            $matches = array_values(array_filter(
-                $result['rows'],
-                static fn (array $row): bool => (int) ($row['installer_tab_id'] ?? 0) === $tabId,
-            ));
-            if (count($matches) !== 1 || !in_array($matches[0]['employment_status'] ?? null, ['employed', 'dismissed'], true)) {
-                throw new \RuntimeException('Object card workforce status unavailable.');
-            }
-            $statuses[$tabId] = $matches[0]['employment_status'];
-        }
+        $statuses = $directory->employmentStatuses($tabIds);
+        foreach ($tabIds as $tabId) if (!isset($statuses[$tabId])) throw new \RuntimeException('Object card workforce status unavailable.');
         $withStatuses = static function (array $installer) use ($statuses): array {
             $installer['employmentStatus'] = $statuses[(int) $installer['tabId']];
             return $installer;

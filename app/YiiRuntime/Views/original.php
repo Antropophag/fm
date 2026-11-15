@@ -35,6 +35,6 @@ ViewSupport::begin($this, $title, $identity);
         <footer class="fm2-order-actions"><a class="shlz-link" href="/pilot/objects/<?= (int) $objectId ?>/assignment-order/selection">К составу</a><button class="shlz-button shlz-button--primary" type="submit" data-original-submit><?= $title ?></button></footer>
     </fieldset>
     <aside class="fm2-order-helper"><div class="fm2-order-helper-icon" aria-hidden="true"><img src="/pilot/assets/shlz-icons/plus-alt-2.svg" data-shlz-icon="plus-alt-2" alt=""></div><div><h2>После загрузки</h2><p>После успешного ответа откроется карточка объекта. При обрыве связи файл и данные останутся в форме для безопасного повтора.</p></div><a class="shlz-link" href="/pilot/objects/<?= (int) $objectId ?>">К карточке объекта</a></aside>
-    <noscript><p role="alert">Для загрузки оригинала включите JavaScript и обновите страницу.</p></noscript><p class="fm2-original-status" role="status" aria-live="polite" data-original-status></p>
+    <noscript><p role="alert">Для загрузки оригинала включите JavaScript и обновите страницу.</p></noscript><div class="fm2-original-status" role="status" aria-live="polite"><progress data-original-progress max="100" value="0" hidden></progress><p data-original-status></p></div>
 </form>
 <?php ViewSupport::end($this);

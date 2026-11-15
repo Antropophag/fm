@@ -6,6 +6,7 @@
       ],
       "name": "bounded-ui",
       "patterns": [
+        "app/YiiRuntime/Assets/calendar.js",
         "app/YiiRuntime/Assets/completion-register.css",
         "app/YiiRuntime/Assets/inspection-schedule.js",
         "app/YiiRuntime/Assets/navigation.js",
@@ -15,8 +16,8 @@
         "app/YiiRuntime/Assets/preloader.js",
         "app/YiiRuntime/Assets/preopening.css",
         "app/YiiRuntime/Assets/preopening.js",
-        "app/YiiRuntime/Assets/sidebar-bootstrap.js",
         "app/YiiRuntime/Assets/shlz.css",
+        "app/YiiRuntime/Assets/sidebar-bootstrap.js",
         "app/YiiRuntime/Assets/template-offer.js",
         "app/YiiRuntime/Assets/users.js",
         "rapid-pilot/calendar.js",
@@ -147,16 +148,17 @@
         "config/**",
         "commands/**",
         "public/yii.php",
-      "rapid-pilot/*.php",
-      "rapid-pilot/*.sh",
-      "rapid-pilot/*.mjs",
-      "rapid-pilot/*.md",
-      "rapid-pilot/*.svg",
-      "rapid-pilot/assets/**",
-      "rapid-pilot/fonts/**",
-      "rapid-pilot/legacy-migration/**",
-      "public/**",
-      "web/**"
+        "rapid-pilot/*.php",
+        "rapid-pilot/*.sh",
+        "rapid-pilot/*.mjs",
+        "rapid-pilot/*.md",
+        "rapid-pilot/*.svg",
+        "rapid-pilot/assets/**",
+        "rapid-pilot/fonts/**",
+        "rapid-pilot/legacy-migration/**",
+        "public/**",
+        "web/**",
+        "app/YiiRuntime/ReadOnlySession.php"
       ],
       "tests": []
     },
@@ -275,8 +277,15 @@
   "capability_ownership": [
     {
       "name": "architecture-sql-ownership",
-      "patterns": ["tools/architecture/check.py", "tools/architecture/check"],
-      "verifiers": ["tests/Verification/architecture_native_select_tokens_291_test.py", "tests/Verification/architecture_js_select_tokens_286_test.py", "tests/Verification/architecture_guard_001_test.py"],
+      "patterns": [
+        "tools/architecture/check.py",
+        "tools/architecture/check"
+      ],
+      "verifiers": [
+        "tests/Verification/architecture_native_select_tokens_291_test.py",
+        "tests/Verification/architecture_js_select_tokens_286_test.py",
+        "tests/Verification/architecture_guard_001_test.py"
+      ],
       "consumers": []
     },
     {
@@ -420,8 +429,8 @@
         "app/Otiz/MariaDbSnapshotBuilderPersistence.php",
         "app/Otiz/MariaDbNativePremiumInputsValues.php",
         "app/Otiz/MariaDbObjectRegisterQuery.php",
-        "app/Otiz/NativePremiumNorms.php"
-        ,"app/Otiz/ObjectEconomy.php"
+        "app/Otiz/NativePremiumNorms.php",
+        "app/Otiz/ObjectEconomy.php"
       ],
       "verifiers": [
         "tests/Otiz/excel_inputs_001_test.php",
@@ -615,23 +624,23 @@
         "app/Otiz/OtizSettlementV2DraftBuilder.php",
         "app/Otiz/OtizSettlementV2Admission.php",
         "app/Otiz/OtizPortfolioEconomy.php",
-        "app/Otiz/OtizSettlementV2Workbook.php"
-        ,"app/Otiz/MariaDbOtizSettlementV2.php"
-        ,"app/Otiz/MariaDbOtizSettlementV2Admission.php"
-        ,"app/Otiz/MariaDbOtizSettlementV2DraftBuilder.php"
-        ,"app/Otiz/MariaDbOtizSettlementV2Access.php"
-        ,"app/Otiz/MariaDbNativeOtizAdmission.php"
-        ,"app/Otiz/MariaDbOtizCalculationRegister.php"
-        ,"app/Otiz/MariaDbOtizPortfolioEconomy.php"
-        ,"app/Otiz/MariaDbOtizMonthlyTotals.php"
-        ,"app/Otiz/OtizCalculationReportFilter.php"
-        ,"app/YiiRuntime/Controllers/OtizSettlementV2Controller.php"
-        ,"app/YiiRuntime/Controllers/OtizAdmissionController.php"
-        ,"app/YiiRuntime/Views/otiz-v2-register.php"
-        ,"app/YiiRuntime/Views/otiz-calculation-v2.php"
-        ,"app/YiiRuntime/Views/otiz-economy-v2.php"
-        ,"app/autoload.php"
-        ,"public/yii.php"
+        "app/Otiz/OtizSettlementV2Workbook.php",
+        "app/Otiz/MariaDbOtizSettlementV2.php",
+        "app/Otiz/MariaDbOtizSettlementV2Admission.php",
+        "app/Otiz/MariaDbOtizSettlementV2DraftBuilder.php",
+        "app/Otiz/MariaDbOtizSettlementV2Access.php",
+        "app/Otiz/MariaDbNativeOtizAdmission.php",
+        "app/Otiz/MariaDbOtizCalculationRegister.php",
+        "app/Otiz/MariaDbOtizPortfolioEconomy.php",
+        "app/Otiz/MariaDbOtizMonthlyTotals.php",
+        "app/Otiz/OtizCalculationReportFilter.php",
+        "app/YiiRuntime/Controllers/OtizSettlementV2Controller.php",
+        "app/YiiRuntime/Controllers/OtizAdmissionController.php",
+        "app/YiiRuntime/Views/otiz-v2-register.php",
+        "app/YiiRuntime/Views/otiz-calculation-v2.php",
+        "app/YiiRuntime/Views/otiz-economy-v2.php",
+        "app/autoload.php",
+        "public/yii.php"
       ],
       "verifiers": [
         "tests/Otiz/native_admission_001_test.php",
@@ -679,11 +688,11 @@
         "app/RuntimeRestore/RuntimeRecovery.php",
         "app/RuntimeRestore/RuntimeRecoverySchemaV29.php",
         "app/RuntimeRestore/RuntimeRecoverySchemaV30.php",
-        "app/RuntimeRestore/RuntimeRecoverySchemaV32.php"
-        ,"app/RuntimeRestore/RuntimeRecoverySchemaV35.php"
-        ,"app/RuntimeRestore/RuntimeRecoverySchemaV36.php"
-        ,"app/RuntimeRestore/RuntimeRecoverySchemaV37.php"
-        ,"app/RuntimeRestore/RuntimeRecoverySchemaV38.php"
+        "app/RuntimeRestore/RuntimeRecoverySchemaV32.php",
+        "app/RuntimeRestore/RuntimeRecoverySchemaV35.php",
+        "app/RuntimeRestore/RuntimeRecoverySchemaV36.php",
+        "app/RuntimeRestore/RuntimeRecoverySchemaV37.php",
+        "app/RuntimeRestore/RuntimeRecoverySchemaV38.php"
       ],
       "verifiers": [
         "tests/Runtime/runtime_recovery_001_test.php",
@@ -826,9 +835,9 @@
         "app/InstallationProcess/InstallationCaseCurrentStatus.php",
         "app/InstallationProcess/MariaDbWeeklyFkrReportSource.php",
         "app/Jobs/MariaDbWeeklyFkrOpeningEligibility.php",
-        "app/Jobs/MariaDbOutbox.php"
-        ,"app/Jobs/OutboxDeliveryOutcome.php"
-        ,"app/InspectionEvidence/MariaDbChecklistProgress.php"
+        "app/Jobs/MariaDbOutbox.php",
+        "app/Jobs/OutboxDeliveryOutcome.php",
+        "app/InspectionEvidence/MariaDbChecklistProgress.php"
       ],
       "verifiers": [
         "tests/Jobs/weekly_fkr_report_delivery_001_test.php",
@@ -867,6 +876,37 @@
       "consumers": [
         "canonical-migration-frontier"
       ]
+    },
+    {
+      "name": "protected-photo-thumbnail",
+      "patterns": [
+        "app/InspectionEvidence/InspectionPhotoThumbnail.php"
+      ],
+      "verifiers": [
+        "tests/Yii2/yii2_checklist_photo_viewing_browser_001_test.php"
+      ],
+      "consumers": []
+    },
+    {
+      "name": "request-local-register-admission",
+      "patterns": [
+        "app/Otiz/OtizRegisterAdmission.php"
+      ],
+      "verifiers": [
+        "tests/Yii2/yii2_otiz_settlement_v2_001_test.php"
+      ],
+      "consumers": []
+    },
+    {
+      "name": "read-only-yii-session-handoff",
+      "patterns": [
+        "app/YiiRuntime/ReadOnlySession.php"
+      ],
+      "verifiers": [
+        "tests/Yii2/yii2_session_failure_001_test.php",
+        "tests/Yii2/yii2_month_session_001_test.php"
+      ],
+      "consumers": []
     }
   ],
   "full_argv": [
@@ -883,49 +923,133 @@
   "suite_inventory": "tools/verification/suites.tsv",
   "generated_sources": [
     {
-      "inputs": ["tools/delivery/Dockerfile.runtime.in", "tools/delivery/dependencies.env", "tools/delivery/render-dependencies.py"],
-      "artifacts": ["deploy/runtime/Dockerfile"],
-      "check": ["python3", "tools/delivery/render-dependencies.py", "--check"],
-      "consumers": [["python3", "tests/Verification/verification_ci_001_test.py"]]
+      "inputs": [
+        "tools/delivery/Dockerfile.runtime.in",
+        "tools/delivery/dependencies.env",
+        "tools/delivery/render-dependencies.py"
+      ],
+      "artifacts": [
+        "deploy/runtime/Dockerfile"
+      ],
+      "check": [
+        "python3",
+        "tools/delivery/render-dependencies.py",
+        "--check"
+      ],
+      "consumers": [
+        [
+          "python3",
+          "tests/Verification/verification_ci_001_test.py"
+        ]
+      ]
     }
   ],
   "environment_profiles": {
-    "unit": {"services": [], "languages": ["python3", "php", "node"]},
-    "integration": {"services": ["mariadb"], "languages": ["python3", "php", "node"]},
-    "e2e": {"services": ["mariadb", "browser", "container"], "languages": ["python3", "php", "node"]},
-    "governance": {"services": [], "languages": ["python3", "php", "node"]}
+    "unit": {
+      "services": [],
+      "languages": [
+        "python3",
+        "php",
+        "node"
+      ]
+    },
+    "integration": {
+      "services": [
+        "mariadb"
+      ],
+      "languages": [
+        "python3",
+        "php",
+        "node"
+      ]
+    },
+    "e2e": {
+      "services": [
+        "mariadb",
+        "browser",
+        "container"
+      ],
+      "languages": [
+        "python3",
+        "php",
+        "node"
+      ]
+    },
+    "governance": {
+      "services": [],
+      "languages": [
+        "python3",
+        "php",
+        "node"
+      ]
+    }
   },
   "focused_command_profiles": {
+    "tests/Runtime/production_performance_session_001_test.php": "browser",
     "tests/Runtime/yii2_safe_error_correlation_001_test.php": "integration",
+    "tests/Yii2/production_performance_assets_001_test.php": "browser",
+    "tests/Yii2/production_performance_browser_001_test.php": "browser",
+    "tests/Yii2/production_performance_concurrency_001_test.php": "browser",
+    "tests/Yii2/production_performance_reads_001_test.php": "browser",
+    "tests/Yii2/yii2_calendar_003_browser_test.php": "browser",
+    "tests/Yii2/yii2_calendar_003_test.php": "browser",
+    "tests/Yii2/yii2_checklist_photo_viewing_001_test.php": "browser",
+    "tests/Yii2/yii2_checklist_photo_viewing_browser_001_test.php": "browser",
     "tests/Yii2/yii2_construction_control_shipment_indicator_001_test.php": "integration",
-    "tests/Yii2/yii2_main_navigation_001_test.php": "browser"
+    "tests/Yii2/yii2_inspection_browser_001_test.php": "browser",
+    "tests/Yii2/yii2_installer_utilization_stage_one_001_test.php": "browser",
+    "tests/Yii2/yii2_main_navigation_001_test.php": "browser",
+    "tests/Yii2/yii2_month_session_001_test.php": "browser",
+    "tests/Yii2/yii2_otiz_settlement_v2_001_test.php": "browser",
+    "tests/Yii2/yii2_otiz_settlement_v2_browser_001_test.php": "browser",
+    "tests/Yii2/yii2_session_failure_001_test.php": "browser",
+    "tests/Yii2/yii2_user_access_001_test.php": "browser",
+    "tests/Yii2/yii2_user_access_browser_001_test.php": "browser"
   },
   "semantic_surfaces": [
     {
       "name": "current-state-authority",
-      "patterns": ["app/**/*Current*.php", "app/**/*Projection*.php", "app/**/*State*.php"],
+      "patterns": [
+        "app/**/*Current*.php",
+        "app/**/*Projection*.php",
+        "app/**/*State*.php"
+      ],
       "category": "integration",
       "reason": "authoritative current-state changes affect downstream consumers"
     },
     {
       "name": "persistence-semantics",
-      "patterns": ["app/**/MariaDb*.php", "app/Infrastructure/Persistence/**"],
+      "patterns": [
+        "app/**/MariaDb*.php",
+        "app/Infrastructure/Persistence/**"
+      ],
       "category": "integration",
       "reason": "persisted state semantics require integration closure"
     },
     {
       "name": "schema-migration-frontier",
-      "patterns": ["app/**/*Migration*.php", "app/**/*Schema*.php", "migrations/**"],
+      "patterns": [
+        "app/**/*Migration*.php",
+        "app/**/*Schema*.php",
+        "migrations/**"
+      ],
       "category": "integration",
       "reason": "schema and migration frontier require integration closure"
     },
     {
       "name": "domain-application-contract",
       "patterns": [
-        "app/AssignmentOrderComposition/**", "app/AssignmentOrderOriginal/**",
-        "app/DeadlineTransferCertificate/**", "app/IdentityAccess/**",
-        "app/InspectionEvidence/**", "app/InstallationProcess/**", "app/Jobs/**",
-        "app/Otiz/**", "app/RapidPilot/**", "app/Runtime/**", "app/Workforce/**",
+        "app/AssignmentOrderComposition/**",
+        "app/AssignmentOrderOriginal/**",
+        "app/DeadlineTransferCertificate/**",
+        "app/IdentityAccess/**",
+        "app/InspectionEvidence/**",
+        "app/InstallationProcess/**",
+        "app/Jobs/**",
+        "app/Otiz/**",
+        "app/RapidPilot/**",
+        "app/Runtime/**",
+        "app/Workforce/**",
         "app/YiiRuntime/*Application.php"
       ],
       "category": "integration",
@@ -933,21 +1057,44 @@
     },
     {
       "name": "recovery-representation",
-      "patterns": ["app/**/*Recovery*.php", "app/**/*Restore*.php", "app/RuntimeRestore/**"],
+      "patterns": [
+        "app/**/*Recovery*.php",
+        "app/**/*Restore*.php",
+        "app/RuntimeRestore/**"
+      ],
       "category": "integration",
       "reason": "persisted recovery representation requires integration closure"
     }
   ],
   "test_prerequisites": {
-    "tests/Yii2/yii2_imports_workforce_001_test.php": {"services": ["mariadb"]}
+    "tests/Yii2/yii2_imports_workforce_001_test.php": {
+      "services": [
+        "mariadb"
+      ]
+    }
   },
   "declared_python_imports": [],
   "declared_php_dependencies": [],
   "declared_node_dependencies": [],
   "service_probes": {
-    "mariadb": ["python3", "tools/delivery/probe-environment.py", "service", "mariadb"],
-    "browser": ["python3", "tools/delivery/probe-environment.py", "service", "browser"],
-    "container": ["python3", "tools/delivery/probe-environment.py", "service", "container"]
+    "mariadb": [
+      "python3",
+      "tools/delivery/probe-environment.py",
+      "service",
+      "mariadb"
+    ],
+    "browser": [
+      "python3",
+      "tools/delivery/probe-environment.py",
+      "service",
+      "browser"
+    ],
+    "container": [
+      "python3",
+      "tools/delivery/probe-environment.py",
+      "service",
+      "container"
+    ]
   },
   "verification_lanes": {
     "FAST": [

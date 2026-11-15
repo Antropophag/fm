@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FMonitor2\YiiRuntime\Controllers;
 
 use FMonitor2\Workforce\MariaDbInstallerUtilization;
+use FMonitor2\YiiRuntime\ReadOnlySession;
 use Yii;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
@@ -31,6 +32,12 @@ final class InstallerDirectoryController extends PilotController
     {
         $filters = $this->filters();
         try {
+            $identity=Yii::$app->user->identity;
+            $csrf=Yii::$app->request->csrfToken;
+            $actor=(int)Yii::$app->user->id;
+            $canAdmin=Yii::$app->canonicalAccess->checkAccess($actor,'access.administer');
+            $canControl=Yii::$app->canonicalAccess->checkAccess($actor,'construction_control.read');
+            ReadOnlySession::release();
             $model = (new MariaDbInstallerUtilization(
                 Yii::$app->db,
                 (string) (getenv('FMONITOR_PROCESS_TABLE_PREFIX') ?: ''),
@@ -38,9 +45,10 @@ final class InstallerDirectoryController extends PilotController
             ))->directory($filters);
             if((int)$model['summary']['total']===0)$model['rows']=[];
             return $this->render('@app/app/YiiRuntime/Views/installers', $model + [
-                'identity' => Yii::$app->user->identity,
-                'canAdmin' => Yii::$app->canonicalAccess->checkAccess((int) Yii::$app->user->id, 'access.administer'),
-                'canControl' => Yii::$app->canonicalAccess->checkAccess((int) Yii::$app->user->id, 'construction_control.read'),
+                'identity' => $identity,
+                'canAdmin' => $canAdmin,
+                'canControl' => $canControl,
+                'csrf' => $csrf,
             ]);
         } catch (\OutOfRangeException) {
             throw new BadRequestHttpException();

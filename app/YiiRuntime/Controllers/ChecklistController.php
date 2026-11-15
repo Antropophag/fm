@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace FMonitor2\YiiRuntime\Controllers;
 
 use FMonitor2\InspectionEvidence\MariaDbYiiChecklist;
+use FMonitor2\InspectionEvidence\InspectionPhotoThumbnail;
 use FMonitor2\Runtime\SafeRuntimeFailure;
 use FMonitor2\InspectionEvidence\InspectionRecording;
 use FMonitor2\InspectionEvidence\ProductionInspectionEvidenceConfig;
@@ -68,6 +69,8 @@ return$this->json(200,['csrf'=>Yii::$app->request->csrfToken,'revision'=>$o->pro
     {
         $id=$this->id($id);$photoId=$this->id($photoId);
         if($id===null||$photoId===null)return$this->plain(404);
+        $variant=Yii::$app->request->get('variant');
+        if($variant!==null&&$variant!=='thumbnail')return$this->plain(404);
         try{$owner=$this->owner();$access=$owner->access($this->actor(),$id);
             if(!($access['exists']??false))return$this->plain(404);
             if(!($access['read']??false))return$this->plain(403);
@@ -78,12 +81,12 @@ return$this->json(200,['csrf'=>Yii::$app->request->csrfToken,'revision'=>$o->pro
             $root=(string)(getenv('FMONITOR_ARTIFACT_STORAGE_ROOT')?:getenv('FMONITOR_DEMO_PRIVATE_ROOT'));
             $directory=$root.'/checklist';$path=$directory.'/'.$storage;
             if(is_link($path)||!is_file($path)||filesize($path)!==(int)$photo['size'])return$this->plain(503,true);
-            $bytes=file_get_contents($path);
-            if(!is_string($bytes)||strlen($bytes)!==(int)$photo['size'])return$this->plain(503,true);
+            if($variant==='thumbnail'){$rendered=(new InspectionPhotoThumbnail())->render($path,(string)$photo['sha256'],$root.'/derived');$bytes=$rendered['bytes'];$mime=$rendered['mime'];}
+            else{$bytes=file_get_contents($path);$mime=(string)$photo['mime'];if(!is_string($bytes)||strlen($bytes)!==(int)$photo['size'])return$this->plain(503,true);}
             $response=Yii::$app->response;$response->statusCode=200;$response->format=Response::FORMAT_RAW;
-            $response->headers->set('Content-Type',(string)$photo['mime']);
-            $response->headers->set('Content-Length',(string)$photo['size']);
-            $response->headers->set('Content-Disposition','inline; filename="checklist-photo.'.(['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'][(string)$photo['mime']]??'bin').'"');
+            $response->headers->set('Content-Type',$mime);
+            $response->headers->set('Content-Length',(string)strlen($bytes));
+            $response->headers->set('Content-Disposition','inline; filename="checklist-photo'.($variant==='thumbnail'?'-thumbnail':'').'.'.(['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'][$mime]??'bin').'"');
             $response->headers->set('X-Content-Type-Options','nosniff');
             $response->headers->set('Cache-Control','private, no-store');
             $response->content=$bytes;
@@ -184,7 +187,7 @@ Yii::$app->response->statusCode=$status;return$this->render('@app/app/YiiRuntime
 }
 
     private function projection(MariaDbYiiChecklist $owner,int $objectId):array{$projection=$owner->projection($objectId);
-foreach($projection['photos']as&$photo)$photo['viewUrl']='/pilot/objects/'.$objectId.'/checklist/photos/'.(int)$photo['id'];
+foreach($projection['photos']as&$photo){$photo['viewUrl']='/pilot/objects/'.$objectId.'/checklist/photos/'.(int)$photo['id'];$photo['thumbnailUrl']=$photo['viewUrl'].'?variant=thumbnail';}
 unset($photo);return$projection;
 }
 

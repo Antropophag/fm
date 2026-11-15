@@ -10,10 +10,10 @@ use yii\web\View;
 
 final class ViewSupport
 {
-    public static function begin(View $view, string $title, object $identity, ?string $currentSection = null, string $shellVariant = ''): void
+    public static function begin(View $view, string $title, object $identity, ?string $currentSection = null, string $shellVariant = '', ?string $csrfToken = null): void
     {
         PreopeningAssetBundle::register($view);
-        $csrf = Html::hiddenInput(\Yii::$app->request->csrfParam, \Yii::$app->request->csrfToken);
+        $csrf = Html::hiddenInput(\Yii::$app->request->csrfParam, $csrfToken ?? \Yii::$app->request->csrfToken);
         $parts = preg_split('/\s+/u', trim((string) $identity->displayName), -1, PREG_SPLIT_NO_EMPTY) ?: [];
         $initials = '';
         foreach (array_slice($parts, 0, 2) as $part) {
@@ -27,7 +27,7 @@ final class ViewSupport
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title><?= Html::encode($title) ?> · FMonitor 2.0</title>
     <link rel="icon" href="/pilot/assets/favicon.svg">
-    <script src="/pilot/assets/sidebar-bootstrap.js" data-storage-key="fmonitor.sidebar.expanded" data-storage-api="localStorage.getItem" data-root-state="dataset.fm2Sidebar"></script>
+    <script src="/pilot/assets/<?=Html::encode(\FMonitor2\YiiRuntime\Assets\AssetVersion::file('sidebar-bootstrap.js'))?>" data-storage-key="fmonitor.sidebar.expanded" data-storage-api="localStorage.getItem" data-root-state="dataset.fm2Sidebar"></script>
     <?php $view->head() ?>
 </head>
 <body class="shlz-scope">

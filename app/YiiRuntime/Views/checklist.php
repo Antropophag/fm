@@ -1,5 +1,5 @@
 <?php declare(strict_types=1);
-use FMonitor2\YiiRuntime\ViewSupport;use yii\helpers\Html;
+use FMonitor2\YiiRuntime\ViewSupport;use FMonitor2\YiiRuntime\Assets\AssetVersion;use yii\helpers\Html;
 $sections=[1=>['Демонтаж старого оборудования',[[28,'Зачистка шахты, переделка кабины',2],[29,'Демонтаж направляющих',2],[30,'Демонтаж кронштейнов',2],[31,'Демонтаж ДШ',2],[32,'Демонтаж МП (СУ; СПЧ; ВУ)',1],[33,'Демонтаж каркаса кабины',1],[34,'Демонтаж противовеса',2],[35,'Демонтаж приямка, НУ',1],[36,'Демонтаж лебёдки, ОС',2]]],2=>['Монтаж направляющих',[[37,'Монтаж основных кронштейнов',3],[38,'Монтаж кронштейнов противовеса',3],[39,'Монтаж основных направляющих',3],[40,'Монтаж направляющих противовеса',3],[41,'Выверка направляющих, зачистка стыков',2]]],3=>['Монтаж кабины и противовеса',[[1,'Монтаж каркаса кабины',2],[2,'Монтаж противовеса',2],[3,'Загрузка противовеса',1],[4,'Сборка купе кабины',2],[5,'Установка привода и ДК',1],[6,'Монтаж буферов',1]]],4=>['Монтаж ДШ',[[7,'Сборка порталов',2],[8,'Монтаж ДШ',5],[9,'Установка фартуков',1],[10,'Монтаж вызывных постов и этажных указателей',1]]],5=>['Монтаж в МП',[[11,'Монтаж лебёдки',3],[12,'Запасовка канатов',2],[13,'Монтаж ОС; НУ (запасовка)',2],[14,'Монтаж СУЛ с ПЧ; ВУ',1],[15,'Разварка контура МП; шахты; приямка',2]]],6=>['ПНР',[[16,'Электромонтаж по шахте',4],[17,'Электроразводка по МП',4],[18,'Наладка ДШ',3],[19,'Установка шунтов и датчиков',3],[20,'Пуск лифта в «нормальную» работу',3],[21,'Диспетчеризация',2]]],7=>['Стройотделка',[[22,'Установка ОДШЛ; порогов (покраска)',3],[23,'СОР МП; шахты; приямка',2],[24,'Примыкания ДШ (в шахте)',1],[25,'Покраска сварных соединений, контура, шахты',1],[26,'Освещение МП; шахты',1],[27,'Установка противопожарных дверей; люков',1]]]];
 $enabled=(bool)$access['opened']&&((bool)$access['roleAccess']||(bool)$access['itemComplete']);$legacy=(bool)$access['opened']&&(bool)$access['roleAccess'];$assigned=(bool)$access['opened']&&(bool)$access['assigned'];
 $technicalDocuments=$access['technicalDocuments']??['status'=>'unavailable','links'=>[]];$technicalDocument=$technicalDocuments['status']==='available'?($technicalDocuments['links'][0]??null):null;$orderNumber=$access['orderNumber']??null;
@@ -12,6 +12,7 @@ ViewSupport::begin($this,'Чек-лист объекта № '.$id,$identity);?>
 </a>
 <div class="fm2-sync-banner" data-sync-banner role="status">
 <span data-sync-copy>Синхронизировано</span>
+<progress data-sync-progress max="100" value="0" hidden></progress>
 <button type="button" data-sync-now hidden>Повторить отправку</button>
 </div>
 </div>
@@ -140,6 +141,6 @@ ViewSupport::begin($this,'Чек-лист объекта № '.$id,$identity);?>
 <div class="shlz-alert fm2-feedback-toast" role="status" data-toast hidden>
 </div>
 </div>
-<script src="/pilot/assets/checklist.js?v=20260921-1" defer>
+<script src="/pilot/assets/<?=Html::encode(AssetVersion::file('checklist.js'))?>" defer>
 </script>
 <?php ViewSupport::end($this);

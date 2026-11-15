@@ -9,6 +9,7 @@ use yii\filters\VerbFilter;
 use yii\web\BadRequestHttpException;
 use yii\web\ForbiddenHttpException;
 use yii\web\Response;
+use yii\web\NotFoundHttpException;
 use FMonitor2\IdentityAccess\LegacyIdentityLinkCommand;
 use FMonitor2\IdentityAccess\ProductionLegacyIdentityLinkFactory;
 final class UserAccessController extends PilotController
@@ -21,11 +22,12 @@ Yii::$app->response->headers->set('Location','/pilot/login');
 }else throw new ForbiddenHttpException();
 }]];
 }
- public function actionIndex():string{try{$actor=(int)Yii::$app->user->id;$d=$this->owner()->directory($actor);$db=$this->legacyDb();$process=(string)getenv('FMONITOR_PROCESS_TABLE_PREFIX');$legacy=(string)getenv('FMONITOR_LEGACY_TABLE_PREFIX');if($legacy==='')$legacy=$process;try{$links=ProductionLegacyIdentityLinkFactory::create($db,$process,$legacy)->directory($actor);}finally{$db->close();}
+ public function actionIndex():string{try{$actor=(int)Yii::$app->user->id;$d=$this->owner()->directory($actor);$query=Yii::$app->request->queryParams;if(array_diff(array_keys($query),['q','status','role','page'])!==[])throw new BadRequestHttpException();$q=$this->queryScalar('q');$status=$this->queryScalar('status','all');$role=$this->queryScalar('role');$pageRaw=$this->queryScalar('page','1');if(!in_array($status,['all','active','invited','blocked'],true)||preg_match('/^[1-9][0-9]*$/D',$pageRaw)!==1||($role!==''&&preg_match('/^[1-9][0-9]*$/D',$role)!==1))throw new BadRequestHttpException();$all=$d['users'];$needle=mb_strtolower(trim($q));$filtered=array_values(array_filter($all,static function(array$user)use($needle,$status,$role):bool{$state=$user['active']?'active':($user['invited']?'invited':'blocked');$text=mb_strtolower($user['name'].' '.$user['email'].' '.$user['phone']);$roles=array_map('strval',array_column($user['roles'],'id'));return($needle===''||str_contains($text,$needle))&&($status==='all'||$status===$state)&&($role===''||in_array($role,$roles,true));}));$page=(int)$pageRaw;$pages=max(1,(int)ceil(count($filtered)/25));if($page>$pages)$page=$pages;$d['users']=array_slice($filtered,($page-1)*25,25);$d['allUsers']=$all;$d['total']=count($filtered);$d['page']=$page;$d['pages']=$pages;$d['query']=['q'=>$q,'status'=>$status,'role'=>$role];
 }catch(DomainException){throw new ForbiddenHttpException();
-}catch(\Throwable$e){throw new \RuntimeException('User directory unavailable.',0,$e);
-}return$this->render('@app/app/YiiRuntime/Views/users',['identity'=>Yii::$app->user->identity,'directory'=>$d,'legacyLinks'=>$links,'notice'=>Yii::$app->session->getFlash('notice'),'error'=>Yii::$app->session->getFlash('error'),'invitation'=>Yii::$app->session->getFlash('invitation'),'inviteForm'=>Yii::$app->session->getFlash('inviteForm')]);
+}catch(\Throwable$e){if($e instanceof \yii\web\HttpException)throw$e;throw new \RuntimeException('User directory unavailable.',0,$e);
+}return$this->render('@app/app/YiiRuntime/Views/users',['identity'=>Yii::$app->user->identity,'directory'=>$d,'notice'=>Yii::$app->session->getFlash('notice'),'error'=>Yii::$app->session->getFlash('error'),'invitation'=>Yii::$app->session->getFlash('invitation'),'inviteForm'=>Yii::$app->session->getFlash('inviteForm')]);
 }
+ public function actionEditor(int$id):string{Yii::$app->response->headers->set('Cache-Control','no-store');try{$actor=(int)Yii::$app->user->id;$d=$this->owner()->directory($actor);$user=current(array_filter($d['users'],static fn(array$u):bool=>(int)$u['id']===$id));if(!is_array($user))throw new NotFoundHttpException();$actorUser=current(array_filter($d['users'],static fn(array$u):bool=>(int)$u['id']===$actor));$canSuper=is_array($actorUser)&&in_array('access.superadminister',$actorUser['permissions'],true);$db=$this->legacyDb();$process=(string)getenv('FMONITOR_PROCESS_TABLE_PREFIX');$legacy=(string)getenv('FMONITOR_LEGACY_TABLE_PREFIX');if($legacy==='')$legacy=$process;try{$links=ProductionLegacyIdentityLinkFactory::create($db,$process,$legacy)->directory($actor);}finally{$db->close();}}catch(DomainException){throw new ForbiddenHttpException();}return$this->render('@app/app/YiiRuntime/Views/user-editor',['identity'=>Yii::$app->user->identity,'user'=>$user,'roles'=>$d['roles'],'legacyLink'=>$links[$id]??null,'canSuper'=>$canSuper,'actorId'=>$actor]);}
  public function actionLegacyLink(int$id):Response{
   if(strlen(http_build_query(Yii::$app->request->post()))>8192){Yii::$app->response->statusCode=413;return Yii::$app->response;}if(!Yii::$app->request->validateCsrfToken())throw new BadRequestHttpException();
   if((int)($_SERVER['CONTENT_LENGTH']??0)>8192){Yii::$app->response->statusCode=413;return Yii::$app->response;}if(!str_starts_with((string)Yii::$app->request->contentType,'application/x-www-form-urlencoded')){Yii::$app->response->statusCode=415;return Yii::$app->response;}
@@ -100,6 +102,7 @@ $error='Ссылка активации недействительна или и
 if(!is_string($v))throw new BadRequestHttpException();
 return$v;
 }
+ private function queryScalar(string$name,string$default=''):string{$v=Yii::$app->request->get($name,$default);if(!is_string($v)||mb_strlen($v)>300)throw new BadRequestHttpException();return$v;}
  private function success(string$message,array$r,string$origin):void{Yii::$app->session->setFlash('notice',$message);
 Yii::$app->session->setFlash('invitation',$origin.'/pilot/activate?token='.$r['token']);
 }

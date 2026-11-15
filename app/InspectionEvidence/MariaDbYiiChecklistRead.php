@@ -58,9 +58,9 @@ trait MariaDbYiiChecklistRead
         {
             $case=$this->case($objectId,false);
             if($case===null)return null;
-            $row=$this->one("SELECT storage_name,mime_type,byte_size FROM {$this->t('fm2_checklist_photos')} WHERE id=? AND installation_case_id=? AND revoked_at IS NULL",[$photoId,(int)$case['id']]);
+            $row=$this->one("SELECT storage_name,sha256,mime_type,byte_size FROM {$this->t('fm2_checklist_photos')} WHERE id=? AND installation_case_id=? AND revoked_at IS NULL",[$photoId,(int)$case['id']]);
             if($row===null)return null;
-            return['storageName'=>(string)$row['storage_name'],'mime'=>(string)$row['mime_type'],'size'=>(int)$row['byte_size']];
+            return['storageName'=>(string)$row['storage_name'],'sha256'=>(string)$row['sha256'],'mime'=>(string)$row['mime_type'],'size'=>(int)$row['byte_size']];
         }
 
         public function queue(int $actorId,int $page=1,int $size=50,string$ownership='mine',string$query='',bool$includeCompleted=false):array

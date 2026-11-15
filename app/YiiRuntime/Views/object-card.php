@@ -119,7 +119,7 @@ $registrationIdentity = trim((string) $registrationNumber) !== ''
 $liftTypeDisplay = $objectDetailsStatus === 'available' && isset($objectDetails['fields']['lift_type'])
     ? $technicalDisplay('lift_type', $objectDetails['fields']['lift_type'])
     : 'Не указано';
-ViewSupport::begin($this, $registrationIdentity, $identity);
+ViewSupport::begin($this, $registrationIdentity, $identity, null, '', $csrf);
 ?>
 <nav class="fm2-breadcrumb" aria-label="Хлебные крошки">
     <a class="fm2-breadcrumb-link" href="/pilot/objects">Объекты монтажа</a>

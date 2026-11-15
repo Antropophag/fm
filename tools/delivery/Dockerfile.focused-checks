@@ -38,8 +38,9 @@ FROM ${PHP_IMAGE}@${PHP_IMAGE_DIGEST} AS common
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        bash git make unzip \
-    && docker-php-ext-install -j"$(nproc)" mysqli pcntl pdo_mysql \
+        bash git make unzip libzip-dev libjpeg62-turbo-dev libpng-dev libwebp-dev \
+    && docker-php-ext-configure gd --with-jpeg --with-webp \
+    && docker-php-ext-install -j"$(nproc)" gd zip mysqli pcntl pdo_mysql \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=node /usr/local/ /usr/local/

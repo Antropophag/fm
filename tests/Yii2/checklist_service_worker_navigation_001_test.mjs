@@ -50,7 +50,7 @@ const lifecycle = async type => {
   await work;
 };
 const preservedPath = '/pilot/objects/9999/checklist';
-await (await caches.open('fmonitor2-checklist-doc-v7-17')).put(
+await (await caches.open('fmonitor2-checklist-doc-v8-17')).put(
   preservedPath,
   new Response('<main data-checklist data-user-id="17"></main>', {headers: {'content-type': 'text/html'}}),
 );
@@ -59,7 +59,7 @@ await lifecycle('install');
 await lifecycle('activate');
 assert.equal(skipWaitingCalls, 1, 'updated worker requests immediate activation');
 assert.equal(claimCalls, 1, 'updated worker claims existing clients');
-assert.ok(await (await caches.open('fmonitor2-checklist-doc-v7-17')).match(preservedPath), 'current checklist cache survives worker update');
+assert.ok(await (await caches.open('fmonitor2-checklist-doc-v8-17')).match(preservedPath), 'current checklist cache survives worker update');
 assert.equal(stores.has('fmonitor2-checklist-doc-v6-17'), false, 'stale checklist generation is removed');
 
 const navigation = async path => {

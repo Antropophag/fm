@@ -10,11 +10,12 @@ final class ObjectQueueAssetBundle extends \yii\web\AssetBundle
     public $basePath = '@app/app/YiiRuntime/Assets';
     public $baseUrl = '/pilot/assets';
     public $css = ['shlz.css','pilot.css'];
-    public $js = ['preloader.js','navigation.js','object-queue.js','inspection-schedule.js'];
+    public $js = ['navigation.js','object-queue.js','inspection-schedule.js'];
     public $jsOptions = ['position' => \yii\web\View::POS_END,'type'=>'module'];
     public function init(): void
     {
         parent::init();
-        $this->css = ['shlz.css', AssetVersion::file('pilot.css')];
+        $this->css = [AssetVersion::file('shlz.css'), AssetVersion::file('pilot.css')];
+        $this->js = [AssetVersion::file('navigation.js'),AssetVersion::file('object-queue.js'),AssetVersion::file('inspection-schedule.js')];
     }
 }
