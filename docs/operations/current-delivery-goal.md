@@ -2,6 +2,8 @@
 
 Owner15.11.2026 сообщил404 и попросил проверить параллельныйPR. Подтверждено: production shared web/assets/asset-controller bytes точно равныPR2944cdd3d5 и потеряли регистрации address-register; остальные16runtime files сохранены. Новый dedicated worktree restore-address-register-after-perf объединяет publishedPR294 + два reviewed address commits локально, не меняет чужой worktree/ветку/PR. Root bounded correction author; independent final review до точечного восстановления3shared files. Старые разрешения production-first сохраняются; данные/settings не менять. Full local suite запрещён.
 
+Восстановлено15.11 22:16МСК:3shared registrations returned, immutable derived PHP image persisted,1047other files preserved, focused HTTP/browser and independent review PASS. [Recovery record](address-register-recovery-20261115.md). PublishedPR294 still requires preservation of these additive routes/assets before future rollout; its worktree/WIP is untouched.
+
 ---
 
 # Текущая цель — исправить весь production performance audit
