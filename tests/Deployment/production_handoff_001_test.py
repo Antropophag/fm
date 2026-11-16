@@ -156,6 +156,45 @@ class Handoff(unittest.TestCase):
         self.assertNotEqual(0, self.make('status', ok=False).returncode)
         self.assertEqual(self.before, self.cfg.read_bytes())
 
+    def test_failed_initial_deploy_accepts_corrected_integration_config(self):
+        self.env['HANDOFF_FAIL_INTEGRATION'] = 'erp'
+        self.assertNotEqual(0, self.make('deploy', ok=False).returncode)
+        self.assertEqual('initializing', self.receipt()['state'])
+        old_identity = self.receipt()['identity_hash']
+        old_image = self.receipt()['image_id']
+        self.data['FMONITOR_ERP_PASSWORD'] = 'corrected-private-value'
+        self.write()
+        self.env.pop('HANDOFF_FAIL_INTEGRATION')
+        result = self.make('deploy', ok=False)
+        self.assertEqual(0, result.returncode, 'INTENDED_RED correcting integration env must allow initial deploy retry: ' + result.stdout + result.stderr)
+        self.assertNotIn('corrected-private-value', result.stdout + result.stderr)
+        self.assertEqual('installed', self.receipt()['state'])
+        self.assertEqual(old_identity, self.receipt()['identity_hash'])
+        self.assertEqual(old_image, self.receipt()['image_id'])
+        self.assertEqual(self.before, self.cfg.read_bytes())
+
+    def test_initial_retry_cannot_change_installation_identity(self):
+        self.env['HANDOFF_FAIL_INTEGRATION'] = 'erp'
+        self.assertNotEqual(0, self.make('deploy', ok=False).returncode)
+        receipt = (self.state / 'installed').read_bytes()
+        self.data['FMONITOR_YII_IDENTITY_KEY'] = 'x' * 64
+        self.write()
+        self.env.pop('HANDOFF_FAIL_INTEGRATION')
+        count = len(self.calls())
+        self.assertNotEqual(0, self.make('deploy', ok=False).returncode)
+        self.assertEqual(receipt, (self.state / 'installed').read_bytes())
+        self.assertFalse(any('run' in x['args'] or 'up' in x['args'] for x in self.calls()[count:]))
+
+    def test_installed_config_change_still_requires_update(self):
+        self.make('deploy')
+        receipt = (self.state / 'installed').read_bytes()
+        self.data['FMONITOR_ERP_PASSWORD'] = 'corrected-private-value'
+        self.write()
+        count = len(self.calls())
+        self.assertNotEqual(0, self.make('deploy', ok=False).returncode)
+        self.assertEqual(receipt, (self.state / 'installed').read_bytes())
+        self.assertFalse(any('run' in x['args'] or 'up' in x['args'] for x in self.calls()[count:]))
+
     def test_jobs_disabled_and_optional_documents(self):
         self.data['FMONITOR_JOBS_ENABLED'] = 'false'
         self.write()

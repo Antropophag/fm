@@ -54,3 +54,23 @@ repeat/stop-start with receipt-owned image cleanup PASS; isolated jobs Compose
 startup/restart PASS. Local canonical full suite was not run. Final metadata commit
 adds only this delivery update and the independent approval record; application,
 operator and test bytes remain those reviewed. Exact-source GitHub CI follows.
+
+## First exact-source CI and corrections
+
+PR300 head e1356095, run43927062027 completed. Complete failed-job inventory:
+`fast` failed only sql_ownership for the probe SQL literal in Native delivery;
+`verify` failed solely because fast failed. Complete REGRESSION_FAILURE inventory
+is empty. Unit, both integration shards, e2e and governance passed. All failed logs
+and inventory retained externally in ci-43927062027/; no unexplained failures.
+Executor moved the unchanged probe query into existing MariaDbErpEquipmentFactsSource
+SQL ownership; actual `make architecture-check` now passes all8 rules plus HTTP
+qualification. No baseline exemption. Independent final correction review approved.
+
+While waiting for the complete CI inventory, root reproduced a safely-retryable
+initial-deployment gap: changing an ERP credential after failed qualification was
+blocked by the initializing config hash. Three root tests cover corrected integration
+config, forbidden identity changes, and installed update-only config changes; Gate3
+approved and separate executor fixed the branch. All15 Make handoff cases and public
+probe PASS on the final corrected source; independent final delta approved. Existing
+installed data/keys/source/image gates remain. New exact-source CI is required for
+these corrections; the failed run above is preserved, not retried as same-source GREEN.

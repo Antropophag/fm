@@ -168,3 +168,90 @@ Independent final review is **APPROVED** for commit `13efd65a` and exact source
 `7c50701de...`. F1-F3 are closed and no new code finding remains. Publication,
 PR readiness, merge, and deployment still require the selected exact-source CI;
 this review grants none of them by itself.
+
+---
+
+## Final SQL-ownership delta review — 2026-11-16
+
+- Correction base: `e1356095af458fb1608cd5468698b77619aaba76`
+- Corrected package: `/Users/antropophag/.local/share/fmonitor-2/delivery-harness/packages/20261116T183249Z-cadc42baf4/package.json`
+- Exact source: `b5df0512cdddeaaeed91f4427b21f67684f97c5bdf5a38b27c27db283e79488b`
+- Executable source: `a5878b6d6bab765c1febc422cd5b0637c563564257e2967ef76516ac83fa966a`
+- Snapshot patch SHA-256: `e5424b14c6c8b36e803e55ba163ba53fba99b8373d71845cde9ba99d7fcbb802`
+- Verification-plan SHA-256: `47db5303769f94330a33a0631984855a7c8a50022402cf61a6f1b7b4c77ae0a7`
+- Verdict: **APPROVED**
+
+CI run `43927062027` found one actual architecture failure on the prior pushed
+head: the new literal probe SQL lived in `NativeErpEquipmentFactsDelivery` rather
+than the established ERP SQL owner. The complete known fast-job inventory had no
+`REGRESSION_FAILURE` entries; unit and governance jobs passed, while the remaining
+integration/e2e jobs were still pending when this bounded source was approved.
+
+The correction is exactly two production files and preserves behavior.
+`MariaDbErpEquipmentFactsSource::probeQuery()` now owns the exact
+`SELECT 1 AS available`; `NativeErpEquipmentFactsDelivery::probe()` calls that
+owner with the same empty parameters, one-row bound, configured timeout, read-only
+flag, response validation, exception handling, and safe receipt. No policy
+allowlist or architecture exemption was added. The prior F1-F3 corrections and
+their tests are byte-unchanged.
+
+The package binds all twelve handoff cases and the probe/controller test GREEN to
+the corrected source. Records:
+
+```text
+1794853873879043000-fc74ac9a81014a2b82b698c2a41c6519.json  handoff Make/Git matrix
+1794853926121077000-2c6dda5ef9b84c8293440378fa5300a6.json  ERP probe/controller
+```
+
+The actual repository `make architecture-check` passed all eight rules, including
+the required Pilot HTTP global-call qualification; its log SHA-256 is
+`5e5d7b4f2c7542d50d9b09863a03fa7ca3919d726728c820c69de8396a3315bd`.
+Both changed PHP files linted, the focused probe test passed, and `git diff --check`
+passed. The architecture file-size advisories are pre-existing unrelated hotspots
+and do not concern this delta.
+
+No finding remains. Independent final delta review is **APPROVED** for exact source
+`b5df0512...`. The still-running prior-head CI jobs must reach a complete inventory
+before correction push, and replacement exact-source CI must pass before
+publication; this approval does not convert pending or prior failed CI to GREEN.
+
+---
+
+## Final failed-initial retry delta review — 2026-11-16
+
+- Package: `/Users/antropophag/.local/share/fmonitor-2/delivery-harness/packages/20261116T184234Z-876e3f1f6e/package.json`
+- Exact source: `4dd2f3c829ba10848fbfbbddf316cdd4124d53248064824f054cf987fb075973`
+- Executable source: `0da762f9547aa729c253e8952c5356f1ea7cbaac174d1934292cac4a95eb1cc9`
+- Snapshot base: `e1356095af458fb1608cd5468698b77619aaba76`
+- Snapshot patch SHA-256: `1f2dac269808407e84ef18ce85db9d942876f14ce7a45114a092fa779d5617c0`
+- Verification-plan SHA-256: `39a39c76d584d69490265f5075e2b680e7df64c2c3c471b517acbda8043e4420`
+- Verdict: **APPROVED**
+
+The runtime delta after the approved SQL-owner correction is confined to
+`deploy/production/manage`. Deploy still validates the receipt's project/resource
+ownership and durable identity hash before entering retry logic, then verifies
+the exact source, application reference, and application ID. Config-hash equality
+is now required inside the `state=installed` branch, where config changes continue
+to fail with `update`. A `state=initializing` receipt may proceed with corrected
+integration config; `provision()` republishes the initializing receipt with the
+new config hash before subsequent setup/qualification, and final success persists
+the corrected env. Unknown/failed receipt states remain rejected.
+
+The three public cases are complementary: corrected ERP credentials after a
+failed initial qualification now succeed without secret output and preserve
+identity/image; a changed Yii identity key remains rejected before Docker or
+receipt effects; and the same ERP config change after successful installation
+remains rejected before effects and requires update. This implements H03 safe
+initial retry without weakening H02 installed identity or config-change policy.
+
+The package binds fifteen handoff cases GREEN at record
+`1794854421957099000-46ecf56c1f224d28a60447ce512625af.json` and the probe/controller
+test GREEN at `1794854489326357000-33aa338dda0645b1a722eeb586464427.json`.
+Shell/Python syntax, focused probe, and diff checks passed during review. The
+approved SQL-ownership delta and F1-F3 fixes remain unchanged.
+
+No finding remains. Independent final delta review is **APPROVED** for exact
+source `4dd2f3c8...`. The prior CI run still had only Integration 2 pending at
+review time; the known fast architecture failure belongs to the earlier head and
+is corrected in this source. Complete prior-run inventory and replacement
+exact-source CI remain required before publication.

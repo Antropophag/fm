@@ -289,3 +289,39 @@ b3baa0d28671d600869dea095bf0e9191f5bc26a201ec30065359f9cbae4c671  pinned-recover
 Python compilation and `git diff --check` passed. Gate 3 approves this test delta
 for the narrow old-mode correction. Production and the earlier final findings
 remain pending a complete GREEN frozen-source rereview.
+
+---
+
+## Gate 3 failed-initial retry delta
+
+- Date: 2026-11-16
+- Scope: existing H03 safely retryable initial deployment after integration configuration correction.
+- Verdict: **APPROVED**
+
+The public Make/Git fixture now fails initial deploy at ERP qualification, confirms
+the durable receipt remains `initializing`, changes only the ERP password in the
+private env, and retries the same source/image. Success must publish `installed`,
+preserve identity hash and image ID, keep corrected env bytes stable, and suppress
+the corrected secret. The retained RED fails exactly at the current unconditional
+config-hash equality with `PRODUCTION_CONFIG_INVALID: update`.
+
+The companion scenario changes the durable Yii identity key after the same initial
+failure and requires rejection before Docker `run`/`up` or receipt mutation. It is
+GREEN on the rejected source, proving the desired relaxation does not encompass
+installation identity. Existing source/image equality checks remain part of the
+same deploy retry path and are not relaxed by this test decision. Installed
+deployments continue to require `make update` for any config change: an explicit
+backstop installs successfully, changes the same ERP password, and requires deploy
+to reject before Docker or receipt effects. That backstop is GREEN on the rejected
+source.
+
+```text
+4b2555abba7f82aedcbb3513d9bc2052576429aaa356b65da8d833df9719dac9  tests/Deployment/production_handoff_001_test.py
+f0c0f38539c994b36a0aa0ad65ece3b2b58a36373aa634696cd624b40a4162de  initial-retry-red.log
+67554297076e830f66cd58365c6c4b5f6642da5b8684ccbf724705ab374b0022  installed-retry-green.log
+```
+
+Python compilation and `git diff --check` passed. Gate 3 approves this bounded
+regression for implementation. The SQL-ownership correction and prior final
+approval remain unchanged; the initial-retry production delta requires focused
+GREEN, a fresh source binding, and independent final delta review.

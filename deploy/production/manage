@@ -515,11 +515,13 @@ deploy(){
   if [[ -f $installed ]]; then
     local configured_hash installed_hash
     configured_hash=$(sha256sum "$ENV_FILE" | awk '{print $1}'); installed_hash=$(sed -n 's/^config_hash=//p' "$installed")
-    [[ $configured_hash == "$installed_hash" ]] || fail update
     grep -qx "source=${FMONITOR_SOURCE_REVISION}" "$installed" || fail update
     grep -qx "image=${FMONITOR_RUNTIME_IMAGE}" "$installed" || fail update
     grep -qx "image_id=$IMAGE_ID" "$installed" || fail update
-    if grep -qx 'state=installed' "$installed"; then start_services; return; fi
+    if grep -qx 'state=installed' "$installed"; then
+      [[ $configured_hash == "$installed_hash" ]] || fail update
+      start_services; return
+    fi
     grep -qx 'state=initializing' "$installed" || fail update
   else
     receipt initializing
