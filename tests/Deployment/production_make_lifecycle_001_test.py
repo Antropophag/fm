@@ -30,7 +30,9 @@ import sys,json,os
 from pathlib import Path
 args=sys.argv[1:]
 with open(os.environ['FM2_TRACE'],'a') as f:f.write(json.dumps(args)+'\\n')
+if args and args[0]=='build':Path(os.environ['FM2_IMAGE_CREATED']).touch()
 if args[:2]==['image','inspect']:
+ if os.environ.get('FM2_MODE')=='build' and not Path(os.environ['FM2_IMAGE_CREATED']).exists():sys.exit(1)
  if '--format' in args:
   fmt=args[args.index('--format')+1]
   print('b'*40 if 'revision' in fmt else ('sha256:'+'b'*64 if '.Id' in fmt else json.dumps({'org.opencontainers.image.revision':'b'*40})))
@@ -40,11 +42,11 @@ elif args and args[0] in ['volume','network','container','inspect']:sys.exit(1)
 elif args and args[0]=='info':print('{}')
 elif args[:2]==['compose','version']:print('2.40.0')
 ''')
-    git=binpath/'git';git.write_text('#!/bin/sh\ncase " $* " in *" --show-toplevel "*) pwd;; *" --show-prefix "*) :;; *" rev-parse "*) printf "'+('a'*40)+'\\n";; esac\n');git.chmod(0o755)
+    git=binpath/'git';git.write_text('#!/bin/sh\ncase " $* " in *" status "*) if [ "${FM2_UNTRACKED:-}" = 1 ]; then case " $* " in *--untracked-files=no*) :;; *) printf "?? app/untracked.php\\n";; esac; fi;; *" --show-toplevel "*) pwd;; *" --show-prefix "*) :;; *" rev-parse "*) printf "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\n";; esac\n');git.chmod(0o755)
     import json
-    env['FM2_TRACE']=str(trace)
+    env['FM2_TRACE']=str(trace);env['FM2_IMAGE_CREATED']=str(home/'image-created')
     for mode in ['build','pull','local']:
-        trace.unlink(missing_ok=True)
+        trace.unlink(missing_ok=True);pathlib.Path(env['FM2_IMAGE_CREATED']).unlink(missing_ok=True);env['FM2_MODE']=mode
         image='registry.example.org/fmonitor@sha256:'+'a'*64 if mode=='pull' else 'fmonitor2-runtime:fixture'
         d.update(FMONITOR_IMAGE_MODE=mode,FMONITOR_RUNTIME_IMAGE=image)
         config.write_text(''.join(k+'='+v+'\n' for k,v in d.items()));config.chmod(0o600)
@@ -56,6 +58,15 @@ elif args[:2]==['compose','version']:print('2.40.0')
         if mode=='build':assert any(c[0]=='build' or c[:2]==['buildx','build'] for c in calls)
         if mode=='pull':assert any(c[0]=='pull' for c in calls)
         if mode=='local':assert not any(c[0] in ['build','pull','load'] for c in calls)
+    # A labelled build must not include untracked source bytes.
+    trace.unlink(missing_ok=True);pathlib.Path(env['FM2_IMAGE_CREATED']).unlink(missing_ok=True)
+    env.update(FM2_UNTRACKED='1',FM2_MODE='build');d.update(FMONITOR_IMAGE_MODE='build',FMONITOR_RUNTIME_IMAGE='fmonitor2-runtime:unique-untracked')
+    config.write_text(''.join(k+'='+v+'\n' for k,v in d.items()));config.chmod(0o600)
+    r=subprocess.run(['bash',str(ROOT/'deploy/production/manage'),'deploy','--env-file',str(config)],cwd=ROOT,env=env,capture_output=True,text=True,timeout=20)
+    assert r.returncode!=0
+    calls=[json.loads(l) for l in trace.read_text().splitlines()] if trace.exists() else []
+    assert not any(c and c[0]=='build' for c in calls),'INTENDED_RED: untracked source must reject before labelled build'
+    env.pop('FM2_UNTRACKED');env['FM2_MODE']='local'
     # An explicitly selected archive is an integrity input even if an image tag exists locally.
     import hashlib
     archive=home/'images.tar';archive.write_bytes(b'synthetic image archive')

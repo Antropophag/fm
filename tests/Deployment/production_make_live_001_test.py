@@ -233,12 +233,20 @@ test "$(cat /tmp/project/vendor/retained-sentinel)" = sentinel
         release=home/'release'
         make('release',cfg,'OUTPUT='+str(release),timeout=300)
         assert release.is_dir() and (release/'Makefile').is_file()
+        release_identity=json.loads((release/'release.json').read_text())
+        assert re.fullmatch(r'sha256:[0-9a-f]{64}',release_identity['databaseImageId'])
+        assert release_identity['applicationPlatform'].startswith('linux/')
+        assert release_identity['databasePlatform']==release_identity['applicationPlatform']
         command(['make','--no-print-directory','-C',str(release),'env-init'])
         release_env=read(release/'.env')
         assert release_env['FMONITOR_IMAGE_MODE']=='local' and release_env['FMONITOR_SOURCE_REVISION']==source
         assert release_env['FMONITOR_RUNTIME_IMAGE']==image
         archive=pathlib.Path(release_env['FMONITOR_IMAGE_ARCHIVE'])
         assert archive.is_file() and hashlib.sha256(archive.read_bytes()).hexdigest()==release_env['FMONITOR_IMAGE_ARCHIVE_SHA256']
+        release_env['FMONITOR_RUNTIME_IMAGE']='operator-chosen:retained'
+        write(release/'.env',release_env);retained=(release/'.env').read_bytes()
+        command(['make','--no-print-directory','-C',str(release),'env-init'])
+        assert (release/'.env').read_bytes()==retained,'release env-init must not rewrite operator configuration'
         # Newly generated operator config is removed before checking the distributed package.
         (release/'.env').unlink()
         assert not any(x.name=='.env' for x in release.rglob('*'))
@@ -284,6 +292,19 @@ test "$(cat /tmp/project/vendor/retained-sentinel)" = sentinel
             assert any('c'*40 in p.read_text(errors='ignore') for p in pathlib.Path(td['FMONITOR_DEPLOY_STATE_DIR']).rglob('*') if p.is_file()),'successful receipt names new source'
             make('deploy',target,timeout=300)
         finally:command(['docker','image','rm',updated],ok=False)
+        # A metadata publication failure after healthy new writers must stop them again.
+        receiptimage='fmonitor2-runtime:prod-receipt-'+token
+        receiptfile=home/'Receipt.Dockerfile';receiptfile.write_text('FROM '+image+'\nLABEL org.opencontainers.image.revision="'+'e'*40+'"\n')
+        command(['docker','build','-f',str(receiptfile),'-t',receiptimage,str(home)],timeout=120);extra_images.append(receiptimage)
+        td.update(FMONITOR_RUNTIME_IMAGE=receiptimage,FMONITOR_SOURCE_REVISION='e'*40);write(target,td)
+        publication=home/'publication-failure';publication.mkdir();started=home/'new-writers-started'
+        docker_stub=publication/'docker';docker_stub.write_text('#!/bin/sh\ncase " $* " in *" up "*" php "*) touch '+str(started)+';; esac\nexec '+shutil.which('docker')+' "$@"\n');docker_stub.chmod(0o755)
+        mv_stub=publication/'mv';mv_stub.write_text('#!/bin/sh\nif [ -f '+str(started)+' ]; then exit 46; fi\nexec '+shutil.which('mv')+' "$@"\n');mv_stub.chmod(0o755)
+        env=dict(os.environ,PATH=str(publication)+os.pathsep+os.environ['PATH'])
+        assert make('update',target,env=env,ok=False,timeout=400).returncode!=0
+        assert started.exists(),'publication failure injected after new writers start'
+        assert not {'php','web','jobs-worker','jobs-scheduler'}.intersection(compose(td,'ps','--status','running','--services').stdout.splitlines())
+        assert make('start',target,ok=False).returncode!=0
         # Failed migration after backup must leave all target writers stopped.
         newimage='fmonitor2-runtime:prod-update-'+token
         dockerfile=home/'Update.Dockerfile'

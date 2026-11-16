@@ -85,3 +85,12 @@ make release ENV_FILE=/absolute/private/runtime.env OUTPUT=/absolute/private/rel
 
 Команды сериализованы на project. Production workflow не предоставляет reset,
 prune или `down --volumes`.
+
+Пакет готовых образов привязан к платформе: `release.json` хранит точные ID
+приложения и MariaDB, а также `applicationPlatform`/`databasePlatform`
+(например, `linux/amd64` или `linux/arm64`). Перед передачей сисадмину
+согласуйте архитектуру сервера. Пакет для другой архитектуры нужно собрать
+на соответствующей платформе; исходный build также требует доступа к
+базовым образам, apt/npm и Microsoft repository. Fallback PHP-пакетов
+устраняет зависимость от доступности Composer repositories, но не заменяет
+все источники сборки. Перенос готовых images исключает сборку на целевом сервере.

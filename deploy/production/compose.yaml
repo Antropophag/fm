@@ -29,7 +29,7 @@ x-app: &app
   logging: {driver: json-file, options: {max-size: "10m", max-file: "5"}}
 services:
   db:
-    image: mariadb:11.4.7-noble
+    image: ${FMONITOR_DATABASE_IMAGE}
     command: ["--character-set-server=utf8mb4","--collation-server=utf8mb4_unicode_ci"]
     environment: {MARIADB_DATABASE: "${FMONITOR_DB_NAME}", MARIADB_ROOT_PASSWORD: "${FMONITOR_MIGRATION_DB_PASSWORD}"}
     volumes: [database:/var/lib/mysql]

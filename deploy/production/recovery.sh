@@ -2,21 +2,24 @@
 # Sourced by deploy/production/manage after configuration validation and export.
 
 recovery_running_writers(){
-  local service
+  local service inventory
+  inventory=$(dc ps --status running --services) || return 1
   for service in jobs-scheduler jobs-worker web php; do
-    dc ps --status running --services | grep -qx "$service" && printf '%s\n' "$service"
+    if grep -qx "$service" <<<"$inventory"; then printf '%s\n' "$service" || return 1; fi
   done
 }
 
 recovery_stop_writers(){
-  local running_name=$1 service current=()
-  while IFS= read -r service; do current+=("$service"); done < <(recovery_running_writers)
+  local running_name=$1 service inventory final_inventory current=()
+  inventory=$(recovery_running_writers) || return 1
+  while IFS= read -r service; do [[ -z $service ]] || current+=("$service"); done <<<"$inventory"
   eval "$running_name=(\"\${current[@]}\")"
   for service in jobs-scheduler jobs-worker web php; do
-    [[ " ${current[*]} " == *" $service "* ]] && dc stop "$service"
+    if [[ " ${current[*]} " == *" $service "* ]]; then dc stop "$service" || return 1; fi
   done
+  final_inventory=$(dc ps --status running --services) || return 1
   for service in "${current[@]}"; do
-    ! dc ps --status running --services | grep -qx "$service" || { note "Writer failed to stop: $service" >&2; return 1; }
+    if grep -qx "$service" <<<"$final_inventory"; then note "Writer failed to stop: $service" >&2; return 1; fi
   done
 }
 
@@ -26,11 +29,11 @@ recovery_resume_writers(){
 
 recovery_private_manifest(){
   local runtime=$1 config=$2 output=$3 config_sha runtime_sha
-  config_sha=$(sha256sum "$config" | awk '{print $1}')
-  runtime_sha=$(sha256sum "$runtime/manifest.json" | awk '{print $1}')
+  config_sha=$(sha256sum "$config" | awk '{print $1}') || return 1
+  runtime_sha=$(sha256sum "$runtime/manifest.json" | awk '{print $1}') || return 1
   printf '{"formatVersion":"fmonitor-production-private-v1","sourceProject":"%s","configSha256":"%s","runtimeManifestSha256":"%s"}\n' \
-    "$COMPOSE_PROJECT_NAME" "$config_sha" "$runtime_sha" >"$output"
-  chmod 600 "$output"
+    "$COMPOSE_PROJECT_NAME" "$config_sha" "$runtime_sha" >"$output" || return 1
+  chmod 600 "$output" || return 1
 }
 
 recovery_host_ownership(){
@@ -41,11 +44,13 @@ recovery_host_ownership(){
 
 backup_core(){
   local destination=$1 keep_stopped=${2:-false}
-  local backup_image=${3:-$FMONITOR_RUNTIME_IMAGE} backup_source=${4:-$FMONITOR_SOURCE_REVISION} backup_image_id=${5:-$IMAGE_ID}
-  local config_source=${6:-"$(installed_env_path)"} stage canonical config service resumed=false expected_config_hash actual_config_hash
+  local backup_image=${3:-$IMAGE_ID} backup_source=${4:-$FMONITOR_SOURCE_REVISION} backup_image_id=${5:-$IMAGE_ID} backup_image_reference=${6:-$FMONITOR_RUNTIME_IMAGE}
+  local config_source stage canonical config service resumed=false expected_config_hash actual_config_hash
+  config_source=$(installed_env_path) || return 1
   local running=()
-  mkdir -p -m 700 "$FMONITOR_BACKUP_ROOT"
-  [[ $destination == /* && $destination != "$ROOT"/* && ! -e $destination && ! -L $destination ]] || fail BACKUP
+  ensure_private_backup_root
+  local destination_parent; destination_parent=$(realpath "$(dirname "$destination")") || fail BACKUP
+  [[ $destination == /* && $destination_parent == "$(realpath "$FMONITOR_BACKUP_ROOT")" && ! -e $destination && ! -L $destination ]] || fail BACKUP
   [[ -f $config_source && ! -L $config_source ]] || fail installation
   expected_config_hash=$(sed -n 's/^config_hash=//p' "${FMONITOR_DEPLOY_STATE_DIR}/installed")
   actual_config_hash=$(sha256sum "$config_source" | awk '{print $1}')
@@ -85,7 +90,7 @@ backup_core(){
       --mount "type=volume,source=${COMPOSE_PROJECT_NAME}_secrets,target=/run/fmonitor-secrets" \
       --mount "type=bind,source=$stage,target=/backup" "$backup_image" \
       php bin/fmonitor2-runtime-recovery.php backup --destination /backup/runtime \
-      --source-commit "$backup_source" --image-reference "$backup_image" --image-id "$backup_image_id" --writers-stopped ); then
+      --source-commit "$backup_source" --image-reference "$backup_image_reference" --image-id "$backup_image_id" --writers-stopped ); then
     recovery_host_ownership "$stage" "$backup_image" || true; rm -rf "$stage"
     if [[ $keep_stopped == false ]] && recovery_resume_writers "${running[@]}"; then resumed=true; fi
     note "Backup failed; writers $([[ $resumed == true ]] && printf resumed || printf stopped)." >&2
@@ -101,7 +106,10 @@ backup_core(){
     note "Backup publication failed; writers $([[ $resumed == true ]] && printf resumed || printf stopped)." >&2
     return 1
   fi
-  if [[ $keep_stopped == false ]]; then recovery_resume_writers "${running[@]}"; fi
+  if [[ $keep_stopped == false ]] && ! recovery_resume_writers "${running[@]}"; then
+    note 'Backup created, but prior writers could not be resumed.' >&2
+    return 1
+  fi
   note "Backup created: $destination"
 }
 
@@ -109,7 +117,7 @@ do_backup(){
   lock; prereq; installed; installed_image
   IMAGE_ID=$(sed -n 's/^image_id=//p' "${FMONITOR_DEPLOY_STATE_DIR}/installed")
   local destination=${ARG_PATH:-"${FMONITOR_BACKUP_ROOT}/backup-$(date -u +%Y%m%dT%H%M%SZ)-$$"}
-  backup_core "$destination" false
+  backup_core "$destination" false "$IMAGE_ID" "$FMONITOR_SOURCE_REVISION" "$IMAGE_ID" "$FMONITOR_RUNTIME_IMAGE"
 }
 
 update_cmd(){
@@ -120,15 +128,18 @@ update_cmd(){
   [[ $old_source != "$FMONITOR_SOURCE_REVISION" || $old_image != "$FMONITOR_RUNTIME_IMAGE" || $old_config_hash != "$current_config_hash" ]] || { installed_image; start_services; return; }
   image
   local new_image_id=$IMAGE_ID backup_path="${FMONITOR_BACKUP_ROOT}/update-$old_source-$(date -u +%Y%m%dT%H%M%SZ)-$$"
-  if ! backup_core "$backup_path" true "$old_image" "$old_source" "$old_image_id"; then return 1; fi
+  local stored_old_source
+  stored_old_source=$(docker image inspect "$old_image_id" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}') || fail update
+  [[ $stored_old_source == "$old_source" ]] || fail update
+  if ! backup_core "$backup_path" true "$old_image_id" "$old_source" "$old_image_id" "$old_image"; then return 1; fi
+  [[ $(docker image inspect "$old_image_id" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}') == "$old_source" ]] || { note 'Old installed image identity changed during backup.' >&2; return 1; }
   IMAGE_ID=$new_image_id; receipt updating
-  if ! provision || ! start_services; then
-    local services=() service; while IFS= read -r service; do services+=("$service"); done < <(writers)
-    dc stop "${services[@]}" || true; receipt failed
+  if ! provision || ! start_services || ! receipt installed; then
+    stop_all_writers || true
+    receipt failed || note 'Failed update receipt remains unresolved.' >&2
     note "Update failed; writers stopped. Recovery backup: $backup_path" >&2
     return 1
   fi
-  receipt installed
 }
 
 recovery_verify_bundle(){
@@ -155,7 +166,7 @@ restore_cmd(){
   ! docker network inspect "${COMPOSE_PROJECT_NAME}_default" >/dev/null 2>&1 || fail installation
   recovery_verify_bundle "$canonical" "$config" "$source" "$source_image" "$source_image_id" "$source_project" || fail BACKUP
   local stage="${FMONITOR_DEPLOY_STATE_DIR}/restore-bundle.$$.$RANDOM" password_file="${FMONITOR_DEPLOY_STATE_DIR}/restore-database-password.$$.$RANDOM"
-  (umask 077; mkdir -m 700 "$stage"; cp "$canonical"/* "$stage"/; chmod 600 "$stage"/*)
+  (umask 077; mkdir -m 700 "$stage"; cp -p -- "$canonical/database.sql" "$canonical/manifest.json" "$canonical/state.tar" "$stage"/)
   docker run --rm --network none --user 0:0 --entrypoint chown --mount "type=bind,source=$stage,target=/bundle" "$FMONITOR_RUNTIME_IMAGE" -R 10001:10001 /bundle
   if ! ( export FMONITOR_DB_HOST=db FMONITOR_DB_PORT=3306; docker run --rm --network none --user 10001:10001 \
       -e FMONITOR_DB_HOST -e FMONITOR_DB_PORT -e FMONITOR_DB_NAME -e FMONITOR_DB_USER -e FMONITOR_DB_PASSWORD \
@@ -212,15 +223,24 @@ restore_cmd(){
 release_cmd(){
   [[ -n $ARG_PATH && $ARG_PATH == /* && ! -e $ARG_PATH && ! -L $ARG_PATH ]] || fail OUTPUT
   lock; prereq; image
-  local stage="$ARG_PATH.stage.$$.$RANDOM" db_image=mariadb:11.4.7-noble
-  mkdir -m 700 "$stage"; docker image inspect "$db_image" >/dev/null 2>&1 || docker pull "$db_image" >/dev/null
-  docker save -o "$stage/images.tar" "$FMONITOR_RUNTIME_IMAGE" "$db_image"
-  mkdir -m 700 "$stage/deploy"; cp -R "$ROOT/deploy/production" "$stage/deploy/production"
-  cp "$ROOT/deploy/production/release.Makefile" "$stage/Makefile"
-  printf '{"formatVersion":"fmonitor-production-release-v1","source":"%s","applicationImage":"%s","applicationImageId":"%s","databaseImage":"%s"}\n' \
-    "$FMONITOR_SOURCE_REVISION" "$FMONITOR_RUNTIME_IMAGE" "$IMAGE_ID" "$db_image" >"$stage/release.json"
-  printf 'FMONITOR_RUNTIME_IMAGE=%s\nFMONITOR_SOURCE_REVISION=%s\nFMONITOR_IMAGE_ARCHIVE_SHA256=%s\n' \
-    "$FMONITOR_RUNTIME_IMAGE" "$FMONITOR_SOURCE_REVISION" "$(sha256sum "$stage/images.tar" | awk '{print $1}')" >"$stage/release.defaults"
+  local stage="$ARG_PATH.stage.$$.$RANDOM" db_image=$FMONITOR_DATABASE_IMAGE db_image_id app_platform db_platform
+  mkdir -m 700 "$stage"; docker image inspect "$db_image" >/dev/null 2>&1 || fail FMONITOR_DATABASE_IMAGE
+  db_image_id=$(docker image inspect "$db_image" --format '{{.Id}}') || fail OUTPUT
+  app_platform=$(docker image inspect "$IMAGE_ID" --format '{{.Os}}/{{.Architecture}}') || fail OUTPUT
+  db_platform=$(docker image inspect "$db_image_id" --format '{{.Os}}/{{.Architecture}}') || fail OUTPUT
+  [[ $db_image_id =~ ^sha256:[0-9a-f]{64}$ && $app_platform =~ ^[a-z0-9]+/[a-z0-9_]+$ && $db_platform =~ ^[a-z0-9]+/[a-z0-9_]+$ ]] || fail OUTPUT
+  docker save -o "$stage/images.tar" "$FMONITOR_RUNTIME_IMAGE" "$IMAGE_ID" "$db_image" "$db_image_id" || fail OUTPUT
+  [[ $(docker image inspect "$FMONITOR_RUNTIME_IMAGE" --format '{{.Id}}') == "$IMAGE_ID" \
+      && $(docker image inspect "$db_image" --format '{{.Id}}') == "$db_image_id" ]] || fail OUTPUT
+  mkdir -m 700 "$stage/deploy" || fail OUTPUT
+  docker run --rm --network none --user 0:0 --entrypoint sh \
+    --mount "type=bind,source=$stage,target=/output" "$IMAGE_ID" -c \
+    'set -eu; cp -R /workspace/fmonitor-2/deploy/production /output/deploy/production; cp /workspace/fmonitor-2/deploy/production/release.Makefile /output/Makefile' || fail OUTPUT
+  recovery_host_ownership "$stage" "$IMAGE_ID" || fail OUTPUT
+  printf '{"formatVersion":"fmonitor-production-release-v1","source":"%s","applicationImage":"%s","applicationImageId":"%s","applicationPlatform":"%s","databaseImage":"%s","databaseImageId":"%s","databasePlatform":"%s"}\n' \
+    "$FMONITOR_SOURCE_REVISION" "$FMONITOR_RUNTIME_IMAGE" "$IMAGE_ID" "$app_platform" "$db_image" "$db_image_id" "$db_platform" >"$stage/release.json"
+  printf 'FMONITOR_RUNTIME_IMAGE=%s\nFMONITOR_SOURCE_REVISION=%s\nFMONITOR_IMAGE_ARCHIVE_SHA256=%s\nFMONITOR_DATABASE_IMAGE=%s\nFMONITOR_DATABASE_IMAGE_ID=%s\nFMONITOR_APPLICATION_PLATFORM=%s\nFMONITOR_DATABASE_PLATFORM=%s\n' \
+    "$FMONITOR_RUNTIME_IMAGE" "$FMONITOR_SOURCE_REVISION" "$(sha256sum "$stage/images.tar" | awk '{print $1}')" "$db_image" "$db_image_id" "$app_platform" "$db_platform" >"$stage/release.defaults"
   (cd "$stage"; find deploy -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum; sha256sum Makefile images.tar release.json release.defaults) >"$stage/SHA256SUMS"
   find "$stage" -type d -exec chmod 700 {} +; find "$stage" -type f -exec chmod 600 {} +
   mv -n "$stage" "$ARG_PATH"

@@ -158,3 +158,27 @@ The live acceptance adds the missing host-orchestration proof: a schema-v38 mani
 The A10 increment runs the generated release Makefile's `env-init` and checks local image mode, exact source/image defaults, archive existence, and archive digest before deleting the generated private `.env` and retaining the existing package secret-exclusion checks. It tests the operator artifact without weakening release isolation.
 
 No findings. Gate 3 remains **APPROVED** for the frozen expectations, including this A09/A10 delta. Minimal separate implementation may expose the shared read-only canonical preflight and place it before target resource creation. Final implementation review, focused GREEN, and exact-source CI remain outside this approval.
+
+---
+
+## Gate 3 correction-oracle delta — D2, D6, D7, D8
+
+- Date: `2026-11-16`
+- Implementation baseline under correction: `3aea5fee63338a0b35986e9e6c8f022de8006b6a`
+- Environment test SHA-256: `74048085b861e97010a98ee115cba31ec7e11d3323ed871ca5121031db6cf5b4`
+- Lifecycle test SHA-256: `c87451d6bddd00dcc06b20dc9b40f728f9118f0143cc95873631a1540a6ed499`
+- Live test SHA-256: `243d8d630c0d848fe66aeb647ddd8b54c7a77ade557fd03cc1c0c3d54492ad55`
+- Retained RED index SHA-256: `4d83f72ea25a05f4b9ddbf0601a173cfbb0c2c269fd7b5774df7fc53fc69029b`
+- Verdict: **APPROVED** for the test delta only
+
+The environment test now rejects an existing mode-`0755` backup directory, a symlink to it, and a regular file used as the backup root. An absent private path remains accepted by the existing valid configuration. This directly covers D6's fail-closed type/mode boundary before Docker or writer effects.
+
+The lifecycle fake now models that a build-mode image does not exist before the build command. Its Git fixture exposes an untracked `app/` source file unless the implementation uses the old `--untracked-files=no` escape. The new case requires rejection before any labelled Docker build. This is a precise D2 oracle and retains build/pull/local acquisition and wrong-label assertions.
+
+The live release increment requires a canonical database image ID plus compatible explicit application/database platforms. It exercises the generated release `env-init`, then changes the image choice and proves a repeated invocation preserves every byte of the private operator configuration. These assertions cover D7 and the pre-existing A01 repeat/no-clobber rule without introducing registry publication or multi-architecture requirements.
+
+The update publication fixture marks the point at which new web/php writers are started, then makes `mv` fail. It requires nonzero update, all writers stopped, and `start` blocked by unresolved state. Backup and the earlier updating receipt remain able to publish before the injection. The case therefore targets D8's final receipt failure rather than an earlier setup failure; failure to publish a secondary failed marker is tolerated as long as the durable updating state blocks restart.
+
+Two real reconstructed-baseline REDs were inspected. The environment test fails exactly because `3aea5fee` accepts the unsafe backup root (log SHA-256 `5224b9f068540a371958e7c1aab8fff70f7612dc3010c6a0c54fbecbc0428264`). The lifecycle test fails exactly because the old ignored-untracked check reaches Docker build (log SHA-256 `0842426d4e798f1dd9c9b7ed43a12d8707fd5af0fce3993bbb8f4fefa0f60408`). The Docker-dependent D7/D8 cases remain pending the corrected full live run and are not claimed RED or GREEN here.
+
+No findings in this delta. All prior expectations remain. This approval does not approve the correction implementation, close D1-D9, or replace final source-bound live evidence and code rereview.

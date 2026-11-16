@@ -16,6 +16,16 @@ if (!is_dir($bundle) || is_link($bundle) || !is_file($config) || is_link($config
     || !is_file($targetConfig) || is_link($targetConfig)) {
     reject();
 }
+$bundleStat = lstat($bundle);
+$names = array_values(array_diff(scandir($bundle) ?: [], ['.', '..']));
+sort($names, SORT_STRING);
+if (!is_array($bundleStat) || ($bundleStat['mode'] & 0777) !== 0700
+    || $names !== ['database.sql', 'manifest.json', 'state.tar']) reject();
+foreach ($names as $name) {
+    $member = $bundle . '/' . $name;
+    $memberStat = lstat($member);
+    if (!is_array($memberStat) || is_link($member) || !is_file($member) || ($memberStat['mode'] & 0777) !== 0600) reject();
+}
 /** @return array<string,string> */
 function environmentFile(string $path): array
 {

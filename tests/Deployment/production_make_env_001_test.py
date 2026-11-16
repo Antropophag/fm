@@ -79,6 +79,12 @@ with tempfile.TemporaryDirectory(prefix='fm2-production-env-') as raw:
         assert invoke('env-init',invalid).returncode!=0
     private=home/'custom.env';private.write_text('private bytes\n');private.chmod(0o600)
     invoke('env-init',private);assert private.read_text()=='private bytes\n'
+    # Existing backup roots cannot redirect or expose private bundles.
+    public=home/'public-backups';public.mkdir(mode=0o755)
+    linkroot=home/'linked-backups';linkroot.symlink_to(public,target_is_directory=True)
+    for unsafe in [public,linkroot,private]:
+        write(cfg,dict(d,FMONITOR_BACKUP_ROOT=str(unsafe)))
+        assert invoke('check-config',cfg).returncode!=0,'INTENDED_RED: backup root must be private owned regular directory'
     concurrent=home/'race.env'
     args=['bash',str(MANAGE),'env-init','--env-file',str(concurrent)]
     jobs=[subprocess.Popen(args,cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.PIPE) for _ in range(2)]

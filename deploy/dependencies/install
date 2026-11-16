@@ -49,6 +49,10 @@ verify_install(){
 }
 publish(){
     local stage=$1 old=''
+    # Composer runs as root while the production runtime is UID 10001. Keep
+    # executable package files executable and make the dependency tree readable
+    # and traversable without granting write access.
+    chmod -R a+rX "$stage"||fail 'could not make vendor runtime-readable'
     if [[ -e "$project/vendor" || -L "$project/vendor" ]];then
         [[ ! -L "$project/vendor" && -d "$project/vendor" ]]||fail 'existing vendor is unsafe'
         old=$(mktemp -d "$project/.vendor-old.XXXXXXXX");rmdir "$old";owned+=("$old")
