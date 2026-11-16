@@ -339,6 +339,7 @@ e2e	python3	tests/Deployment/local_integration_interruption_185_test.py	integrat
 e2e	python3	tests/Deployment/local_integration_make_e2e_185_test.py	integration
 e2e	python3	tests/Deployment/pilot_jobs_compose_001_test.py	e2e
 e2e	python3	tests/Deployment/production_make_live_001_test.py	e2e
+e2e	python3	tests/Deployment/production_make_quickstart_live_001_test.py	e2e
 e2e	python3	tests/Deployment/yii2_canonical_migrations_package_001_test.py	e2e
 e2e	python3	tests/Deployment/yii2_clean_stand_acceptance_result_001_test.py	e2e
 e2e	python3	tests/Deployment/yii2_clean_stand_admission_001_test.py	e2e
@@ -422,6 +423,7 @@ unit	python3	tests/Deployment/local_integration_env_security_001_test.py	unit
 unit	python3	tests/Deployment/production_dependencies_001_test.py	unit
 unit	python3	tests/Deployment/production_make_env_001_test.py	unit
 unit	python3	tests/Deployment/production_make_lifecycle_001_test.py	unit
+unit	python3	tests/Deployment/production_make_quickstart_001_test.py	unit
 unit	python3	tests/Deployment/yii2_imports_workforce_package_001_test.py	unit
 unit	python3	tests/Deployment/yii2_local_data_bootstrap_001_test.py	unit
 unit	python3	tests/Deployment/yii2_local_integration_config_001_test.py	unit

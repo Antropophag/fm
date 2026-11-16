@@ -11,7 +11,17 @@ applicationPlatform/databasePlatform из release.json (`x86_64` соответ�
 платформу application и MariaDB images и exact IDs; соответствие серверу
 оператор подтверждает до запуска.
 
-1. Выполните `make env-init`. В release команда проверит SHA256SUMS и заполнит
+Если сисадмин получил подготовленный `.env` вместе с source checkout, маршрут
+состоит из трёх действий: clone corporate repository, copy файла в корень как
+`.env`, затем `make deploy`. Обычная копия mode0644 будет безопасно сужена до0600
+без изменения bytes; `auto` создаст project-scoped private state/backups под
+`$HOME`. Ручные `sudo`, `chmod` и `ENV_FILE` не нужны. Небезопасный env или
+существующий path отклоняется до Docker.
+Автоматическая правка mode относится только к root `.env`; явно выбранный внешний
+`ENV_FILE` должен заранее быть private mode0600 и workflow его не изменяет.
+
+1. Если подготовленного `.env` нет, выполните `make env-init`. В release команда
+   проверит SHA256SUMS и заполнит
    local/archive identities без Git. В source checkout она запишет текущий HEAD,
    build mode и новый уникальный tag; чистоту checkout команда проверит при
    `make deploy`. Новый `.env` имеет mode0600; повтор его не изменяет.
