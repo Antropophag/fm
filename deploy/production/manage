@@ -94,6 +94,36 @@ finalize_prepared_env(){
 
 random_hex(){ od -An -N32 -tx1 /dev/urandom | tr -d ' \n'; }
 
+resolve_build_identity(){
+  [[ ${FMONITOR_IMAGE_MODE:-} == build ]] || return 0
+  local receipt="${FMONITOR_DEPLOY_STATE_DIR}/installed" head recorded_source
+  if [[ $VERB == deploy || $VERB == update ]]; then
+    head=$(git -C "$ROOT" rev-parse --verify HEAD 2>/dev/null) || fail FMONITOR_SOURCE_REVISION
+    [[ $head =~ ^[0-9a-f]{40}$ && -z $(git -C "$ROOT" status --porcelain --untracked-files=all) ]] || fail FMONITOR_SOURCE_REVISION
+    if [[ -f $receipt ]]; then
+      recorded_source=$(sed -n 's/^source=//p' "$receipt")
+      if [[ $VERB == deploy || $recorded_source == "$head" ]]; then
+        FMONITOR_SOURCE_REVISION=$recorded_source
+        FMONITOR_RUNTIME_IMAGE=$(sed -n 's/^image=//p' "$receipt")
+        FMONITOR_APPLICATION_IMAGE_ID=$(sed -n 's/^image_id=//p' "$receipt")
+        FMONITOR_APPLICATION_PLATFORM=$(sed -n 's/^application_platform=//p' "$receipt")
+        return 0
+      fi
+    fi
+    FMONITOR_SOURCE_REVISION=$head
+    FMONITOR_RUNTIME_IMAGE="fmonitor2-runtime:${head}-$(random_hex | cut -c1-12)"
+    FMONITOR_APPLICATION_IMAGE_ID=
+    FMONITOR_APPLICATION_PLATFORM=
+    return 0
+  fi
+  if [[ -f $receipt ]]; then
+    FMONITOR_SOURCE_REVISION=$(sed -n 's/^source=//p' "$receipt")
+    FMONITOR_RUNTIME_IMAGE=$(sed -n 's/^image=//p' "$receipt")
+    FMONITOR_APPLICATION_IMAGE_ID=$(sed -n 's/^image_id=//p' "$receipt")
+    FMONITOR_APPLICATION_PLATFORM=$(sed -n 's/^application_platform=//p' "$receipt")
+  fi
+}
+
 env_init(){
   local target=$ENV_FILE parent tmp line key value revision operator_home image_mode image_reference application_image_id image_archive image_archive_sha database_image database_image_id application_platform database_platform
   parent=$(dirname "$target")
@@ -228,7 +258,8 @@ prepare_managed_paths(){
 
 validate(){
   local k
-  for k in COMPOSE_PROJECT_NAME FMONITOR_IMAGE_MODE FMONITOR_RUNTIME_IMAGE FMONITOR_DATABASE_IMAGE FMONITOR_SOURCE_REVISION FMONITOR_HTTP_PORT FMONITOR_DB_NAME FMONITOR_DB_USER FMONITOR_DB_PASSWORD FMONITOR_MIGRATION_DB_USER FMONITOR_MIGRATION_DB_PASSWORD FMONITOR_PROCESS_TABLE_PREFIX FMONITOR_LEGACY_TABLE_PREFIX FMONITOR_SESSION_INSTANCE FMONITOR_YII_COOKIE_VALIDATION_KEY FMONITOR_YII_IDENTITY_KEY FMONITOR_TRUSTED_REQUEST_HOST FMONITOR_TRUSTED_REQUEST_SCHEME FMONITOR_RUNTIME_ENV FMONITOR_PUBLIC_BASE_URL FMONITOR_ALLOW_HTTP FMONITOR_INITIAL_OWNER_EMAIL FMONITOR_BOOTSTRAP_SUPERADMIN_PASSWORD FMONITOR_JOBS_ENABLED FMONITOR_DEPLOY_STATE_DIR FMONITOR_BACKUP_ROOT; do need "$k"; done
+  for k in COMPOSE_PROJECT_NAME FMONITOR_IMAGE_MODE FMONITOR_DATABASE_IMAGE FMONITOR_HTTP_PORT FMONITOR_DB_NAME FMONITOR_DB_USER FMONITOR_DB_PASSWORD FMONITOR_MIGRATION_DB_USER FMONITOR_MIGRATION_DB_PASSWORD FMONITOR_PROCESS_TABLE_PREFIX FMONITOR_LEGACY_TABLE_PREFIX FMONITOR_SESSION_INSTANCE FMONITOR_YII_COOKIE_VALIDATION_KEY FMONITOR_YII_IDENTITY_KEY FMONITOR_TRUSTED_REQUEST_HOST FMONITOR_TRUSTED_REQUEST_SCHEME FMONITOR_RUNTIME_ENV FMONITOR_PUBLIC_BASE_URL FMONITOR_ALLOW_HTTP FMONITOR_INITIAL_OWNER_EMAIL FMONITOR_BOOTSTRAP_SUPERADMIN_PASSWORD FMONITOR_JOBS_ENABLED FMONITOR_DEPLOY_STATE_DIR FMONITOR_BACKUP_ROOT; do need "$k"; done
+  if [[ ${FMONITOR_IMAGE_MODE} != build ]]; then need FMONITOR_RUNTIME_IMAGE; need FMONITOR_SOURCE_REVISION; fi
   [[ ${COMPOSE_PROJECT_NAME} =~ ^fm2-prod-[a-z0-9][a-z0-9-]*$ ]] || fail COMPOSE_PROJECT_NAME
   [[ ${FMONITOR_IMAGE_MODE} =~ ^(build|pull|local)$ ]] || fail FMONITOR_IMAGE_MODE
   [[ -z ${FMONITOR_APPLICATION_IMAGE_ID:-} || ${FMONITOR_APPLICATION_IMAGE_ID} =~ ^sha256:[0-9a-f]{64}$ ]] || fail FMONITOR_APPLICATION_IMAGE_ID
@@ -305,7 +336,11 @@ validate(){
   if [[ -n ${FMONITOR_IMAGE_ARCHIVE:-} ]]; then [[ ${FMONITOR_IMAGE_ARCHIVE} == /* && ${FMONITOR_IMAGE_ARCHIVE_SHA256:-} =~ ^[0-9a-f]{64}$ ]] || fail FMONITOR_IMAGE_ARCHIVE_SHA256; fi
 }
 
-export_config(){ local k; for k in $CONFIG_KEYS; do export "$k"; done; }
+export_config(){
+  local k
+  for k in $CONFIG_KEYS; do export "$k"; done
+  export FMONITOR_IMAGE_MODE FMONITOR_RUNTIME_IMAGE FMONITOR_APPLICATION_IMAGE_ID FMONITOR_APPLICATION_PLATFORM FMONITOR_SOURCE_REVISION
+}
 dc(){ docker compose --env-file /dev/null -p "${COMPOSE_PROJECT_NAME}" -f "$COMPOSE_FILE" "$@"; }
 writers(){ local a=(php web); [[ ${FMONITOR_JOBS_ENABLED} == true ]] && a+=(jobs-worker jobs-scheduler); printf '%s\n' "${a[@]}"; }
 
@@ -392,6 +427,32 @@ stage_integrations(){
   fi
 }
 
+qualify_integrations(){
+  local stage command status=0
+  if [[ $FMONITOR_JOBS_ENABLED != true ]]; then
+    for stage in erp workforce documents; do note "INTEGRATION_CHECK $stage SKIPPED"; done
+    return 0
+  fi
+  for stage in erp workforce documents; do
+    if [[ $stage == documents && -z ${FMONITOR_BITRIX_ORDER_DOCUMENT_WEBHOOK_URL:-} ]]; then
+      note 'INTEGRATION_CHECK documents SKIPPED'
+      continue
+    fi
+    case $stage in
+      erp) command=erp-equipment-facts-sync/probe;;
+      workforce) command=workforce-sync/run;;
+      documents) command=bitrix-order-document-links-sync/run;;
+    esac
+    if dc --profile jobs run --rm --no-deps jobs-worker php bin/yii "$command" --interactive=0 >/dev/null 2>&1; then
+      note "INTEGRATION_CHECK $stage OK"
+    else
+      note "INTEGRATION_CHECK $stage FAILED"
+      status=1
+    fi
+  done
+  return "$status"
+}
+
 provision(){
   dc up -d --wait db || return 1
   if grep -qx 'state=initializing' "${FMONITOR_DEPLOY_STATE_DIR}/installed" 2>/dev/null; then receipt initializing || return 1; fi
@@ -465,6 +526,7 @@ deploy(){
   fi
   if ! provision \
     || ! dc --profile deployment run --rm -e FMONITOR_BOOTSTRAP_SUPERADMIN_PASSWORD --entrypoint php prepare bin/fmonitor2-provision-initial-admin.php --email "${FMONITOR_INITIAL_OWNER_EMAIL}" \
+    || ! qualify_integrations \
     || ! start_services \
     || ! receipt installed; then
     stop_all_writers || true
@@ -475,6 +537,7 @@ deploy(){
 
 installed(){ local mode=${1:-exact} f="${FMONITOR_DEPLOY_STATE_DIR}/installed" expected actual; [[ -f $f && ! -L $f ]] || fail installation; grep -qx "project=${COMPOSE_PROJECT_NAME}" "$f" || fail installation; grep -qx 'state=installed' "$f" || fail update; expected=$(sed -n 's/^identity_hash=//p' "$f"); actual=$(printf '%s\0' "$COMPOSE_PROJECT_NAME" "$FMONITOR_DB_NAME" "$FMONITOR_DB_USER" "$FMONITOR_DB_PASSWORD" "$FMONITOR_PROCESS_TABLE_PREFIX" "$FMONITOR_SESSION_INSTANCE" "$FMONITOR_YII_COOKIE_VALIDATION_KEY" "$FMONITOR_YII_IDENTITY_KEY" | sha256sum | awk '{print $1}'); [[ $expected == "$actual" ]] || fail FMONITOR_YII_IDENTITY_KEY; ensure_unowned_or_owned; if [[ $mode == exact ]]; then expected=$(sed -n 's/^config_hash=//p' "$f"); actual=$(sha256sum "$ENV_FILE" | awk '{print $1}'); [[ $expected == "$actual" ]] || fail update; grep -qx "source=${FMONITOR_SOURCE_REVISION}" "$f" || fail update; grep -qx "image=${FMONITOR_RUNTIME_IMAGE}" "$f" || fail update; fi; }
 installed_image(){ local receipt="${FMONITOR_DEPLOY_STATE_DIR}/installed" expected actual; expected=$(sed -n 's/^image_id=//p' "$receipt") || return 1; actual=$(docker image inspect "$FMONITOR_RUNTIME_IMAGE" --format '{{.Id}}') || fail FMONITOR_RUNTIME_IMAGE; [[ $actual == "$expected" ]] || fail FMONITOR_RUNTIME_IMAGE; expected=$(sed -n 's/^application_platform=//p' "$receipt"); [[ $(docker image inspect "$FMONITOR_RUNTIME_IMAGE" --format '{{.Os}}/{{.Architecture}}') == "$expected" ]] || fail FMONITOR_APPLICATION_PLATFORM; grep -qx "database_image=${FMONITOR_DATABASE_IMAGE}" "$receipt" || fail FMONITOR_DATABASE_IMAGE; expected=$(sed -n 's/^database_image_id=//p' "$receipt"); [[ $(docker image inspect "$FMONITOR_DATABASE_IMAGE" --format '{{.Id}}') == "$expected" ]] || fail FMONITOR_DATABASE_IMAGE_ID; expected=$(sed -n 's/^database_platform=//p' "$receipt"); [[ $(docker image inspect "$FMONITOR_DATABASE_IMAGE" --format '{{.Os}}/{{.Architecture}}') == "$expected" ]] || fail FMONITOR_DATABASE_PLATFORM; }
+installed_database_image(){ local receipt="${FMONITOR_DEPLOY_STATE_DIR}/installed" expected; grep -qx "database_image=${FMONITOR_DATABASE_IMAGE}" "$receipt" || fail FMONITOR_DATABASE_IMAGE; expected=$(sed -n 's/^database_image_id=//p' "$receipt"); [[ $(docker image inspect "$FMONITOR_DATABASE_IMAGE" --format '{{.Id}}') == "$expected" ]] || fail FMONITOR_DATABASE_IMAGE_ID; expected=$(sed -n 's/^database_platform=//p' "$receipt"); [[ $(docker image inspect "$FMONITOR_DATABASE_IMAGE" --format '{{.Os}}/{{.Architecture}}') == "$expected" ]] || fail FMONITOR_DATABASE_PLATFORM; }
 
 stop_cmd(){ lock; installed any; stop_all_writers; }
 start_cmd(){ lock; installed; installed_image; start_services; }
@@ -496,6 +559,7 @@ main(){
   finalize_prepared_env
   if [[ $VERB == is-production ]]; then [[ ${FMONITOR_RUNTIME_ENV:-} == production && ${COMPOSE_PROJECT_NAME:-} =~ ^fm2-prod- ]] && return 0; return 1; fi
   resolve_auto_paths
+  resolve_build_identity
   validate
   [[ $VERB == check-config ]] && return
   [[ $VERB != deploy ]] || prepare_managed_paths

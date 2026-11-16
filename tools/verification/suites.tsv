@@ -425,6 +425,7 @@ unit	python3	tests/Deployment/local_integration_env_001_test.py	unit
 unit	python3	tests/Deployment/local_integration_env_security_001_test.py	unit
 unit	python3	tests/Deployment/pecl_direct_fallback_001_test.py	unit
 unit	python3	tests/Deployment/production_dependencies_001_test.py	unit
+unit	python3	tests/Deployment/production_handoff_001_test.py	unit
 unit	python3	tests/Deployment/production_make_env_001_test.py	unit
 unit	python3	tests/Deployment/production_make_lifecycle_001_test.py	unit
 unit	python3	tests/Deployment/production_make_quickstart_001_test.py	unit
@@ -475,6 +476,7 @@ unit	php	tests/InstallationProcess/document_render_html_001_test.php	unit
 unit	php	tests/InstallationProcess/erp_equipment_facts_delivery_001_test.php	unit
 unit	php	tests/InstallationProcess/erp_equipment_facts_operational_001_test.php	unit
 unit	php	tests/InstallationProcess/erp_equipment_facts_owner_boundary_001_test.php	unit
+unit	php	tests/InstallationProcess/erp_equipment_facts_probe_001_test.php	unit
 unit	python3	tests/InstallationProcess/erp_order_document_link_20261030_test.py	unit
 unit	php	tests/InstallationProcess/harness_artifact_isolation_001_test.php	integration
 unit	php	tests/InstallationProcess/inspection_evidence_sql_owner_policy_test.php	governance

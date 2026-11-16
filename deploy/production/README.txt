@@ -65,13 +65,22 @@ Jobs выключены по умолчанию. Для общего worker/sche
 `.env` и backup содержат секреты: не помещайте их в Git, release или общие логи.
 
 Update:
-- source build: получите чистый reviewed checkout нового commit, обновите
-  FMONITOR_SOURCE_REVISION и задайте новый несуществующий runtime image tag;
+- source build: получите чистый reviewed checkout нового commit и выполните
+  `make update`; exact Git HEAD и новый уникальный runtime image tag выбираются
+  автоматически, исходный `.env` не переписывается;
 - pull: задайте новый digest-pinned image reference;
 - local/archive: загрузите проверенный candidate и обновите exact image
   ID/platform/archive fields.
 После изменения jobs/integration config также используйте `make update`.
 Изменение bootstrap password не сбрасывает пароль существующего owner.
+
+При включённых jobs deploy/update до запуска worker и scheduler выполняет
+ограниченную проверку ERP и первую синхронизацию кадрового Bitrix. Синхронизация
+документов Bitrix выполняется только при настроенной паре webhook/root. Результаты
+выводятся как `INTEGRATION_CHECK ... OK|FAILED|SKIPPED`; любая обязательная
+ошибка завершает команду ненулевым кодом. Проверка не запускает SMTP, scheduler,
+outbox или legacy import. Пустой каталог объектов не отменяет read-only проверку
+соединения с ERP.
 
 Restore:
 1. Создайте отдельный target `.env` из backup `restore.env`.

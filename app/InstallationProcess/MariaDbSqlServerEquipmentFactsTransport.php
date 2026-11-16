@@ -8,7 +8,7 @@ final class MariaDbSqlServerEquipmentFactsTransport
     private \PDO $connection;
     public function __construct(ErpEquipmentFactsDeliveryConfig $config)
     {
-        $this->connection=new \PDO('sqlsrv:Server='.$config->host.';Database='.$config->database.';Encrypt=yes;TrustServerCertificate=yes;ApplicationIntent=ReadOnly',$config->user,$config->password,[\PDO::ATTR_ERRMODE=>\PDO::ERRMODE_EXCEPTION]);
+        $this->connection=new \PDO('sqlsrv:Server='.$config->host.';Database='.$config->database.';LoginTimeout='.$config->timeoutSeconds.';Encrypt=yes;TrustServerCertificate=yes;ApplicationIntent=ReadOnly',$config->user,$config->password,[\PDO::ATTR_ERRMODE=>\PDO::ERRMODE_EXCEPTION]);
     }
     public function __invoke(string $sql,array $parameters,array $options):array
     {

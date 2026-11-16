@@ -1,5 +1,10 @@
 # PRODUCTION-MAKE-ENV-001
 
+Source-build version selection and initial integration qualification are superseded
+by [PRODUCTION-HANDOFF-001](PRODUCTION-HANDOFF-001.md). Operator env stays unchanged;
+Git HEAD selects deploy/update candidates and private receipts retain installed identity.
+Pinned pull/local/release and recovery guarantees below remain in force.
+
 ## Простыми словами
 
 Оператор создаёт `.env`, заполняет адрес сервера/свою учётку/внешние токены и выполняет `make deploy`. Система разворачивает новую БД и приложение; все дальнейшие команды сохраняют данные. Если обычная установка PHP-пакетов недоступна, сборка пробует закреплённые прямые архивы. Готовые Docker images можно перенести архивом без сборки в корпоративной сети.

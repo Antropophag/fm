@@ -6,6 +6,14 @@ final class NativeErpEquipmentFactsDelivery
 {
     private \Closure$transport;
     public function __construct(private ErpEquipmentFactsDeliveryConfig$config,callable$transport){$this->transport=\Closure::fromCallable($transport);}
+    public function probe():array
+    {
+        try{$rows=($this->transport)('SELECT 1 AS available',[],['maxRows'=>1,'timeoutSeconds'=>$this->config->timeoutSeconds,'readOnly'=>true]);}
+        catch(\Throwable){return['status'=>'failed'];}
+        return is_array($rows)&&count($rows)===1&&is_array($rows[0]??null)&&array_keys($rows[0])===['available']&&$rows[0]['available']===1
+            ?['status'=>'completed']
+            :['status'=>'failed'];
+    }
     public function fetch(array $candidates):array
     {
         $orders=[];
