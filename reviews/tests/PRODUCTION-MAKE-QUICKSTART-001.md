@@ -73,3 +73,22 @@ The matrix now simulates foreign ownership for HOME, the managed root, project, 
 ### Approval boundary
 
 No Gate 3 findings remain. The contract and corrected tests are **APPROVED** for separate minimal implementation. Expectations must remain frozen; implementation still requires focused GREEN, the real isolated live qualification, independent final review, and exact-source full GitHub CI. This verdict does not authorize production deployment or merge.
+
+---
+
+## Implementation correction-oracle review — Q1/Q2
+
+- Date: `2026-11-16`
+- Reviewed implementation baseline: `6aa853028d528a31c2cc3e43c577e51e00985fa3`
+- Scope: descriptor-bound root-env parsing and explicit-env compatibility only
+- Focused result: all 16 quickstart unit cases PASS on the corrected working tree
+- Prior live evidence: record `1794826918690878000-bd2f98cd476d4779abddabd01a972991` GREEN for the committed pre-correction live workflow
+- Verdict: **APPROVED** for the narrow test and implementation correction; formal Gate 5 remains pending a committed exact-source package
+
+The unit helper no longer requires `STUB_DOCKER_BOUNDARY` on stdout. Production intentionally redirects `docker info` output; the external fake-Docker trace plus its nonzero exit still proves the real Docker boundary was reached. No safety, identity, data, secrecy, or zero-effect assertion was removed.
+
+Two new regression cases close the final-review findings. A late same-byte replacement is injected from the first parser `od` boundary and must be detected before Docker. An explicit external mode-`0644` env must reject unchanged, proving the convenience mutation remains limited to repository-root `.env`. The private baseline reconstruction fails exactly these two assertions; the corrected 16-case run passes them.
+
+The implementation captures the validated single-link root env through an opened descriptor, preserves trailing newlines with a sentinel, verifies the snapshot digest, narrows permissions through `/dev/fd/9`, and parses only the captured snapshot. After parsing it rechecks pathname device/inode/UID/link-count/mode and content digest before clearing the snapshot or proceeding. A pathname replacement cannot alter parsed configuration or reach Docker. The logic is gated by the canonical `$ROOT/.env` path; every explicit external env continues through the established readonly `0600` validation.
+
+No further Q1/Q2 findings remain. Bash syntax, Python compilation, focused cases, and diff hygiene are reported GREEN. The implementation must still be committed and rebound to a fresh live GREEN package before independent final code approval.
