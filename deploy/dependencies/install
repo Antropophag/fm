@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail(){ printf 'DEPENDENCY_FAILURE: %s\n' "$*" >&2; exit 1; }
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
+project=$PWD
+manifest="$script_dir/direct-dist-sha256.json"
+composer=/usr/local/bin/composer
+mode=auto
+archive_dir=''
+check=0
+while (($#)); do
+    case "$1" in
+        --project) (($#>=2))||fail 'missing --project value';project=$2;shift 2;;
+        --manifest) (($#>=2))||fail 'missing --manifest value';manifest=$2;shift 2;;
+        --composer) (($#>=2))||fail 'missing --composer value';composer=$2;shift 2;;
+        --mode) (($#>=2))||fail 'missing --mode value';mode=$2;shift 2;;
+        --archive-dir) (($#>=2))||fail 'missing --archive-dir value';archive_dir=$2;shift 2;;
+        --check-manifest) check=1;shift;;
+        *) fail 'unknown argument';;
+    esac
+done
+[[ "$mode" == auto || "$mode" == composer || "$mode" == direct ]]||fail 'invalid mode'
+[[ -d "$project" && ! -L "$project" ]]||fail 'project must be a regular directory'
+project=$(cd "$project"&&pwd -P)
+php "$script_dir/manifest.php" check "$project" "$manifest"
+((check==0))||exit 0
+[[ -x "$composer" ]]||fail 'Composer executable is unavailable'
+if [[ -z "$archive_dir" ]];then archive_dir="$project/.composer-direct-archives";fi
+[[ ! -L "$archive_dir" ]]||fail 'archive directory cannot be a symlink'
+mkdir -p "$archive_dir"
+archive_dir=$(cd "$archive_dir"&&pwd -P)
+
+owned=()
+cleanup(){ local path;for path in "${owned[@]-}";do [[ ! -e "$path" && ! -L "$path" ]]||rm -rf -- "$path";done; }
+trap cleanup EXIT
+new_stage(){ LAST_STAGE=$(mktemp -d "$project/.dependency-$1.XXXXXXXX");owned+=("$LAST_STAGE"); }
+install_packages(){
+    local working=$1 vendor=$2
+    COMPOSER_VENDOR_DIR="$vendor" "$composer" install --working-dir="$working" --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader||return $?
+}
+verify_install(){
+    local vendor=$1
+    # Rebuild root paths from the untouched project after a private-lock install.
+    COMPOSER_VENDOR_DIR="$vendor" "$composer" dump-autoload --working-dir="$project" --no-dev --no-interaction --optimize||return $?
+    COMPOSER_VENDOR_DIR="$vendor" "$composer" validate --working-dir="$project" --strict --no-check-all --no-interaction||return $?
+    COMPOSER_VENDOR_DIR="$vendor" "$composer" check-platform-reqs --working-dir="$project" --no-dev --no-interaction||return $?
+    php "$script_dir/verify.php" "$vendor" "$project/composer.lock"||return $?
+}
+publish(){
+    local stage=$1 old=''
+    # Composer runs as root while the production runtime is UID 10001. Keep
+    # executable package files executable and make the dependency tree readable
+    # and traversable without granting write access.
+    chmod -R a+rX "$stage"||fail 'could not make vendor runtime-readable'
+    if [[ -e "$project/vendor" || -L "$project/vendor" ]];then
+        [[ ! -L "$project/vendor" && -d "$project/vendor" ]]||fail 'existing vendor is unsafe'
+        old=$(mktemp -d "$project/.vendor-old.XXXXXXXX");rmdir "$old";owned+=("$old")
+        mv "$project/vendor" "$old"
+    fi
+    if ! mv "$stage" "$project/vendor";then [[ -z "$old" ]]||mv "$old" "$project/vendor";fail 'could not publish vendor';fi
+    [[ -z "$old" ]]||rm -rf -- "$old"
+}
+primary(){
+    local stage;new_stage vendor-primary;stage=$LAST_STAGE
+    if install_packages "$project" "$stage"&&verify_install "$stage";then publish "$stage";return 0;fi
+    return 1
+}
+direct(){
+    local sha size url archive partial actual_size actual_sha private_base private_json private_lock vendor
+    while IFS=$'\t' read -r sha size url;do
+        archive="$archive_dir/$sha.zip"
+        if [[ -e "$archive" || -L "$archive" ]];then
+            [[ ! -L "$archive" && -f "$archive" ]]||fail 'cached archive is unsafe'
+        else
+            partial="$archive_dir/.$sha.download.$$"
+            [[ ! -e "$partial" && ! -L "$partial" ]]||fail 'download stage already exists'
+            owned+=("$partial")
+            curl --fail --silent --show-error --proto '=https' --max-redirs 0 --connect-timeout 15 --max-time 180 --retry 2 --output "$partial" "$url"||fail 'approved archive download failed'
+            actual_size=$(wc -c < "$partial"|tr -d ' ');actual_sha=$(sha256sum "$partial"|awk '{print $1}')
+            [[ "$actual_size" == "$size" && "$actual_sha" == "$sha" ]]||fail 'downloaded archive checksum mismatch'
+            mv "$partial" "$archive"
+        fi
+        actual_size=$(wc -c < "$archive"|tr -d ' ');actual_sha=$(sha256sum "$archive"|awk '{print $1}')
+        [[ "$actual_size" == "$size" && "$actual_sha" == "$sha" ]]||fail 'cached archive checksum mismatch'
+        unzip -tqq "$archive" >/dev/null||fail 'cached archive is not a valid ZIP'
+    done < <(php "$script_dir/manifest.php" list "$project" "$manifest")
+    private_base=$(mktemp "$project/.dependency-composer.XXXXXXXX");rm -f -- "$private_base"
+    private_json="$private_base.json";private_lock="$private_base.lock";owned+=("$private_json" "$private_lock")
+    cp "$project/composer.json" "$private_json"
+    php "$script_dir/manifest.php" lock "$project" "$manifest" "$archive_dir" "$private_lock"
+    new_stage vendor-direct;vendor=$LAST_STAGE
+    COMPOSER="$private_json" COMPOSER_VENDOR_DIR="$vendor" COMPOSER_DISABLE_NETWORK=1 "$composer" install --working-dir="$project" --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader||fail 'offline Composer install failed'
+    COMPOSER_DISABLE_NETWORK=1 verify_install "$vendor"||fail 'offline Composer verification failed'
+    publish "$vendor"
+}
+
+case "$mode" in
+    composer) primary||fail 'Composer install failed';;
+    direct) direct;;
+    auto) primary||{ printf 'DEPENDENCY_NOTICE: primary Composer install failed; using reviewed direct archives\n' >&2;direct; };;
+esac

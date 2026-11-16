@@ -1,0 +1,137 @@
+x-env: &env
+  FMONITOR_DB_HOST: db
+  FMONITOR_DB_PORT: "3306"
+  FMONITOR_DB_NAME: ${FMONITOR_DB_NAME}
+  FMONITOR_DB_USER: ${FMONITOR_DB_USER}
+  FMONITOR_DB_PASSWORD: ${FMONITOR_DB_PASSWORD}
+  FMONITOR_PROCESS_TABLE_PREFIX: ${FMONITOR_PROCESS_TABLE_PREFIX}
+  FMONITOR_LEGACY_TABLE_PREFIX: ${FMONITOR_LEGACY_TABLE_PREFIX}
+  FMONITOR_SESSION_STATE_ROOT: /home/fmonitor/.local/state/fmonitor2
+  FMONITOR_SESSION_INSTANCE: ${FMONITOR_SESSION_INSTANCE}
+  FMONITOR_YII_COOKIE_VALIDATION_KEY: ${FMONITOR_YII_COOKIE_VALIDATION_KEY}
+  FMONITOR_YII_IDENTITY_KEY: ${FMONITOR_YII_IDENTITY_KEY}
+  FMONITOR_YII_SESSION_PATH: /home/fmonitor/.local/state/fmonitor2/yii-sessions
+  FMONITOR_ARTIFACT_STORAGE_ROOT: /home/fmonitor/.local/state/fmonitor2/artifacts
+  FMONITOR_ORIGINAL_DB_PASSWORD_FILE: /run/fmonitor-secrets/database-password
+  FMONITOR_ORIGINAL_SAFE_LOG_FILE: /home/fmonitor/.local/state/fmonitor2/log/original-safe.jsonl
+  FMONITOR_TRUSTED_REQUEST_HOST: ${FMONITOR_TRUSTED_REQUEST_HOST}
+  FMONITOR_TRUSTED_REQUEST_SCHEME: ${FMONITOR_TRUSTED_REQUEST_SCHEME}
+  FMONITOR_RUNTIME_BUILD_ID_FILE: /usr/local/share/fmonitor2/runtime-build-id
+x-app: &app
+  image: ${FMONITOR_RUNTIME_IMAGE}
+  environment: *env
+  volumes:
+    - type: volume
+      source: state
+      target: /home/fmonitor/.local/state
+      volume: {nocopy: true}
+    - secrets:/run/fmonitor-secrets
+  logging: {driver: json-file, options: {max-size: "10m", max-file: "5"}}
+services:
+  db:
+    image: ${FMONITOR_DATABASE_IMAGE}
+    command: ["--character-set-server=utf8mb4","--collation-server=utf8mb4_unicode_ci"]
+    environment: {MARIADB_DATABASE: "${FMONITOR_DB_NAME}", MARIADB_ROOT_PASSWORD: "${FMONITOR_MIGRATION_DB_PASSWORD}"}
+    volumes: [database:/var/lib/mysql]
+    healthcheck: {test: ["CMD","healthcheck.sh","--connect","--innodb_initialized"], interval: 5s, timeout: 3s, retries: 24, start_period: 15s}
+    restart: unless-stopped
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "5"}}
+  prepare:
+    <<: *app
+    command: ["php","bin/fmonitor2-runtime-prepare.php"]
+    profiles: [deployment]
+    restart: "no"
+  initialize-state:
+    image: ${FMONITOR_RUNTIME_IMAGE}
+    user: "0:0"
+    entrypoint: ["sh","-c","set -eu; install -d -m 0700 -o 10001 -g 10001 /state /state/fmonitor2"]
+    volumes:
+      - type: volume
+        source: state
+        target: /state
+        volume: {nocopy: true}
+    profiles: [deployment]
+    restart: "no"
+  migrate:
+    <<: *app
+    environment:
+      <<: *env
+      FMONITOR_DB_USER: ${FMONITOR_MIGRATION_DB_USER}
+      FMONITOR_DB_PASSWORD: ${FMONITOR_MIGRATION_DB_PASSWORD}
+    command: ["php","bin/yii","schema-migrate/run","--interactive=0"]
+    profiles: [deployment]
+    restart: "no"
+  stage-runtime-secrets:
+    image: ${FMONITOR_RUNTIME_IMAGE}
+    user: "0:0"
+    entrypoint: ["bin/fmonitor2-stage-runtime-bitrix-config"]
+    volumes:
+      - secrets:/run/fmonitor-secrets
+      - type: bind
+        source: ${FMONITOR_BITRIX_CONFIG_HOST_FILE:-/dev/null}
+        target: /run/fmonitor-input/bitrix-config.json
+        read_only: true
+    profiles: [deployment]
+    restart: "no"
+  php:
+    <<: *app
+    command: ["php-fpm","-F","--fpm-config","deploy/runtime/php-fpm.conf"]
+    healthcheck: {test: ["CMD-SHELL","SCRIPT_FILENAME=/workspace/fmonitor-2/public/runtime.php SCRIPT_NAME=/health/ready REQUEST_METHOD=GET REQUEST_URI=/health/ready SERVER_PROTOCOL=HTTP/1.1 HTTP_HOST=$${FMONITOR_TRUSTED_REQUEST_HOST} cgi-fcgi -bind -connect 127.0.0.1:9000 | grep -q '\"ok\":true'"], interval: 5s, timeout: 5s, retries: 24, start_period: 10s}
+    stop_signal: SIGQUIT
+    stop_grace_period: 60s
+    restart: unless-stopped
+  web:
+    image: ${FMONITOR_RUNTIME_IMAGE}
+    environment: {FMONITOR_TRUSTED_REQUEST_HOST: "${FMONITOR_TRUSTED_REQUEST_HOST}"}
+    command: ["nginx","-c","/workspace/fmonitor-2/deploy/runtime/nginx.conf","-g","daemon off;"]
+    ports: ["127.0.0.1:${FMONITOR_HTTP_PORT}:8080"]
+    depends_on: {php: {condition: service_healthy}}
+    healthcheck: {test: ["CMD-SHELL","curl --fail --silent --header \"Host: $${FMONITOR_TRUSTED_REQUEST_HOST}\" http://127.0.0.1:8080/health/ready >/dev/null"], interval: 5s, timeout: 5s, retries: 24, start_period: 10s}
+    restart: unless-stopped
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "5"}}
+  jobs-worker:
+    <<: *app
+    command: ["php","bin/yii","jobs/worker","--interactive=0"]
+    environment:
+      <<: *env
+      FMONITOR_BITRIX_CONFIG: /run/fmonitor-secrets/bitrix-config.json
+      FMONITOR_BITRIX_ORDER_DOCUMENT_ROOT_ID: ${FMONITOR_BITRIX_ORDER_DOCUMENT_ROOT_ID:-}
+      FMONITOR_ERP_HOST: ${FMONITOR_ERP_HOST}
+      FMONITOR_ERP_DATABASE: ${FMONITOR_ERP_DATABASE}
+      FMONITOR_ERP_USER: ${FMONITOR_ERP_USER}
+      FMONITOR_ERP_PASSWORD: ${FMONITOR_ERP_PASSWORD}
+      FMONITOR_ERP_EQUIPMENT_FACTS_HMAC_KEY: ${FMONITOR_ERP_EQUIPMENT_FACTS_HMAC_KEY}
+      FMONITOR_ERP_EQUIPMENT_FACTS_TIMEOUT_SECONDS: ${FMONITOR_ERP_EQUIPMENT_FACTS_TIMEOUT_SECONDS}
+      FMONITOR_ERP_EQUIPMENT_FACTS_MAX_ROWS: ${FMONITOR_ERP_EQUIPMENT_FACTS_MAX_ROWS}
+      FMONITOR_ERP_EQUIPMENT_FACTS_CHUNK_SIZE: ${FMONITOR_ERP_EQUIPMENT_FACTS_CHUNK_SIZE}
+      FMONITOR_RUNTIME_ENV: production
+      FMONITOR_PUBLIC_BASE_URL: ${FMONITOR_PUBLIC_BASE_URL}
+      FMONITOR_SMTP_HOST: ${FMONITOR_SMTP_HOST}
+      FMONITOR_SMTP_PORT: ${FMONITOR_SMTP_PORT}
+      FMONITOR_SMTP_ENCRYPTION: ${FMONITOR_SMTP_ENCRYPTION}
+      FMONITOR_SMTP_USERNAME: ${FMONITOR_SMTP_USERNAME}
+      FMONITOR_SMTP_PASSWORD: ${FMONITOR_SMTP_PASSWORD}
+      FMONITOR_SMTP_FROM_ADDRESS: ${FMONITOR_SMTP_FROM_ADDRESS}
+      FMONITOR_SMTP_FROM_NAME: ${FMONITOR_SMTP_FROM_NAME}
+      FMONITOR_SMTP_TIMEOUT_SECONDS: ${FMONITOR_SMTP_TIMEOUT_SECONDS}
+      FMONITOR_SMTP_VERIFY_PEER: ${FMONITOR_SMTP_VERIFY_PEER}
+    profiles: [jobs]
+    healthcheck: {test: ["CMD","php","bin/yii","jobs/process-health","--interactive=0"], interval: 15s, timeout: 10s, retries: 8, start_period: 15s}
+    restart: unless-stopped
+  jobs-scheduler:
+    <<: *app
+    command: ["php","bin/yii","jobs/scheduler","--interactive=0"]
+    environment:
+      <<: *env
+      FMONITOR_ERP_HOST: ${FMONITOR_ERP_HOST}
+      FMONITOR_ERP_DATABASE: ${FMONITOR_ERP_DATABASE}
+      FMONITOR_ERP_USER: ${FMONITOR_ERP_USER}
+      FMONITOR_ERP_PASSWORD: ${FMONITOR_ERP_PASSWORD}
+      FMONITOR_ERP_EQUIPMENT_FACTS_HMAC_KEY: ${FMONITOR_ERP_EQUIPMENT_FACTS_HMAC_KEY}
+      FMONITOR_ERP_EQUIPMENT_FACTS_TIMEOUT_SECONDS: ${FMONITOR_ERP_EQUIPMENT_FACTS_TIMEOUT_SECONDS}
+      FMONITOR_ERP_EQUIPMENT_FACTS_MAX_ROWS: ${FMONITOR_ERP_EQUIPMENT_FACTS_MAX_ROWS}
+      FMONITOR_ERP_EQUIPMENT_FACTS_CHUNK_SIZE: ${FMONITOR_ERP_EQUIPMENT_FACTS_CHUNK_SIZE}
+    profiles: [jobs]
+    healthcheck: {test: ["CMD","php","bin/yii","jobs/process-health","--interactive=0"], interval: 15s, timeout: 10s, retries: 8, start_period: 15s}
+    restart: unless-stopped
+volumes: {database: {}, state: {}, secrets: {}}

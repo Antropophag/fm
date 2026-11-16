@@ -1,0 +1,38 @@
+{
+  "change": "production-make-env-deploy",
+  "planned_paths": [
+    "Makefile",
+    ".dockerignore",
+    "deploy/production",
+    "deploy/dependencies",
+    "deploy/runtime/Dockerfile",
+    "tools/delivery/Dockerfile.runtime.in",
+    "tools/delivery/render-dependencies.py",
+    "docs/operations/current-delivery-goal.md",
+    "docs/operations/production-runtime-runbook.md",
+    "docs/operations/runtime-recovery-runbook.md",
+    "docs/operations/production-make-env-delivery.md",
+    "README.md",
+    "openspec/changes/production-make-env-deploy",
+    "specs/PRODUCTION-MAKE-ENV-001.md",
+    "tests/Deployment/production_make_env_001_test.py",
+    "tests/Deployment/production_make_lifecycle_001_test.py",
+    "tests/Deployment/production_dependencies_001_test.py",
+    "tests/Deployment/production_make_live_001_test.py",
+    "tools/verification/suites.tsv",
+    "app/RuntimeRestore/RuntimeRecovery.php",
+    "tests/Runtime/production_recovery_preflight_001_test.php",
+    "docs/operations/production-make-env.md"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "PRODUCTION-MAKE-ENV-001",
+      "acceptance_id": "A09-canonical-preflight",
+      "spec_path": "specs/PRODUCTION-MAKE-ENV-001.md",
+      "seam": "public RuntimeRecovery verify CLI without DB effects",
+      "tests": [
+        "tests/Runtime/production_recovery_preflight_001_test.php"
+      ]
+    }
+  ]
+}

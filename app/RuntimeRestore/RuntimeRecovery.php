@@ -13,10 +13,14 @@ final class RuntimeRecovery
     private const CURRENT_SCHEMA_VERSION=39;
     public static function run(array $argv,array $environment):array
     {
-        try{return match($argv[1]??''){ 'backup'=>self::backup(array_slice($argv,2),$environment),'restore'=>self::restore(array_slice($argv,2),$environment),default=>self::out(64,'CONFIGURATION_INVALID')};}
+        try{return match($argv[1]??''){ 'backup'=>self::backup(array_slice($argv,2),$environment),'verify'=>self::verify(array_slice($argv,2),$environment),'restore'=>self::restore(array_slice($argv,2),$environment),default=>self::out(64,'CONFIGURATION_INVALID')};}
         catch(\mysqli_sql_exception){return self::out(69,'DATABASE_UNAVAILABLE');}
         catch(RecoveryFailure $failure){return self::out($failure->exit,$failure->reason);}
         catch(\Throwable){return self::out(70,'BACKUP_FAILED');}
+    }
+    private static function verify(array$args,array$env):array
+    {
+        $options=self::options($args,['bundle','source-commit','image-reference','image-id'],[]);$config=self::config($env);$bundle=self::path($options['bundle'],true);$manifest=self::preflight($bundle,$config->value('FMONITOR_PROCESS_TABLE_PREFIX'));if($options['source-commit']!==$manifest['sourceCommit']||$options['image-reference']!==$manifest['imageReference']||$options['image-id']!==$manifest['imageId'])throw new RecoveryFailure(67,'BUNDLE_INVALID');return self::out(0,'BUNDLE_VERIFIED');
     }
     private static function backup(array$args,array$env):array
     {

@@ -1,3 +1,5 @@
+> Историческая инструкция для прежнего schema frontier. Для новых production-установок используйте [Make deployment](production-make-env.md): `make backup`, `make restore` и canonical read-only `verify`. Команды и v23 inventory ниже сохраняются как история, не как актуальный рецепт для v39.
+
 # Production runtime recovery — operational draft
 
 **Status: OPERATIONALLY CROSS-CHECKED; INDEPENDENTLY REVIEWED.** Команды ниже

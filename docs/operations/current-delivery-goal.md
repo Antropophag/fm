@@ -1,3 +1,13 @@
+# Текущая цель — production Make и единый environment
+
+Поручение владельца16.11.2026 в текущей беседе: реализовать согласованный пакет чистого production-развёртывания через Make; все ключи, токены и первоначальная учётка находятся в одном приватном `.env`. При недоступности Composer repositories автоматически скачивать закреплённые пакеты напрямую с проверкой digest. Существующие базы не переносить. Это разрешение на реализацию, isolated acceptance, PR/push; фактическая выкладка на корпоративный сервер, отправка почты, изменения живого production и merge не входят.
+
+Worktree `fmonitor-2-production-make-env-deploy`, change `production-make-env-deploy`, контракт `PRODUCTION-MAKE-ENV-001`. Исходная база — main7c6b8e14 после PR294; в эту ветку также включён main6cf725fc после завершения параллельного PR295; соседние worktrees и параллельная сессия сохраняются. Root — спецификация/tests; отдельные gpt-5.6-sol/low executors — deployment и dependency installer; независимый reviewer — Gate3/final. План выбирает lane/reviews. Проверки локально bounded, полный matrix только exact-source GitHub CI. Секреты и полные журналы вне Git. UNKNOWN не означает GREEN.
+
+Предыдущая очередь сохранена ниже; её production-first/merge authorization не переносится на эту задачу.
+
+---
+
 # Текущая цель — адресный перечень через PR/CI до main
 
 Owner16.11.2026 явно поручил проверить/дописать тесты, провести изменения черезPR и полныйCI и влить вmain. Работа в отдельном worktree address-register-integration на main7c6b8e14, содержащем mergedPR294. Объединены все original/repaired/adaptive address-register commits с сохранением авторства и историй. Production менять не требуется. Root specs/tests/integration; independent retrospective test/final review; требуемыегейты и полныйexact-sourceCI теперь обязательны, прежние owner-deferred записи ниже остаются историей. Full local make test/verify запрещён: только focused checks. Разрешеныpush/PR/merge после review/CI; чужиеworktrees/WIP не менять.
