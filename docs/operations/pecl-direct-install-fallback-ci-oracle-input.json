@@ -1,0 +1,35 @@
+{
+  "change": "pecl-direct-install-fallback-ci-oracle",
+  "planned_paths": [
+    "tests/Yii2/yii2_erp_equipment_facts_console_001_test.php"
+  ],
+  "lifecycle": {
+    "intent": "COMPACT_MAINTENANCE",
+    "issue": "Owner workstation PECL failure / PR298 CI oracle correction",
+    "change_kind": "BOUNDED_FIX",
+    "requirement_status": "CURRENT",
+    "semantic_change": "ESTABLISHED_BEHAVIOR_FIX",
+    "canonical_requirements": [
+      {
+        "path": "specs/PECL-DIRECT-FALLBACK-001.md"
+      }
+    ],
+    "executable_regression": "tests/Yii2/yii2_erp_equipment_facts_console_001_test.php",
+    "sensitivity": {
+      "classification": "ORDINARY",
+      "boundaries": [],
+      "rationale": "Existing test wiring assertion follows the already reviewed installer extraction. No runtime, dependency pin, driver, workflow or application change."
+    }
+  },
+  "acceptances": [
+    {
+      "spec_id": "PECL-DIRECT-FALLBACK-001",
+      "acceptance_id": "P03-existing-ERP-consumer",
+      "spec_path": "specs/PECL-DIRECT-FALLBACK-001.md",
+      "seam": "existing ERP console contract and actual Dockerfile-to-driver installer wiring",
+      "tests": [
+        "tests/Yii2/yii2_erp_equipment_facts_console_001_test.php"
+      ]
+    }
+  ]
+}

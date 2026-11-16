@@ -53,3 +53,37 @@ The private baseline with PECL mapped to loopback remains a real nonzero reprodu
 ## Final boundary
 
 Gate 5 is **APPROVED** for the exact candidate and executable source above. No code findings remain. Full exact-source GitHub CI and tested-main publication are still pending; the known missing automatic admission adapter remains `UNKNOWN`. This verdict does not authorize live production deployment or represent those pending states as GREEN.
+
+---
+
+## Test-only CI oracle correction review
+
+- Date: `2026-11-16`
+- Correction base: `41727536bbc25281169785f4ab186100f6044abf`
+- Candidate source: `31b6fd1a10cea544628a719caee97bc362f7a994971b4d20093b9236a38c3eb7`
+- Executable source: `04ea7bda5847e102184931d4a6d0605870b44375ad558fb06625eb3fa5ca012f`
+- Reviewer package: `20261116T125050Z-a3f34b92fd`, SHA-256 `3b44231f268771c44f5af12d344b89116c2976b9303404053b85cc28aac0d100`
+- Verification plan SHA-256: `a43c55293dadad16e0e93a3e88de0abae6e4c8a2c5f1f362d9066eb4576ab9ec`
+- Harness final record: `APPROVED`, recorded `2026-11-16T12:51:17Z`
+- Verdict: **APPROVED**
+
+PR298's first full-CI unit job exposed one stale pre-change assertion in `yii2_erp_equipment_facts_console_001_test.php`: it searched the generated Dockerfile for the literal `pdo_sqlsrv`, although installation now belongs to the reviewed helper. The complete unit failure inventory contains this single regression marker; governance and fast jobs were GREEN. Remaining old-candidate e2e/integration jobs were cancelled to avoid waiting on a candidate already known to require a test-only correction. Their coverage remains explicitly `UNKNOWN`, and the cancelled run is not treated as GREEN.
+
+The correction changes only that obsolete wiring assertion. It now requires:
+
+- the generated Dockerfile to copy `deploy/dependencies/install-sqlsrv` into the runtime image;
+- the generated Dockerfile to invoke the pinned installer through its public path;
+- the installer to enable both `sqlsrv` and `pdo_sqlsrv`.
+
+All ERP environment wiring, obsolete secret-file rejection, safe completed/failed results, canonical owner composition, command registration, exception normalization, no-secret leakage, and production unavailable behavior remain unchanged. There is no runtime, pin, template, workflow, schema, or application behavior change.
+
+The old test has a retained exact `INTENDED_RED` record `1794833175084957000-eb071ad5a94c46b4a587555461ac912c`, failing at the stale line-12 oracle. A first direct local attempt after correction reached later controller code but lacked `vendor/autoload.php`; that is retained as an environment setup failure, not a code finding. After installing the exact existing Composer lock into ignored local `vendor`, the mapped test is source-bound GREEN:
+
+- `php tests/Yii2/yii2_erp_equipment_facts_console_001_test.php` — record `1794833425247137000-f6797ce975854f40b34ec0eef26bc10b`, command blob `2368373d17c365b3aa6609ec89afad84188691174f3801eb4dc7e3bb7420a00e`
+
+Supporting correction checks are GREEN:
+
+- change verification `1794833272494199000-c55137d16ead448f966e8b1ac00dbd05`
+- architecture guard `1794833308681303000-1aca5a0e14ba4e0da7e5934e50f74e9d`
+
+The test-only correction is **APPROVED**. A new exact-source full CI run remains required; cancelled e2e/integration jobs from the superseded candidate and the aggregate status remain `UNKNOWN` until that run completes.

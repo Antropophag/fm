@@ -38,3 +38,23 @@ The corresponding review record retains exact complete hashes and evidence IDs.
 Only this delivery note and final review documentation are added after approval.
 Full exact-source GitHub CI and tested-main GitLab transfer remain the publication
 steps; known I1 automatic admission stays UNKNOWN, not silently overridden.
+
+
+## CI oracle correction
+
+First fullCI43868057851 reported one regression: existing ERP console test searched
+for an inline pdo_sqlsrv literal in Dockerfile after installation had moved to the
+reviewed helper. Root missed this adjacent consumer during local selection. The
+complete failed-job inventory is unit plus verify aggregate; the complete regression
+inventory contains only tests/Yii2/yii2_erp_equipment_facts_console_001_test.php.
+Remaining e2e and integration jobs were cancelled to start the corrected full run
+sooner; their results remain UNKNOWN, never GREEN. All failed logs are retained.
+
+Root bounded test-only correction checks helper COPY, pinned invocation, and both
+drivers enabled in the actual installer; all ERP behavioral assertions are retained.
+Runtime/template/pins remain byte-identical to41727536. Exact oracle RED retained;
+first local corrected attempt lacked vendor/autoload.php, then exact composer.lock
+installation supplied the fixture and the complete PHP test passed. Governance and
+architecture also passed. Independent final correction approval recorded12:51:17Z.
+Correction input declares ordinary compact maintenance; planner requires final only.
+New exact-source fullCI required before main/GitLab publication.
