@@ -101,6 +101,15 @@ with tempfile.TemporaryDirectory(prefix='fm2-quick-live-') as raw:
             assert path.is_dir() and stat.S_IMODE(path.stat().st_mode) == 0o700
         make('status')
         opener = login(data['FMONITOR_PUBLIC_BASE_URL'], data['FMONITOR_INITIAL_OWNER_EMAIL'], data['FMONITOR_BOOTSTRAP_SUPERADMIN_PASSWORD'])
+        guide=opener.open(data['FMONITOR_PUBLIC_BASE_URL']+'/help/',timeout=15)
+        guide_bytes=guide.read()
+        assert guide.status==200 and guide_bytes==(clone/'public/help/index.html').read_bytes(), 'RUNTIME_HELP_ROUTE_REQUIRED'
+        help_assets=set(re.findall(rb'(?:src|href)="(/help/[^"#?]+)"',guide_bytes))
+        assert len(help_assets)>10
+        for asset in help_assets:
+            path=asset.decode()
+            response=opener.open(data['FMONITOR_PUBLIC_BASE_URL']+path,timeout=15)
+            assert response.status==200 and response.read()==(clone/'public'/path.lstrip('/')).read_bytes(), path
         sentinel = 'quickstart-' + token
         run(compose_args + ['exec', '-T', 'php', 'php', '-r',
                            'umask(0077);file_put_contents(getenv("FMONITOR_SESSION_STATE_ROOT")."/quickstart-proof",' + json.dumps(sentinel) + ');'],

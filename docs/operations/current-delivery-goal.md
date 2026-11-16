@@ -1,3 +1,18 @@
+# Текущая цель — восстановить инструкцию в чистой Docker-установке
+
+Owner вошёл в установленный FMonitor, но «Инструкция» возвращает NOT_FOUND.
+Подтверждено: /help/ и его assets отсутствуют в строгой Yii route map, хотя HTML,
+CSS/JS и учебные screenshots уже включены в production image. Worktree
+restore-runtime-help-route, base e4642a77. Bounded correction existing public help;
+root contract/tests, separate sol/low executor, independent planner-required reviews.
+Сохраняем trusted-host/security headers и закрытый public file allowlist. Интеграции
+локального trial пока выключены; legacy import не включать. Установка уже существует:
+после tested-main GitLab publication передаём прежний env с новыми source/image,
+обновление через make update с сохранением данных/учётки. Full local suite запрещён,
+точечные проверки + существующий exact-source CI. Liveproduction не менять.
+
+---
+
 # Текущая цель — устранить PECL blocker корпоративной установки
 
 Owner продолжает установку clone/env/make на WSL; предоставленный16.11.2026 файл

@@ -1,0 +1,51 @@
+{
+  "change": "restore-runtime-help-route",
+  "planned_paths": [
+    "app/YiiRuntime/Controllers/HelpController.php",
+    "config/yii/assets.php",
+    "specs/RUNTIME-HELP-001.md",
+    "tests/Yii2/runtime_help_001_test.py",
+    "tests/Deployment/production_make_quickstart_live_001_test.py",
+    "tools/verification/suites.tsv",
+    "docs/operations/current-delivery-goal.md",
+    "docs/operations/restore-runtime-help-route.md"
+  ],
+  "lifecycle": {
+    "intent": "COMPACT_MAINTENANCE",
+    "issue": "Owner clean-deploy Instruction404",
+    "change_kind": "BOUNDED_FIX",
+    "requirement_status": "CURRENT",
+    "semantic_change": "ESTABLISHED_BEHAVIOR_FIX",
+    "canonical_requirements": [
+      {
+        "path": "specs/RUNTIME-HELP-001.md"
+      }
+    ],
+    "executable_regression": "tests/Yii2/runtime_help_001_test.py",
+    "sensitivity": {
+      "classification": "ORDINARY",
+      "boundaries": [],
+      "rationale": "Restore existing public documentation read route; no newpermissions, privatefiles, domainstate or securitypolicy change."
+    }
+  },
+  "acceptances": [
+    {
+      "spec_id": "RUNTIME-HELP-001",
+      "acceptance_id": "H01,H02,H03",
+      "spec_path": "specs/RUNTIME-HELP-001.md",
+      "seam": "real Yii HTTP guide routes/assets and rejections",
+      "tests": [
+        "tests/Yii2/runtime_help_001_test.py"
+      ]
+    },
+    {
+      "spec_id": "RUNTIME-HELP-001",
+      "acceptance_id": "H04",
+      "spec_path": "specs/RUNTIME-HELP-001.md",
+      "seam": "actual fresh-clone Make Docker deployed guide and asset responses",
+      "tests": [
+        "tests/Deployment/production_make_quickstart_live_001_test.py"
+      ]
+    }
+  ]
+}
