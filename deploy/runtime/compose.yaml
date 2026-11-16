@@ -193,6 +193,17 @@ services:
     command: ["php", "bin/yii", "jobs/scheduler", "--interactive=0"]
     environment:
       <<: [*runtime-environment, *jobs-erp-environment]
+      FMONITOR_RUNTIME_ENV: production
+      FMONITOR_PUBLIC_BASE_URL: "${FMONITOR_PUBLIC_BASE_URL:-}"
+      FMONITOR_SMTP_HOST: "${FMONITOR_SMTP_HOST:-}"
+      FMONITOR_SMTP_PORT: "${FMONITOR_SMTP_PORT:-587}"
+      FMONITOR_SMTP_ENCRYPTION: "${FMONITOR_SMTP_ENCRYPTION:-tls}"
+      FMONITOR_SMTP_USERNAME: "${FMONITOR_SMTP_USERNAME:-}"
+      FMONITOR_SMTP_PASSWORD: "${FMONITOR_SMTP_PASSWORD:-}"
+      FMONITOR_SMTP_FROM_ADDRESS: "${FMONITOR_SMTP_FROM_ADDRESS:-}"
+      FMONITOR_SMTP_FROM_NAME: "${FMONITOR_SMTP_FROM_NAME:-FMonitor}"
+      FMONITOR_SMTP_TIMEOUT_SECONDS: "${FMONITOR_SMTP_TIMEOUT_SECONDS:-10}"
+      FMONITOR_SMTP_VERIFY_PEER: "true"
     depends_on:
       db:
         condition: service_healthy

@@ -1,0 +1,36 @@
+{
+  "change": "calendar-browser-readiness-repair",
+  "planned_paths": [
+    "tests/Yii2/production_performance_browser.mjs",
+    "docs/operations/restore-runtime-help-route.md"
+  ],
+  "lifecycle": {
+    "intent": "COMPACT_MAINTENANCE",
+    "issue": "PR299 CI calendar Back/Enter fixture race",
+    "change_kind": "BOUNDED_FIX",
+    "requirement_status": "CURRENT",
+    "semantic_change": "ESTABLISHED_BEHAVIOR_FIX",
+    "canonical_requirements": [
+      {
+        "path": "specs/PRODUCTION-PERFORMANCE-001.md"
+      }
+    ],
+    "executable_regression": "tests/Yii2/production_performance_browser_001_test.php",
+    "sensitivity": {
+      "classification": "ORDINARY",
+      "boundaries": [],
+      "rationale": "Test-only readiness synchronization after async history restoration; all assertions and product runtime preserved."
+    }
+  },
+  "acceptances": [
+    {
+      "spec_id": "PRODUCTION-PERFORMANCE-001",
+      "acceptance_id": "A09",
+      "spec_path": "specs/PRODUCTION-PERFORMANCE-001.md",
+      "seam": "real Yii/browser calendar Back then keyboard Enter with DOM restoration",
+      "tests": [
+        "tests/Yii2/production_performance_browser_001_test.php"
+      ]
+    }
+  ]
+}

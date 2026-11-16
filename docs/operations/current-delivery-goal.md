@@ -1,3 +1,36 @@
+# Текущая цель — проверка реальных интеграций без почты
+
+Owner16.11.2026 поручил для существующего workstation trial включить реальные
+Bitrix/ERP, но не отправлять письма. Уточнил: достаточно пустого SMTP в env;
+новый флаг не добавлять. Четыре пустых SMTP credential fields выключают почту,
+частично заполненные отвергаются. Исправляем deployment validation, scheduler
+composition и health; sender/queue/history/schema не меняются. Это bounded
+configuration correction с root spec/tests, отдельным sol/low implementation,
+независимыми planner-required reviews. Продолжаем PR299 и help fix в существующем
+worktree. Trial env получает реальные Bitrix/ERP из уже приватного production
+handoff; SMTP пустой. Admin env сохраняет SMTP. Данные и bootstrap credentials
+сохраняются, обновление make update. Full local suite запрещён. Failed CI43880163739
+сохраняется, полная triage до correction push; address dialog test race исправляется
+ожиданием точного сохранённого состояния без смены runtime. Затем exact-source
+CI, owner-authorized merge и GitLab main only. Live production не менять.
+
+---
+
+# Текущая цель — восстановить инструкцию в чистой Docker-установке
+
+Owner вошёл в установленный FMonitor, но «Инструкция» возвращает NOT_FOUND.
+Подтверждено: /help/ и его assets отсутствуют в строгой Yii route map, хотя HTML,
+CSS/JS и учебные screenshots уже включены в production image. Worktree
+restore-runtime-help-route, base e4642a77. Bounded correction existing public help;
+root contract/tests, separate sol/low executor, independent planner-required reviews.
+Сохраняем trusted-host/security headers и закрытый public file allowlist. Интеграции
+локального trial пока выключены; legacy import не включать. Установка уже существует:
+после tested-main GitLab publication передаём прежний env с новыми source/image,
+обновление через make update с сохранением данных/учётки. Full local suite запрещён,
+точечные проверки + существующий exact-source CI. Liveproduction не менять.
+
+---
+
 # Текущая цель — устранить PECL blocker корпоративной установки
 
 Owner продолжает установку clone/env/make на WSL; предоставленный16.11.2026 файл
