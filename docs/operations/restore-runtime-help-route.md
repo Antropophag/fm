@@ -74,3 +74,23 @@ lines into tools/delivery/compose.runtime.yaml.in. Rendering preserves every
 previously reviewed artifact byte-for-byte and the dependency check now passes.
 No runtime/spec/test semantics changed. Independent final delta review and a new
 exact-source fullCI are required before publication.
+
+
+## Calendar browser readiness correction
+
+Full run43892093550 at7277f54c completed with all categories GREEN except e2e.
+Sole regression was production_performance_browser_001_test.php, waitForURL
+after keyboard Enter following Back. verify/Quality Graph failures are derived;
+complete logs/inventory retained. Test and calendar runtime match green base
+e4642a77; previous run43880163739 passed this test in5.214s. Exact unchanged
+fixture passed three isolated attempts. A deterministic private witness held the
+Back fragment: URL already restored while old keyboard day remained focused;
+release replaced DOM, detached that element and left focus on BODY.
+
+Root bounded test-only correction records initial selected date and waits for
+that selected DOM state after Back before focusing the keyboard date. Existing
+keyboard, navigation, stale-response, fallback and readonly assertions remain.
+No sleep, larger timeout, runtime or policy change. Root authors this established
+test correction; independent final review per ordinary compact planner route.
+Input calendar-browser-readiness-verification-input.json, base7277f54c. Prior
+SMTP/help reviews remain; a new exact-source fullCI is required before merge.
