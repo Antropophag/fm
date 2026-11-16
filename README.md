@@ -33,11 +33,12 @@ Quickstart не запускает Bitrix/jobs, import или production deploym
 с Compose v2. PHP, Node.js, Composer и соседние репозитории на хосте не нужны:
 закреплённые зависимости собираются внутри Docker.
 
-Единственная актуальная последовательность clean production setup —
-[production runtime runbook](docs/operations/production-runtime-runbook.md). Она
-фиксирует exact source/image, создаёт private environment вне checkout, отдельно
-выполняет migrations, выдаёт DML-only account, явно создаёт первого owner-admin и
-только затем запускает nginx/PHP-FPM.
+Актуальный операторский маршрут описан в
+[production Make runbook](docs/operations/production-make-env.md). Один приватный
+`.env` управляет exact image, чистой БД, первым owner-admin, жизненным циклом,
+backup, update и восстановлением в новый пустой project. Низкоуровневая
+[production runtime инструкция](docs/operations/production-runtime-runbook.md)
+сохраняется как справочник публичных runtime seams.
 
 Порт `8092`, demo bootstrap и Bitrix worker относятся к историческому
 rapid-pilot contour. Они сохраняются для совместимости и расследования, но не

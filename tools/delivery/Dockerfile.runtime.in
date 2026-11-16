@@ -1,4 +1,4 @@
-FROM composer:@COMPOSER_VERSION@ AS composer
+FROM composer:@COMPOSER_VERSION@@@COMPOSER_IMAGE_DIGEST@ AS composer
 
 FROM @GIT_IMAGE@ AS shlz-ui
 
@@ -39,13 +39,16 @@ COPY --from=shlz-ui-build /shlz-ui /workspace/shlz-ui
 COPY --from=composer /usr/bin/composer /usr/local/bin/composer
 COPY composer.json composer.lock ./
 COPY app ./app
-RUN composer install --no-dev --no-interaction --prefer-dist --no-progress \
-    && composer check-platform-reqs --no-dev
+COPY deploy/dependencies ./deploy/dependencies
+RUN bash deploy/dependencies/install --project /workspace/fmonitor-2 --mode auto \
+    && rm -rf /workspace/fmonitor-2/.composer-direct-archives
 COPY bin ./bin
 RUN test -x bin/fmonitor2-run-with-local-integration-config
 COPY config ./config
 COPY public ./public
+COPY deploy/production ./deploy/production
 COPY deploy/runtime ./deploy/runtime
+COPY deploy/runtime/php.ini /usr/local/etc/php/conf.d/zz-fmonitor-production.ini
 RUN find /workspace/fmonitor-2 /workspace/shlz-ui -type f -print0 \
     | sort -z \
     | xargs -0 sha256sum \
@@ -56,6 +59,8 @@ RUN find /workspace/fmonitor-2 /workspace/shlz-ui -type f -print0 \
     && chown root:root /usr/local/share/fmonitor2/runtime-build-id \
     && chmod 0444 /usr/local/share/fmonitor2/runtime-build-id
 
+ARG FMONITOR_SOURCE_REVISION=UNKNOWN
+LABEL org.opencontainers.image.revision="${FMONITOR_SOURCE_REVISION}"
 USER 10001:10001
 EXPOSE 8080 9000
 CMD ["php-fpm", "-F", "--fpm-config", "deploy/runtime/php-fpm.conf"]

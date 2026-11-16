@@ -119,3 +119,42 @@ No further preimplementation findings remain. The prior T1-T5 and R1-R2 findings
 ### Approval boundary
 
 Gate 3 is **APPROVED** for minimal implementation against these frozen contract and test bytes. This authorizes neither changes to the expectations nor production deployment, merge, final review, or a claim of GREEN. Implementation must remain separately authored; focused checks, independent final review, and the planner-selected exact-source full GitHub CI remain required. The owner-prohibited full local suite was not run.
+
+---
+
+## Gate 3 fixture-delta review — Yii bootstrap and early cleanup
+
+- Date: `2026-11-16`
+- Baseline: approved Gate 3 test candidate described above
+- Reviewed file: `tests/Deployment/production_make_live_001_test.py`, SHA-256 `cc5944776612afd2413de6b7b96a80ef57640ec7b50b6ecf9442b33bdcd25e80`
+- Scope: two fixture-only changes; no contract or expected product behavior change
+- Verdict: **APPROVED**
+
+The dependency assertion now loads `vendor/autoload.php` and then the canonical `vendor/yiisoft/yii2/Yii.php` bootstrap before checking `Yii` and `TCPDF`. This matches `tools/delivery/setup-composer.sh:36-43`, `deploy/dependencies/verify.php`, and the repository's canonical integration tests: Yii's global bootstrap class is deliberately loaded from `Yii.php`, while Composer supplies the dependency graph. The correction removes a fixture-caused false failure without weakening the offline Composer/plugin/autoload/platform assertions.
+
+The new `atexit` cleanup removes only tags recorded in `extra_images` and `owned_image`. Every such tag is generated with the test's random token; a caller-supplied `FMONITOR_PRODUCTION_TEST_IMAGE` is never assigned to `owned_image`. Cleanup uses `docker image rm` without force, suppresses only cleanup output, and does not target containers, volumes, projects, shared tag patterns, or digests. A duplicate best-effort removal after the normal `finally` is harmless and closes only the early dependency-phase failure leak.
+
+No findings. The prior Gate 3 approval remains valid for this corrected test fixture. This delta approval is not final implementation review and does not claim the live or full suite has run.
+
+---
+
+## Gate 3 A09/A10 delta — canonical read-only recovery preflight
+
+- Date: `2026-11-16`
+- Candidate source: `794f1a194a99ac57eb0d8ab4c6970af7ec16a689eb1637a42a1f68f3c38ed94b`
+- Prepared package: `20261116T073617Z-ef2900b373`, SHA-256 `7881a7da2e01d94ba574ecfe7fb22dd86960233950ded34243da114e6ab8da2b`
+- Contract SHA-256: `8cc22dcdbf8232f19d319cda32289651a0249a81be3f51626e78008c52697f48`
+- Canonical preflight test SHA-256: `2ed1246a3a104f00c683b30404a49e048be7bad77acf83c500f83978e6bf0c73`
+- Live acceptance SHA-256: `9bb47980d881bc92a228996dc5f8ba5342d40958dfcfba45936568b1a3a382ed`
+- Exact RED: `php tests/Runtime/production_recovery_preflight_001_test.php` reaches the missing public `verify` command and fails its valid-bundle expectation; package record is source-bound to this candidate
+- Verdict: **APPROVED**
+
+The A09 clarification makes the required boundary explicit: the public `verify` command must reuse RuntimeRecovery's canonical preflight and finish without a database connection, extraction, or write. It preserves the existing restore semantics and closes the previously reported ordering gap rather than adding unrelated behavior.
+
+`production_recovery_preflight_001_test.php` supplies a valid canonical v39 fixture with an unreachable database endpoint, so success proves verification does not connect to DB. It then independently rejects source mismatch; wrong schema, table catalogue, auto-increment, size, deferred set, and top-level shape; and traversal, symlink, hardlink, duplicate-entry, and unsafe-mode tar archives after recomputing their payload hashes. It also asserts source manifest stability and absence of target state/secrets. The tar fixture produces structurally valid checksummed ustar inputs, so these are semantic preflight cases rather than malformed-test setup.
+
+The live acceptance adds the missing host-orchestration proof: a schema-v38 manifest and outer private-manifest hash are made self-consistent, restore must fail, and the unique target must have no containers, database/state/secrets volumes, or default network. This prevents the hash-only helper from satisfying A09 while deferring canonical rejection until after `dc up db`.
+
+The A10 increment runs the generated release Makefile's `env-init` and checks local image mode, exact source/image defaults, archive existence, and archive digest before deleting the generated private `.env` and retaining the existing package secret-exclusion checks. It tests the operator artifact without weakening release isolation.
+
+No findings. Gate 3 remains **APPROVED** for the frozen expectations, including this A09/A10 delta. Minimal separate implementation may expose the shared read-only canonical preflight and place it before target resource creation. Final implementation review, focused GREEN, and exact-source CI remain outside this approval.

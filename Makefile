@@ -7,10 +7,12 @@ RUNTIME_COMPOSE := $(LOCAL_ENV_RUN) docker compose --env-file '@env-file' -f dep
 TEST_TOOL_IMAGE ?= fmonitor2-php-test:latest
 
 .PHONY: help up up-with-data down logs ps reset import-production import-legacy sync-workforce register-test \
+	env-init deploy status stop start backup update restore release \
 	test-env-up test-env-down test-db-reset migrate unit-test db-test \
 	characterization-test e2e-test architecture-check lint test verify fresh-test fresh-test-verify ci-setup test-tools setup doctor
 
 help:
+	@echo "make env-init/deploy/status/logs/stop/start/backup/update/restore/release  Production (.env)"
 	@echo "make setup  Подготовить закреплённые зависимости (без изменения существующих)"
 	@echo "make doctor Проверить инструменты и существующие зависимости"
 	@echo "make up     Собрать и поднять локальный Yii2 runtime (настройки в .env)"
@@ -79,7 +81,29 @@ down:
 	$(RUNTIME_COMPOSE) down
 
 logs:
-	$(RUNTIME_COMPOSE) logs --follow
+	@if bash deploy/production/manage is-production --env-file "$(or $(ENV_FILE),.env)" >/dev/null 2>&1; then \
+		bash deploy/production/manage logs --env-file "$(or $(ENV_FILE),.env)"; \
+	else \
+		$(RUNTIME_COMPOSE) logs --follow; \
+	fi
+
+env-init:
+	@bash deploy/production/manage env-init --env-file "$(or $(ENV_FILE),.env)"
+
+deploy status stop start:
+	@bash deploy/production/manage $@ --env-file "$(or $(ENV_FILE),.env)"
+
+backup:
+	@bash deploy/production/manage backup --env-file "$(or $(ENV_FILE),.env)" $(if $(BACKUP),--backup "$(BACKUP)")
+
+update:
+	@bash deploy/production/manage update --env-file "$(or $(ENV_FILE),.env)"
+
+restore:
+	@bash deploy/production/manage restore --env-file "$(or $(ENV_FILE),.env)" $(if $(BACKUP),--backup "$(BACKUP)")
+
+release:
+	@bash deploy/production/manage release --env-file "$(or $(ENV_FILE),.env)" $(if $(OUTPUT),--output "$(OUTPUT)")
 
 ps:
 	$(RUNTIME_COMPOSE) ps

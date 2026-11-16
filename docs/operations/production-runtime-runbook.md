@@ -1,5 +1,8 @@
 # Production runtime: clean setup, restart and update
 
+> Этот документ описывает низкоуровневые runtime seams. Для обычной установки и
+> эксплуатации используйте [production Make workflow](production-make-env.md).
+
 Это canonical operator path для production runtime. Нужны Git, Docker Engine и
 Compose v2. TLS завершается внешним trusted proxy. Базовые разделы1–6 не включают
 background workers; раздел7 описывает их явное подключение с approved конфигурацией. Перед production claim всё ещё

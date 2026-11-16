@@ -3,7 +3,7 @@
 One built image, two unique projects. Tests may seed synthetic bytes/credentials;
 product flow upload regression is supplied by production_runtime_browser_001_test.php.
 """
-import hashlib,html,http.cookiejar,json,os,pathlib,re,secrets,shutil,socket,subprocess,tempfile,urllib.request
+import atexit,hashlib,html,http.cookiejar,json,os,pathlib,re,secrets,shutil,socket,subprocess,tempfile,urllib.request
 ROOT=pathlib.Path(__file__).resolve().parents[2];MANAGE=ROOT/'deploy/production/manage'
 assert MANAGE.is_file(), 'INTENDED_RED: production deployment public workflow missing'
 
@@ -43,6 +43,10 @@ def login(d,password):
 
 command(['docker','info','--format','{{.ServerVersion}}'],timeout=20)
 token=secrets.token_hex(5);projects=[];owned_image=None;extra_images=[]
+def remove_owned_images():
+    for tag in extra_images+([owned_image] if owned_image else []):
+        subprocess.run(['docker','image','rm',tag],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=30)
+atexit.register(remove_owned_images)
 with tempfile.TemporaryDirectory(prefix='fm2-prod-live-') as raw:
     home=pathlib.Path(raw).resolve();cfg=home/'source.env'
     make('env-init',cfg);d=read(cfg);source=command(['git','rev-parse','HEAD']).stdout.strip()
@@ -77,7 +81,7 @@ sha256sum composer.json composer.lock > /tmp/before
 bash deploy/dependencies/install --project /tmp/project --manifest /workspace/fmonitor-2/deploy/dependencies/direct-dist-sha256.json --composer /fixture/composer-first-fails --mode auto --archive-dir /archives
 test -f /tmp/first-composer-failed
 test -f /tmp/project/vendor/bower-asset/jquery/dist/jquery.js
-php -r 'require "/tmp/project/vendor/autoload.php"; if(!class_exists("Yii")||!class_exists("TCPDF"))exit(1);'
+php -r 'require "/tmp/project/vendor/autoload.php"; require "/tmp/project/vendor/yiisoft/yii2/Yii.php"; if(!class_exists("Yii")||!class_exists("TCPDF"))exit(1);'
 cd /tmp/project
 composer check-platform-reqs --no-dev
 sha256sum composer.json composer.lock > /tmp/after
@@ -214,10 +218,29 @@ test "$(cat /tmp/project/vendor/retained-sentinel)" = sentinel
         bad=dict(td,COMPOSE_PROJECT_NAME='fm2-prod-corrupt-'+token,FMONITOR_DEPLOY_STATE_DIR=str(home/'bad-state'));badcfg=home/'bad.env';write(badcfg,bad)
         assert make('restore',badcfg,'BACKUP='+str(corrupt),ok=False).returncode!=0
         assert command(['docker','ps','-aq','--filter','label=com.docker.compose.project='+bad['COMPOSE_PROJECT_NAME']]).stdout.strip()==''
+        # Self-consistent but invalid schema must also be rejected BEFORE target resources.
+        semantic=home/'semantic-invalid';shutil.copytree(backup,semantic)
+        mf=next(p for p in semantic.rglob('manifest.json') if json.loads(p.read_text()).get('formatVersion')=='fmonitor-runtime-backup-v1')
+        md=json.loads(mf.read_text());md['database']['schemaVersion']=38;mf.write_text(json.dumps(md,separators=(',',':'))+'\n')
+        outer=semantic/'private-manifest.json';outer_data=json.loads(outer.read_text());outer_data['runtimeManifestSha256']=hashlib.sha256(mf.read_bytes()).hexdigest();outer.write_text(json.dumps(outer_data,separators=(',',':'))+'\n')
+        bad['COMPOSE_PROJECT_NAME']='fm2-prod-semantic-'+token;bad['FMONITOR_DEPLOY_STATE_DIR']=str(home/'semantic-state');write(badcfg,bad)
+        assert make('restore',badcfg,'BACKUP='+str(semantic),ok=False).returncode!=0
+        assert command(['docker','ps','-aq','--filter','label=com.docker.compose.project='+bad['COMPOSE_PROJECT_NAME']]).stdout.strip()==''
+        for suffix in ['database','state','secrets']:
+            assert command(['docker','volume','inspect',bad['COMPOSE_PROJECT_NAME']+'_'+suffix],ok=False).returncode!=0
+        assert command(['docker','network','inspect',bad['COMPOSE_PROJECT_NAME']+'_default'],ok=False).returncode!=0
         # Release contains deployment tooling and images, never this private env or evidence.
         release=home/'release'
         make('release',cfg,'OUTPUT='+str(release),timeout=300)
-        assert release.is_dir()
+        assert release.is_dir() and (release/'Makefile').is_file()
+        command(['make','--no-print-directory','-C',str(release),'env-init'])
+        release_env=read(release/'.env')
+        assert release_env['FMONITOR_IMAGE_MODE']=='local' and release_env['FMONITOR_SOURCE_REVISION']==source
+        assert release_env['FMONITOR_RUNTIME_IMAGE']==image
+        archive=pathlib.Path(release_env['FMONITOR_IMAGE_ARCHIVE'])
+        assert archive.is_file() and hashlib.sha256(archive.read_bytes()).hexdigest()==release_env['FMONITOR_IMAGE_ARCHIVE_SHA256']
+        # Newly generated operator config is removed before checking the distributed package.
+        (release/'.env').unlink()
         assert not any(x.name=='.env' for x in release.rglob('*'))
         for f in release.rglob('*'):
             if f.is_file() and f.stat().st_size<2_000_000:

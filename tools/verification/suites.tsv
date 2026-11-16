@@ -554,6 +554,7 @@ unit	php	tests/Otiz/report_filters_20261029_test.php	unit
 unit	php	tests/Otiz/settlement_v2_001_test.php	unit
 unit	php	tests/Otiz/settlement_v2_workbook_001_test.php	unit
 unit	php	tests/Runtime/production_performance_session_001_test.php	unit
+unit	php	tests/Runtime/production_recovery_preflight_001_test.php	unit
 unit	php	tests/Runtime/production_runtime_contract_001_test.php	unit
 unit	php	tests/Runtime/weekly_fkr_smtp_configuration_001_test.php	unit
 unit	php	tests/Runtime/yii2_production_web_cutover_architecture_001_test.php	unit

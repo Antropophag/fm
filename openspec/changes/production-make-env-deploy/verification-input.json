@@ -19,7 +19,10 @@
     "tests/Deployment/production_make_lifecycle_001_test.py",
     "tests/Deployment/production_dependencies_001_test.py",
     "tests/Deployment/production_make_live_001_test.py",
-    "tools/verification/suites.tsv"
+    "tools/verification/suites.tsv",
+    "app/RuntimeRestore/RuntimeRecovery.php",
+    "tests/Runtime/production_recovery_preflight_001_test.php",
+    "docs/operations/production-make-env.md"
   ],
   "acceptances": [
     {
@@ -56,6 +59,15 @@
       "seam": "Make production operator and dependency installer public process boundary",
       "tests": [
         "tests/Deployment/production_make_live_001_test.py"
+      ]
+    },
+    {
+      "spec_id": "PRODUCTION-MAKE-ENV-001",
+      "acceptance_id": "A09-canonical-preflight",
+      "spec_path": "specs/PRODUCTION-MAKE-ENV-001.md",
+      "seam": "public RuntimeRecovery verify CLI without DB effects",
+      "tests": [
+        "tests/Runtime/production_recovery_preflight_001_test.php"
       ]
     }
   ]

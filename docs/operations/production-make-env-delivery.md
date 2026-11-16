@@ -2,7 +2,7 @@
 
 Owner authorization: implement agreed clean deployment package, one private env with bootstrap account/secrets and automatic Composer/direct-archive fallback. No live deployment/legacy transfer/real mail or merge. Dedicated worktree based on main7c6b8e14 including merged PR294; neighboring worktrees untouched.
 
-Authors: root specification/OpenSpec/tests/integration; separate sol/low deployment_executor and dependency_executor implementation; independent_review authored neither tests nor implementation.
+Authors: root specification/OpenSpec/tests/integration; separate sol/low deployment_executor, recovery_executor and dependency_executor implementation; independent_review authored neither tests nor implementation.
 
 Contract: `specs/PRODUCTION-MAKE-ENV-001.md`; lifecycle: `openspec/changes/production-make-env-deploy`. Planner selects CRITICAL, Gate3 and final, full exact-source CI. No full local suite.
 
@@ -31,3 +31,9 @@ Residual R2 fixed: success-update Docker observer checks a newly published canon
 ## Evidence and status
 
 Private evidence root: `~/.local/share/fmonitor-2/production-make-env-deploy/`. Intended RED after each meaningful root test correction is recorded by harness; repetitions are source changes, not same-source retries. Gate3 review has two CHANGES_REQUESTED iterations; implementation has not started at this checkpoint. Source-bound final review/CI/PR are pending, not GREEN.
+
+## Implementation checkpoint
+
+Gate3 approved after two complete-candidate returns. Narrow fixture delta (canonical Yii bootstrap and owned-image cleanup) and A09 read-only canonical verify/A10 release-defaults delta independently approved. Implementation authors above; root corrected public tests only. Docker dependency image build succeeded; root executed automatic fallback/primary success/corrupt-cache/download/platform preservation cases inside network-disabled container (private dependency-phase.log), all GREEN. Fast config/lifecycle and architecture/generated-dependency checks GREEN. Combined clean runtime/backup/restore acceptance, independent final review and CI still pending.
+
+Readonly canonical verify adds no schema/table/domain fact; it exposes existing preflight before target resources. Planner consumer closure expands across recovery/application; local checks remain bounded, broader matrix belongs to exact-source CI.
