@@ -40,3 +40,28 @@ The full focused set completed GREEN after the approved utilization-scheduler or
 ## Final boundary
 
 Gate 5 is **APPROVED** for the exact candidate and executable source above. No code findings remain. Corporate Bitrix/ERP results remain `UNKNOWN` until observed on the workstation; no email or live integration call was authorized or performed. Exact-source CI/publication and the missing automatic admission adapter remain separate pending states and are not represented as GREEN. Existing data, users, queue history, and installed state must be preserved through the reviewed update workflow; no database reset is authorized.
+
+---
+
+## Generated runtime Compose template correction
+
+- Date: `2026-11-16`
+- Candidate source: `1ba9d300e4ab6ec5b07ff706e8239e6b0ad85faa0218db044f9a2495b71ffed1`
+- Executable source: `ac01b1e76281f2424e82f2b25912ddc962d9a7cdc30b6e09e369a8246bc7bbf6`
+- Reviewer package: `20261116T145840Z-0182dbed38`, SHA-256 `10205df4d116230cde8031a1393da55ee08563158dc353c5dabba7acf4dc30b8`
+- Verification plan SHA-256: `caedc3bf9da36f51cfa5634d6793cae0c3d1a6aba2da2ef2657d150d08bc8213`
+- Harness final record: `APPROVED`, recorded `2026-11-16T14:59:27Z`
+- Verdict: **APPROVED**
+
+The first exact-source CI attempt exposed generated-source drift: `deploy/runtime/compose.yaml` contained the reviewed jobs-scheduler SMTP block, but its owner template `tools/delivery/compose.runtime.yaml.in` did not. E2E and both Integration shards failed at setup for that exact drift. Verify aggregate and Quality Graph consequently failed. The remaining fast/unit/governance categories were cancelled on the already superseded candidate; they remain incomplete and are not called GREEN. Primary failure logs, aggregate logs, and the cancellation inventory are retained.
+
+The correction adds exactly the existing reviewed eleven scheduler environment lines to the template. It changes no generated runtime Compose bytes, application code, tests, pins, schema, or behavior. `python3 tools/delivery/render-dependencies.py --check` is GREEN, and the generated runtime Compose SHA-256 remains `f3b670aecfbf89d43ee2ff329604992f242989cb416718f7cfd81bdaaf6786e0`. All other generated artifacts are byte-identical to the prior approved candidate.
+
+The four optional-SMTP acceptance tests are freshly source-bound GREEN:
+
+- Compose `1794841099456501000-3cca345b1be148049a381ec19dec138b`
+- production config `1794841099456472000-92103e4a38d141019ba9c5e892b329c7`
+- presence/handler `1794841099456519000-c3309339d4e348ccbc7d10dd860fa531`
+- CLI/disposable DB `1794841111894872000-5d16e464244c4ea8a5a45b6657d2698a`
+
+The generated-template correction is **APPROVED**. A new complete exact-source CI run is still required; cancelled categories and aggregate status from the failed candidate remain non-GREEN historical evidence.

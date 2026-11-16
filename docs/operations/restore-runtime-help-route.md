@@ -59,3 +59,18 @@ GREEN. Initial help/actual fresh Docker acceptance remains linked above. No full
 local suite or real external mail/integration call ran. Candidate is ready for
 one new exact-source fullCI, then owner-authorized tested-main GitLab publication;
 private handoff changes are staged outside Git and await the merged SHA.
+
+
+## Generated Compose correction
+
+Run43890591476 at74c8d393 failed setup in e2e133380492432 and Integration
+133380492485/133380492527: runtime Compose drifted from its canonical template.
+All three complete logs retained; no regression tests ran in those jobs. Root
+cancelled the remaining running categories to avoid waiting on a known failed
+candidate; cancelled categories are incomplete, never GREEN. The runtime Compose
+file has no generated header; its template ownership was missed during local
+qualification. Separate executor copied the reviewed11 scheduler environment
+lines into tools/delivery/compose.runtime.yaml.in. Rendering preserves every
+previously reviewed artifact byte-for-byte and the dependency check now passes.
+No runtime/spec/test semantics changed. Independent final delta review and a new
+exact-source fullCI are required before publication.

@@ -16,7 +16,8 @@
     "docs/operations/production-make-env.md",
     "deploy/production/compose.yaml",
     "deploy/runtime/compose.yaml",
-    "tests/Deployment/optional_smtp_compose_001_test.py"
+    "tests/Deployment/optional_smtp_compose_001_test.py",
+    "tools/delivery/compose.runtime.yaml.in"
   ],
   "lifecycle": {
     "intent": "COMPACT_MAINTENANCE",
