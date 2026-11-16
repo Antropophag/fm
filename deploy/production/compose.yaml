@@ -86,7 +86,7 @@ services:
     command: ["nginx","-c","/workspace/fmonitor-2/deploy/runtime/nginx.conf","-g","daemon off;"]
     ports: ["127.0.0.1:${FMONITOR_HTTP_PORT}:8080"]
     depends_on: {php: {condition: service_healthy}}
-    healthcheck: {test: ["CMD-SHELL","curl --fail --silent --header 'Host: $${FMONITOR_TRUSTED_REQUEST_HOST}' http://127.0.0.1:8080/health/ready >/dev/null"], interval: 5s, timeout: 5s, retries: 24, start_period: 10s}
+    healthcheck: {test: ["CMD-SHELL","curl --fail --silent --header \"Host: $${FMONITOR_TRUSTED_REQUEST_HOST}\" http://127.0.0.1:8080/health/ready >/dev/null"], interval: 5s, timeout: 5s, retries: 24, start_period: 10s}
     restart: unless-stopped
     logging: {driver: json-file, options: {max-size: "10m", max-file: "5"}}
   jobs-worker:

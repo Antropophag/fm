@@ -31,11 +31,12 @@ from pathlib import Path
 args=sys.argv[1:]
 with open(os.environ['FM2_TRACE'],'a') as f:f.write(json.dumps(args)+'\\n')
 if args and args[0]=='build':Path(os.environ['FM2_IMAGE_CREATED']).touch()
+if args and args[0]=='compose' and 'up' in args and os.environ.get('FM2_FAIL_DB')=='1':sys.exit(77)
 if args[:2]==['image','inspect']:
  if os.environ.get('FM2_MODE')=='build' and not Path(os.environ['FM2_IMAGE_CREATED']).exists():sys.exit(1)
  if '--format' in args:
   fmt=args[args.index('--format')+1]
-  print('b'*40 if 'revision' in fmt else ('sha256:'+'b'*64 if '.Id' in fmt else json.dumps({'org.opencontainers.image.revision':'b'*40})))
+  print((('a' if os.environ.get('FM2_CORRECT_LABEL')=='1' else 'b')*40) if 'revision' in fmt else ('linux/arm64' if '.Os' in fmt else ('sha256:'+'b'*64 if '.Id' in fmt else json.dumps({'org.opencontainers.image.revision':'b'*40}))))
  else:print(json.dumps([{'Id':'sha256:'+'b'*64,'Config':{'Labels':{'org.opencontainers.image.revision':'b'*40}}}]))
 elif args and args[0] in ['ps','images']:pass
 elif args and args[0] in ['volume','network','container','inspect']:sys.exit(1)
@@ -67,6 +68,24 @@ elif args[:2]==['compose','version']:print('2.40.0')
     calls=[json.loads(l) for l in trace.read_text().splitlines()] if trace.exists() else []
     assert not any(c and c[0]=='build' for c in calls),'INTENDED_RED: untracked source must reject before labelled build'
     env.pop('FM2_UNTRACKED');env['FM2_MODE']='local'
+    # Matching revision labels alone cannot authenticate a transferred image.
+    env.update(FM2_CORRECT_LABEL='1',FM2_MODE='local',FM2_FAIL_DB='1')
+    d.update(FMONITOR_IMAGE_MODE='local',FMONITOR_RUNTIME_IMAGE='fmonitor2-runtime:release-identity',FMONITOR_APPLICATION_IMAGE_ID='sha256:'+'a'*64,FMONITOR_DEPLOY_STATE_DIR=str(home/'expected-image-state'))
+    config.write_text(''.join(k+'='+v+'\n' for k,v in d.items()));config.chmod(0o600)
+    r=subprocess.run(['bash',str(ROOT/'deploy/production/manage'),'check-config','--env-file',str(config)],cwd=ROOT,env=env,capture_output=True,text=True,timeout=15)
+    assert r.returncode==0,'INTENDED_RED: expected application image identity is a supported release input'
+    trace.unlink(missing_ok=True)
+    r=subprocess.run(['bash',str(ROOT/'deploy/production/manage'),'deploy','--env-file',str(config)],cwd=ROOT,env=env,capture_output=True,text=True,timeout=20)
+    assert r.returncode!=0
+    calls=[json.loads(l) for l in trace.read_text().splitlines()]
+    assert not any('up' in c or 'run' in c for c in calls),'INTENDED_RED: same revision but wrong image ID must fail before DB'
+    d['FMONITOR_APPLICATION_IMAGE_ID']='sha256:'+'b'*64
+    config.write_text(''.join(k+'='+v+'\n' for k,v in d.items()));trace.unlink(missing_ok=True)
+    r=subprocess.run(['bash',str(ROOT/'deploy/production/manage'),'deploy','--env-file',str(config)],cwd=ROOT,env=env,capture_output=True,text=True,timeout=20)
+    calls=[json.loads(l) for l in trace.read_text().splitlines()]
+    assert r.returncode!=0 and any('up' in c for c in calls),'matching exact image ID passes identity checks and reaches controlled DB boundary'
+    env.pop('FM2_CORRECT_LABEL');env.pop('FM2_FAIL_DB')
+    d['FMONITOR_DEPLOY_STATE_DIR']=str(home/'archive-state')
     # An explicitly selected archive is an integrity input even if an image tag exists locally.
     import hashlib
     archive=home/'images.tar';archive.write_bytes(b'synthetic image archive')

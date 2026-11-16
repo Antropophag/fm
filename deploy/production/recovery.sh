@@ -228,7 +228,8 @@ release_cmd(){
   db_image_id=$(docker image inspect "$db_image" --format '{{.Id}}') || fail OUTPUT
   app_platform=$(docker image inspect "$IMAGE_ID" --format '{{.Os}}/{{.Architecture}}') || fail OUTPUT
   db_platform=$(docker image inspect "$db_image_id" --format '{{.Os}}/{{.Architecture}}') || fail OUTPUT
-  [[ $db_image_id =~ ^sha256:[0-9a-f]{64}$ && $app_platform =~ ^[a-z0-9]+/[a-z0-9_]+$ && $db_platform =~ ^[a-z0-9]+/[a-z0-9_]+$ ]] || fail OUTPUT
+  [[ $db_image_id =~ ^sha256:[0-9a-f]{64}$ && $app_platform =~ ^[a-z0-9]+/[a-z0-9_]+$ \
+      && $db_platform =~ ^[a-z0-9]+/[a-z0-9_]+$ && $app_platform == "$db_platform" ]] || fail OUTPUT
   docker save -o "$stage/images.tar" "$FMONITOR_RUNTIME_IMAGE" "$IMAGE_ID" "$db_image" "$db_image_id" || fail OUTPUT
   [[ $(docker image inspect "$FMONITOR_RUNTIME_IMAGE" --format '{{.Id}}') == "$IMAGE_ID" \
       && $(docker image inspect "$db_image" --format '{{.Id}}') == "$db_image_id" ]] || fail OUTPUT
@@ -239,8 +240,8 @@ release_cmd(){
   recovery_host_ownership "$stage" "$IMAGE_ID" || fail OUTPUT
   printf '{"formatVersion":"fmonitor-production-release-v1","source":"%s","applicationImage":"%s","applicationImageId":"%s","applicationPlatform":"%s","databaseImage":"%s","databaseImageId":"%s","databasePlatform":"%s"}\n' \
     "$FMONITOR_SOURCE_REVISION" "$FMONITOR_RUNTIME_IMAGE" "$IMAGE_ID" "$app_platform" "$db_image" "$db_image_id" "$db_platform" >"$stage/release.json"
-  printf 'FMONITOR_RUNTIME_IMAGE=%s\nFMONITOR_SOURCE_REVISION=%s\nFMONITOR_IMAGE_ARCHIVE_SHA256=%s\nFMONITOR_DATABASE_IMAGE=%s\nFMONITOR_DATABASE_IMAGE_ID=%s\nFMONITOR_APPLICATION_PLATFORM=%s\nFMONITOR_DATABASE_PLATFORM=%s\n' \
-    "$FMONITOR_RUNTIME_IMAGE" "$FMONITOR_SOURCE_REVISION" "$(sha256sum "$stage/images.tar" | awk '{print $1}')" "$db_image" "$db_image_id" "$app_platform" "$db_platform" >"$stage/release.defaults"
+  printf 'FMONITOR_RUNTIME_IMAGE=%s\nFMONITOR_SOURCE_REVISION=%s\nFMONITOR_IMAGE_ARCHIVE_SHA256=%s\nFMONITOR_APPLICATION_IMAGE_ID=%s\nFMONITOR_DATABASE_IMAGE=%s\nFMONITOR_DATABASE_IMAGE_ID=%s\nFMONITOR_APPLICATION_PLATFORM=%s\nFMONITOR_DATABASE_PLATFORM=%s\n' \
+    "$FMONITOR_RUNTIME_IMAGE" "$FMONITOR_SOURCE_REVISION" "$(sha256sum "$stage/images.tar" | awk '{print $1}')" "$IMAGE_ID" "$db_image" "$db_image_id" "$app_platform" "$db_platform" >"$stage/release.defaults"
   (cd "$stage"; find deploy -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum; sha256sum Makefile images.tar release.json release.defaults) >"$stage/SHA256SUMS"
   find "$stage" -type d -exec chmod 700 {} +; find "$stage" -type f -exec chmod 600 {} +
   mv -n "$stage" "$ARG_PATH"

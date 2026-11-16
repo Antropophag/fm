@@ -241,6 +241,7 @@ test "$(cat /tmp/project/vendor/retained-sentinel)" = sentinel
         release_env=read(release/'.env')
         assert release_env['FMONITOR_IMAGE_MODE']=='local' and release_env['FMONITOR_SOURCE_REVISION']==source
         assert release_env['FMONITOR_RUNTIME_IMAGE']==image
+        assert release_env['FMONITOR_APPLICATION_IMAGE_ID']==release_identity['applicationImageId']
         archive=pathlib.Path(release_env['FMONITOR_IMAGE_ARCHIVE'])
         assert archive.is_file() and hashlib.sha256(archive.read_bytes()).hexdigest()==release_env['FMONITOR_IMAGE_ARCHIVE_SHA256']
         release_env['FMONITOR_RUNTIME_IMAGE']='operator-chosen:retained'
