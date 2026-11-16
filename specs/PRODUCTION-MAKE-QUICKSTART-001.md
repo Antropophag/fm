@@ -13,6 +13,10 @@ hardlinks, nonregular files and foreign ownership reject before chmod/Docker;
 unfixable permissions reject before Docker with a WSL/Linux-filesystem hint.
 No shell evaluation, secret output, password regeneration or content rewrite.
 Other verbs and check-config keep strict readonly env validation (0644 rejected).
+Permission narrowing is limited to the repository-root `.env`; an explicit path
+to another env retains strict0600 validation. Root env parsing uses bytes captured
+from the validated descriptor, with pathname identity/content rechecked after
+capture/parsing; late same-byte replacement must fail before Docker.
 
 ## Q02 Managed paths
 The exact literal `auto` is accepted only for FMONITOR_DEPLOY_STATE_DIR and

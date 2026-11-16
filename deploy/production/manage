@@ -7,6 +7,10 @@ CONFIG_KEYS=''
 SEEN_KEYS='|'
 ENV_FILE=.env
 ARG_PATH=
+PREPARED_ENV=false
+PREPARED_ENV_IDENTITY=
+PREPARED_ENV_DIGEST=
+ENV_SNAPSHOT=
 
 fail(){ printf 'PRODUCTION_CONFIG_INVALID%s\n' "${1:+: $1}" >&2; exit 64; }
 note(){ printf '%s\n' "$*"; }
@@ -38,7 +42,10 @@ fd_identity(){
 }
 
 prepare_deploy_env_file(){
-  local before stable opened after_fd after_path digest fd_digest after_digest mode inode uid links
+  local env_parent env_absolute before stable opened after_fd after_path digest snapshot_digest after_digest mode inode uid links captured
+  env_parent=$(cd "$(dirname "$ENV_FILE")" 2>/dev/null && pwd -P) || fail ENV_FILE
+  env_absolute="$env_parent/$(basename "$ENV_FILE")"
+  [[ $env_absolute == "$ROOT/.env" ]] || return 0
   [[ -f "$ENV_FILE" && ! -L "$ENV_FILE" ]] || fail ENV_FILE
   before=$(path_identity "$ENV_FILE") || fail ENV_FILE
   IFS=: read -r _ inode uid links mode <<EOF
@@ -50,8 +57,11 @@ EOF
   [[ $stable == "$before" && -f $ENV_FILE && ! -L $ENV_FILE ]] || fail ENV_FILE
   exec 9<>"$ENV_FILE" || fail ENV_FILE
   opened=$(fd_identity) || { exec 9<&-; fail ENV_FILE; }
-  fd_digest=$(sha256sum /dev/fd/9 | awk '{print $1}') || { exec 9<&-; fail ENV_FILE; }
-  [[ $opened == "$inode:$uid:$links:$mode" && $fd_digest == "$digest" ]] || { exec 9<&-; fail ENV_FILE; }
+  [[ $opened == "$inode:$uid:$links:$mode" ]] || { exec 9<&-; fail ENV_FILE; }
+  captured=$( { cat <&9; printf '\001'; } ) || { exec 9<&-; fail ENV_FILE; }
+  ENV_SNAPSHOT=${captured%$'\001'}
+  snapshot_digest=$(printf '%s' "$ENV_SNAPSHOT" | sha256sum | awk '{print $1}') || { exec 9<&-; fail ENV_FILE; }
+  [[ $snapshot_digest == "$digest" ]] || { exec 9<&-; ENV_SNAPSHOT=; fail ENV_FILE; }
   if [[ $mode != 600 ]]; then
     chmod 0600 /dev/fd/9 || { exec 9<&-; note 'Use a Linux filesystem or WSL filesystem that supports private file modes.' >&2; return 64; }
   fi
@@ -62,6 +72,24 @@ EOF
   after_digest=$(sha256sum "$ENV_FILE" | awk '{print $1}') || { exec 9<&-; fail ENV_FILE; }
   exec 9<&-
   [[ $after_digest == "$digest" ]] || fail ENV_FILE
+  PREPARED_ENV=true
+  PREPARED_ENV_IDENTITY="${before%:*}:600"
+  PREPARED_ENV_DIGEST=$digest
+}
+
+read_config_bytes(){
+  if [[ $PREPARED_ENV == true ]]; then printf '%s' "$ENV_SNAPSHOT"; else cat -- "$ENV_FILE"; fi
+}
+
+finalize_prepared_env(){
+  [[ $PREPARED_ENV == true ]] || return 0
+  local identity digest
+  identity=$(path_identity "$ENV_FILE") || fail ENV_FILE
+  [[ $identity == "$PREPARED_ENV_IDENTITY" && -f $ENV_FILE && ! -L $ENV_FILE ]] || fail ENV_FILE
+  digest=$(sha256sum "$ENV_FILE" | awk '{print $1}') || fail ENV_FILE
+  [[ $digest == "$PREPARED_ENV_DIGEST" ]] || fail ENV_FILE
+  ENV_SNAPSHOT=
+  PREPARED_ENV=false
 }
 
 random_hex(){ od -An -N32 -tx1 /dev/urandom | tr -d ' \n'; }
@@ -133,9 +161,9 @@ allowed(){
 
 load_config(){
   regular_private "$ENV_FILE" || fail ENV_FILE
-  LC_ALL=C grep -q $'\r' "$ENV_FILE" && fail ENV_FILE
+  read_config_bytes | LC_ALL=C grep -q $'\r' && fail ENV_FILE
   local octal
-  octal=$(LC_ALL=C od -An -v -t u1 "$ENV_FILE")
+  octal=$(read_config_bytes | LC_ALL=C od -An -v -t u1)
   for n in $octal; do ((n==10 || (n>=32 && n!=127))) || fail ENV_FILE; done
   local line key value quote
   while IFS= read -r line || [[ -n $line ]]; do
@@ -152,7 +180,7 @@ load_config(){
     fi
     printf -v "$key" '%s' "$value"
     CONFIG_KEYS="$CONFIG_KEYS $key"
-  done <"$ENV_FILE"
+  done < <(read_config_bytes)
 }
 
 need(){ local name=$1 value; [[ $SEEN_KEYS == *"|$name|"* ]] || fail "$name"; value=${!name}; [[ -n $value && $value != replace_me && $value != *replace_me* ]] || fail "$name"; }
@@ -457,6 +485,7 @@ main(){
   [[ $VERB != deploy ]] || prepare_deploy_env_file
   while IFS='=' read -r inherited _; do case $inherited in FMONITOR_*|COMPOSE_*) unset "$inherited";; esac; done < <(env)
   load_config
+  finalize_prepared_env
   if [[ $VERB == is-production ]]; then [[ ${FMONITOR_RUNTIME_ENV:-} == production && ${COMPOSE_PROJECT_NAME:-} =~ ^fm2-prod- ]] && return 0; return 1; fi
   resolve_auto_paths
   validate

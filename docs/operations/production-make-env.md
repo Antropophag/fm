@@ -18,6 +18,8 @@ Deploy безопасно сужает права обычной operator-owned 
 backup directories для выбранного `COMPOSE_PROJECT_NAME`; `sudo`, `chmod` и
 `ENV_FILE` для этого маршрута не нужны. Symlink, hardlink, foreign/nonregular env
 и небезопасные существующие directories отклоняются до Docker.
+Автоматическое сужение прав применяется только к `.env` в корне checkout;
+внешний `ENV_FILE` сохраняет прежнее требование mode `0600` и не изменяется.
 
 `env-init` без Docker определяет текущий Git revision и выбирает source build с
 уникальным image tag. Он записывает portable `auto`, но directories не создаёт.

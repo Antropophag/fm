@@ -17,6 +17,8 @@ applicationPlatform/databasePlatform из release.json (`x86_64` соответ�
 без изменения bytes; `auto` создаст project-scoped private state/backups под
 `$HOME`. Ручные `sudo`, `chmod` и `ENV_FILE` не нужны. Небезопасный env или
 существующий path отклоняется до Docker.
+Автоматическая правка mode относится только к root `.env`; явно выбранный внешний
+`ENV_FILE` должен заранее быть private mode0600 и workflow его не изменяет.
 
 1. Если подготовленного `.env` нет, выполните `make env-init`. В release команда
    проверит SHA256SUMS и заполнит

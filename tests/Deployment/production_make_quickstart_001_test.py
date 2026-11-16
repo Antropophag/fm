@@ -249,6 +249,39 @@ sys.exit(97)
     def test_chmod_time_same_bytes_replacement_rejected(self):
         self.chmod_swap('regular')
 
+    def test_late_same_bytes_replacement_before_parse_rejected(self):
+        before = self.cfg.read_bytes()
+        hit = self.base / 'late-swap-reached'
+        saved = self.base / 'before-parse.env'
+        real_od = shutil.which('od')
+        shim = self.bin / 'od'
+        shim.write_text('#!' + sys.executable + '\nimport os,pathlib,sys\n'
+                        + 'cfg=pathlib.Path(' + repr(str(self.cfg)) + ')\n'
+                        + 'hit=pathlib.Path(' + repr(str(hit)) + ')\n'
+                        + 'if not hit.exists():\n'
+                        + ' cfg.rename(' + repr(str(saved)) + ')\n'
+                        + ' cfg.write_bytes(pathlib.Path(' + repr(str(saved)) + ').read_bytes())\n'
+                        + ' os.chmod(cfg,0o600)\n hit.touch()\n'
+                        + 'os.execv(' + repr(real_od) + ',[' + repr(real_od) + ']+sys.argv[1:])\n')
+        shim.chmod(0o755)
+        r = self.call()
+        self.assertTrue(hit.exists(), 'late parser boundary must be reached')
+        self.assertNotEqual(r.returncode, 0)
+        self.assertFalse(self.trace.exists(), 'INTENDED_RED: late replaced env must not reach Docker')
+        self.assertEqual(saved.read_bytes(), before)
+        self.assertEqual(self.cfg.read_bytes(), before)
+
+    def test_explicit_external_env_keeps_strict_mode(self):
+        external = self.base / 'external.env'
+        external.write_bytes(self.cfg.read_bytes())
+        external.chmod(0o644)
+        r = subprocess.run(['bash', 'deploy/production/manage', 'deploy', '--env-file', str(external)],
+                           cwd=self.repo, env=self.env, text=True, capture_output=True, timeout=20)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertFalse(self.trace.exists(), 'INTENDED_RED: explicit ENV_FILE must retain strict mode validation')
+        self.assertEqual(stat.S_IMODE(external.stat().st_mode), 0o644)
+        self.assertEqual(external.read_bytes(), self.cfg.read_bytes())
+
     def chmod_swap(self, kind):
         victim = self.base / 'unrelated.env'
         victim.write_text('UNRELATED_PRIVATE_BYTES')

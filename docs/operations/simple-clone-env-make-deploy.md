@@ -28,3 +28,17 @@ behavior is retained. No secret bytes, domains, schemas or service data changed.
 
 Actual fresh-clone Docker qualification, final independent review and exact-source
 full GitHub CI remain pending at this checkpoint. No production deployment.
+
+
+## Final-review corrections
+
+The initial committed implementation6aa85302 passed actual fresh-main-clone,
+copied0644env, plain Make Docker installation and owner login (record
+1794826918690878000-bd2f98cd476d4779abddabd01a972991). Preliminary independent
+review raised Q1 (parse the captured bytes and reject late path replacement) and
+Q2 (limit permission repair to repository-root.env). Separate executor corrected
+both; root added two regressions and clarified Q01. The16-case suite against
+6aa85302 fails exactly the two new cases; corrected source passes all16.
+Evidence: private simple-clone-env-make-deploy/final-review-correction-red.log
+and corrected-unit.log. Existing14 cases retained. Final exact-source Docker
+qualification, independent final verdict and full GitHub CI still pending.
