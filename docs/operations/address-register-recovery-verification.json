@@ -1,0 +1,20 @@
+{
+  "change": "restore-address-register-after-perf",
+  "planned_paths": [
+    "config/yii/web.php",
+    "config/yii/assets.php",
+    "app/YiiRuntime/Controllers/PilotAssetController.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "ADDRESS-REGISTER-001",
+      "acceptance_id": "A1-A8-restoration",
+      "spec_path": "specs/ADDRESS-REGISTER-001.md",
+      "seam": "existing real Yii HTTP and browser with published performance + address register combined",
+      "tests": [
+        "tests/Yii2/yii2_address_register_001_test.php",
+        "tests/Yii2/yii2_address_register_browser_001_test.php"
+      ]
+    }
+  ]
+}

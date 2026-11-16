@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace FMonitor2\YiiRuntime;
 
 use FMonitor2\InstallationProcess\MariaDbYiiInspectionPlanning;
+use FMonitor2\InstallationProcess\MariaDbAddressRegister;
 use FMonitor2\InstallationProcess\MariaDbYiiObjectCard;
 use FMonitor2\InstallationProcess\MariaDbYiiObjectCardProjection;
 use FMonitor2\InstallationProcess\MariaDbYiiObjectQueue;
@@ -18,6 +19,12 @@ use yii\db\Connection;
 
 final class InstallationProcessFactory
 {
+    public static function addressRegister(Connection $db,string $prefix,string $legacyPrefix):MariaDbAddressRegister
+    {
+        $projection=new MariaDbYiiObjectQueueProjection($db,$prefix);
+        return new MariaDbAddressRegister($db,$prefix,$legacyPrefix,$projection);
+    }
+
     public static function dashboard(Connection $db, string $prefix, string $legacyPrefix): YiiOperationalDashboard
     {
         return new YiiOperationalDashboard(new MariaDbYiiOperationalDashboard($db, $prefix, $legacyPrefix));

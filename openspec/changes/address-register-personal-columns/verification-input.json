@@ -1,0 +1,40 @@
+{
+  "change": "address-register-personal-columns",
+  "planned_paths": [
+    ".quality-graph/verification-policy.json",
+    "app/AddressRegister/ColumnPreferences.php",
+    "app/AddressRegister/Columns.php",
+    "app/InstallationProcess/MariaDbAddressRegister.php",
+    "app/AddressRegister/PreferenceConflict.php",
+    "app/YiiRuntime/Assets/AddressRegisterAssetBundle.php",
+    "app/YiiRuntime/Assets/address-register.css",
+    "app/YiiRuntime/Assets/address-register.js",
+    "app/YiiRuntime/Controllers/AddressRegisterController.php",
+    "app/YiiRuntime/Controllers/PilotAssetController.php",
+    "app/YiiRuntime/FeedbackApplication.php",
+    "app/YiiRuntime/MainNavigation.php",
+    "app/YiiRuntime/Views/address-register.php",
+    "config/yii/assets.php",
+    "config/yii/web.php",
+    "specs/ADDRESS-REGISTER-001.md",
+    "tests/AddressRegister/column_preferences_001_test.php",
+    "tests/Yii2/address_register_browser.mjs",
+    "tests/Yii2/yii2_address_register_001_test.php",
+    "tests/Yii2/yii2_address_register_browser_001_test.php",
+    "tools/verification/suites.tsv",
+    "app/YiiRuntime/InstallationProcessFactory.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "ADDRESS-REGISTER-001",
+      "acceptance_id": "A1-A8",
+      "spec_path": "specs/ADDRESS-REGISTER-001.md",
+      "seam": "ColumnPreferences and real Yii HTTP/browser",
+      "tests": [
+        "tests/AddressRegister/column_preferences_001_test.php",
+        "tests/Yii2/yii2_address_register_001_test.php",
+        "tests/Yii2/yii2_address_register_browser_001_test.php"
+      ]
+    }
+  ]
+}

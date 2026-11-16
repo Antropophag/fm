@@ -1,0 +1,77 @@
+import fs from 'node:fs';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url),c=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+const {chromium}=require(c.playwright),browser=await chromium.launch({headless:true});
+const check=(value,message)=>{if(!value)throw new Error(message);};
+async function login(page){await page.goto(c.origin+'/pilot/login');await page.locator('[name=email]').fill(c.email);await page.locator('[name=email]').locator('xpath=ancestor::form').locator('button[type=submit]').click();await page.locator('[name=password]').fill(c.password);await Promise.all([page.waitForResponse(r=>r.url().endsWith('/pilot/login')&&r.status()===303),page.locator('[name=password]').locator('xpath=ancestor::form').locator('button[type=submit]').click()]);}
+const visibleColumns=page=>page.locator('[data-register-table] thead th[data-column]:visible').evaluateAll(es=>es.map(e=>e.dataset.column));
+const state=page=>page.locator('[data-register-state]').evaluate(e=>JSON.parse(e.textContent));
+try{
+ const context=await browser.newContext({viewport:{width:1440,height:960}}),page=await context.newPage(),assetFailures=[];
+ page.on('response',r=>{if(new URL(r.url()).pathname.startsWith('/pilot/assets/')&&r.status()>=400)assetFailures.push(r.status()+' '+r.url());});
+ await login(page);const r=await page.goto(c.origin+'/pilot/address-register');check(r.status()===200,'INTENDED_RED address register unavailable');
+ await page.getByRole('heading',{name:'Адресный перечень',exact:true}).waitFor();const initial=await visibleColumns(page);check(initial.length===22&&initial[0]==='registrationNumber','confirmed default visible columns');
+ check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'desktop contained width');
+ check(await page.evaluate(()=>document.scrollingElement.scrollHeight<=innerHeight+1),'INTENDED_RED no second document scrollbar');
+ for(const size of [{width:390,height:844},{width:1024,height:768},{width:1920,height:1080},{width:1440,height:960}]){await page.setViewportSize(size);check(await page.evaluate(()=>document.scrollingElement.scrollHeight<=innerHeight+1&&document.documentElement.scrollWidth<=innerWidth+1),'single viewport '+size.width);const bounds=await page.locator('[data-register-table]').locator('..').boundingBox();check(bounds.x>=12&&bounds.x+bounds.width<=size.width-12,'table has side insets '+size.width);}
+ await page.locator('input[type=search][name=q]').fill('REG-451201');
+ await page.locator('[data-register-filter-open]').click();check(await page.locator('[data-register-filter-dialog]').evaluate(e=>e.matches(':modal')&&e.classList.contains('shlz-drawer')),'public filter drawer');
+ await page.locator('[data-register-filter-dialog] [role=combobox]').click();await page.locator('[data-register-filter-dialog] [role=option]').filter({hasText:'Монтажные работы'}).click();await page.screenshot({path:c.artifacts+'/desktop-filters.png',fullPage:true});await page.locator('[data-register-filter-apply]').click();await page.waitForURL(/status=installation/);check(await page.locator('[data-register-table] tbody tr').count()===1,'filter actual result');check(new URL(page.url()).searchParams.get('q')==='REG-451201','filter preserves typed search');
+ await page.locator('input[type=search][name=q]').fill('REG-451201');await page.locator('input[type=search][name=q]').locator('xpath=ancestor::form').locator('button[type=submit]').click();check(new URL(page.url()).searchParams.get('status')==='installation','search preserves stage');await page.goto(c.origin+'/pilot/address-register');
+
+ await page.goto(c.origin+'/pilot/address-register?page=2');
+ await page.locator('input[type=search][name=q]').fill('REG-451201');
+ await page.locator('input[type=search][name=q]').locator('xpath=ancestor::form').locator('button[type=submit]').click();
+ await page.waitForURL(url=>url.searchParams.get('q')==='REG-451201');
+ check(!new URL(page.url()).searchParams.has('page')||new URL(page.url()).searchParams.get('page')==='1','search resets page two');
+ check(await page.locator('[data-register-table] tbody tr').count()===1,'page-two search returns first matching page');
+ await page.goto(c.origin+'/pilot/address-register');
+ const expectedNames=['Иванов Иван Иванович','Петров Пётр Петрович','Сидоров-Петров Алексей Александрович','Смирнов Андрей Владимирович','Кузнецов Николай Константинович'];
+ const crewCells=page.locator('[data-register-table] tbody tr td[data-column=installers]');
+ for(const [index,count] of [1,2,5].entries()){const names=crewCells.nth(index).locator('li');check(JSON.stringify(await names.allTextContents())===JSON.stringify(expectedNames.slice(0,count)),'all complete crew names '+count);const boxes=await names.evaluateAll(es=>es.map(e=>({top:e.getBoundingClientRect().top,bottom:e.getBoundingClientRect().bottom})));for(let i=1;i<boxes.length;i++)check(boxes[i].top>=boxes[i-1].bottom,'separate installer lines');}
+ await page.setViewportSize({width:1024,height:768});const narrow=await page.locator('th[data-column=address]').boundingBox();await page.setViewportSize({width:1920,height:1080});const wide=await page.locator('th[data-column=address]').boundingBox();check(wide.width>narrow.width+20,'long text columns respond to available desktop width');await page.setViewportSize({width:1440,height:960});
+ const scroller=page.locator('[data-register-table]').locator('..');await scroller.evaluate(e=>{e.scrollLeft=0;const cell=e.querySelector('th[data-column=installers]');e.scrollLeft=cell.getBoundingClientRect().left-e.getBoundingClientRect().left-e.querySelector('th[data-column=registrationNumber]').getBoundingClientRect().width-16;});const crewBox=await crewCells.first().boundingBox(),scrollBox=await scroller.boundingBox();check(crewBox.x>scrollBox.x&&crewBox.x+crewBox.width<scrollBox.x+scrollBox.width,'installer screenshot actually contains complete target column');await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:c.artifacts+'/desktop-installers.png',fullPage:true});await scroller.evaluate(e=>e.scrollLeft=0);
+
+ const longIdentity=page.locator('td[data-column=registrationNumber] a[href="/pilot/objects/451204"]');check((await longIdentity.textContent()).length===120,'complete longest valid identifier');
+ check(await longIdentity.evaluate(e=>{const c=e.closest('td').getBoundingClientRect(),r=document.createRange();r.selectNodeContents(e);return [...r.getClientRects()].every(x=>x.left>=c.left&&x.right<=c.right+1);}), 'long registration stays inside its own cell');
+ await page.evaluate(()=>window.scrollTo(0,0));
+ await page.screenshot({path:c.artifacts+'/desktop.png',fullPage:true});
+ const viewport=page.locator('[data-register-table]').locator('..');const pinned=await page.locator('[data-register-table] th[data-column=registrationNumber]').boundingBox();
+ await viewport.evaluate(e=>{e.scrollTop=180;e.scrollLeft=250;});const scrolled=await page.locator('[data-register-table] th[data-column=registrationNumber]').boundingBox();check(Math.abs(pinned.x-scrolled.x)<2&&Math.abs(pinned.y-scrolled.y)<2,'sticky header/registration remain in scroll viewport');await viewport.evaluate(e=>{e.scrollTop=0;e.scrollLeft=0;});
+ await page.locator('[data-register-open]').focus();await page.keyboard.press('Enter');await page.locator('[data-register-settings]').waitFor({state:'visible'});check(await page.locator('[data-register-settings]').evaluate(e=>e.matches(':modal')&&e.classList.contains('shlz-drawer')),'public SHLZ column drawer');
+ const row=key=>page.locator(`[data-register-settings] [data-column-key="${key}"]`);
+ const search=page.locator('[data-register-column-search]');await search.fill('Комментарий');check(await row('comment').isVisible()&&!(await row('status').isVisible()),'column search really hides unmatched rows');await search.fill('');
+ check(await page.locator('[data-register-settings] input[type=number]').count()===0,'no pixel width controls');check(await row('registrationNumber').locator('input[type=checkbox]').isDisabled(),'registration fixed');await row('comment').locator('input[type=checkbox]').uncheck();
+ await page.locator('[data-register-cancel]').click();check(JSON.stringify(await visibleColumns(page))===JSON.stringify(initial),'cancel leaves saved view');
+ await page.locator('[data-register-open]').click();check(await row('comment').locator('input[type=checkbox]').isChecked(),'cancel restores draft');
+ await row('comment').locator('input[type=checkbox]').uncheck();await row('factoryNumber').locator('[data-column-up]').click();
+ await page.locator('[data-register-settings] .shlz-drawer__body').evaluate(e=>e.scrollTop=0);await page.screenshot({path:c.artifacts+'/desktop-columns.png',fullPage:true});
+ // A failed request retains the editable draft and permits a real retry.
+ const draftColumns=await visibleColumns(page);
+ const preferenceUrl='**/address-register/preferences';
+ for(const failure of [422,503,'network']){
+  await page.route(preferenceUrl,route=>failure==='network'?route.abort('failed'):route.fulfill({status:failure,contentType:'application/json',body:JSON.stringify({error:'preferences_unavailable'})}));
+  await page.locator('[data-register-save]').click();
+  await page.waitForFunction(()=>{const s=document.querySelector('[data-register-status]');return s.dataset.kind==='error'&&!document.querySelector('[data-register-save]').disabled;});
+  check(await page.locator('[data-register-settings]').evaluate(e=>e.matches(':modal')),'failed save stays modal '+failure);
+  check(!(await row('comment').locator('input[type=checkbox]').isChecked()),'failed save keeps draft '+failure);
+  check(JSON.stringify(await visibleColumns(page))===JSON.stringify(draftColumns),'failed save keeps preview columns '+failure);
+  const message=(await page.locator('[data-register-status]').textContent()).trim();check(message.length>0&&!message.includes('Вид сохранён'),'failure explained without false success '+failure);
+  await page.unroute(preferenceUrl);
+ }
+ const saved=page.waitForResponse(r=>r.url().endsWith('/address-register/preferences')&&r.request().method()==='POST');await page.locator('[data-register-save]').click();const sr=await saved;check(sr.status()===200,'save succeeds');const expected=await sr.json();check(expected.layoutVersion===2&&!('widths' in expected)&&!expected.visible.includes('comment'),'exact settings saved');
+ await page.reload();check(JSON.stringify(await visibleColumns(page))===JSON.stringify(expected.visible),'reload preserves order/visible');check((await state(page)).layoutVersion===2,'reload preserves adaptive version');
+ // A new browser context means there is no localStorage or shared session state.
+ const second=await browser.newContext(),p2=await second.newPage();await login(p2);await p2.goto(c.origin+'/pilot/address-register');check(JSON.stringify(await visibleColumns(p2))===JSON.stringify(expected.visible),'new browser uses account view');
+ // Stale second tab must not overwrite a later change.
+ await p2.locator('[data-register-open]').click();await page.locator('[data-register-open]').click();await row('paired').locator('input[type=checkbox]').uncheck();const save2=page.waitForResponse(r=>r.url().endsWith('/address-register/preferences')&&r.request().method()==='POST');await page.locator('[data-register-save]').click();check((await save2).status()===200,'first tab advances');
+ const conflict=p2.waitForResponse(r=>r.url().endsWith('/address-register/preferences')&&r.request().method()==='POST');await p2.locator('[data-register-save]').click();check((await conflict).status()===409,'stale tab conflict');check((await p2.locator('[data-register-status]').textContent()).trim().length>0,'conflict explained');await second.close();
+ await page.setViewportSize({width:390,height:844});await page.reload();check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'mobile contained width');
+ await page.screenshot({path:c.artifacts+'/mobile.png',fullPage:true});await page.locator('[data-register-open]').click();
+ for(const name of ['save','cancel']){const button=page.locator(`[data-register-${name}]`);const box=await button.boundingBox();check(box&&box.y>=0&&box.y+box.height<=844,'mobile '+name+' within viewport');check(await button.evaluate(e=>e.contains(document.elementFromPoint(e.getBoundingClientRect().x+e.clientWidth/2,e.getBoundingClientRect().y+e.clientHeight/2))),'mobile '+name+' top-layer hit target');}
+ await page.screenshot({path:c.artifacts+'/mobile-columns.png',fullPage:true});
+ check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'mobile settings contained');await page.keyboard.press('Escape');check(!(await page.locator('[data-register-settings]').isVisible()),'Escape closes settings');check(await page.locator('[data-register-open]').evaluate(e=>e===document.activeElement),'focus restored');
+ await page.locator('[data-register-open]').click();await page.locator('[data-register-reset]').click();const reset=page.waitForResponse(r=>r.url().endsWith('/address-register/preferences')&&r.request().method()==='POST');await page.locator('[data-register-save]').click();check((await reset).status()===200,'reset saves');await page.reload();check(JSON.stringify(await visibleColumns(page))===JSON.stringify(initial),'defaults restored');
+ await page.locator('input[type=search][name=q]').fill('no-such-object');await page.locator('input[type=search][name=q]').locator('xpath=ancestor::form').locator('button[type=submit]').click();check(await page.locator('[data-register-open]').isVisible(),'empty still configurable');
+ fs.writeFileSync(c.result,JSON.stringify({complete:true,assetFailures}));
+}finally{await browser.close();}
