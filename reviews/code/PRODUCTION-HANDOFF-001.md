@@ -102,3 +102,69 @@ source CI remains `UNKNOWN`.
 Final review is **CHANGES_REQUESTED** on F1-F3. Correct the complete set, add the
 bounded regressions, rerun mapped focused checks, and prepare a new immutable source
 for delta rereview. CI, PR readiness, merge, and deployment remain `UNKNOWN`.
+
+---
+
+## Final correction rereview — 2026-11-16
+
+- Corrected commit: `13efd65a62c908f5c26a20ac502e49fe984bc2c2`
+- Corrected package: `/Users/antropophag/.local/share/fmonitor-2/delivery-harness/packages/20261116T181342Z-31a4ccef12/package.json`
+- Exact source: `7c50701de27c42de7702ee7865b943adf70a320712fef906ec040e83d5366a0e`
+- Executable source: `503c86761c14bbf83ad54bd870de00cf3cdd653f0b647bf8c6430bbeb1ae210a`
+- Verification-plan SHA-256: `a750365b8b647a98807d48608a39adc863d8ae26757c41c747cc51b97c2cdce5`
+- Frozen source: base commit `13efd65a62c908f5c26a20ac502e49fe984bc2c2` plus empty patch SHA-256 `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
+- Verdict: **APPROVED**
+
+Reviewer independence is unchanged. No finding was waived.
+
+### Finding resolution
+
+- **F1 fixed.** Update now verifies the current database reference, ID, and
+  platform against the installed receipt before candidate image acquisition or
+  backup effects. Installed build release uses `installed_image` and the receipt's
+  exact application ID before creating a stage or calling `docker save`. Independent
+  update and release regressions mutate the DB tag and require rejection before
+  build, pull, save, runtime backup, writer, migration, or receipt effects.
+- **F2 fixed.** Recovery config always receives effective receipt source,
+  application identity/platform, and database identity/platform. Its mode comes
+  from the old installed private config: old build becomes `local`, while old
+  digest-pull and local modes remain pull and local. This handles build-to-pinned
+  candidate transitions without removing pinned pull restore portability. The
+  build, pull, and local public regressions all inspect their recovery result.
+- **F3 fixed.** Rewrite, permission, and publication failures remove the private
+  stage and use the same `keep_stopped` policy as the surrounding backup flow.
+  Manual backup restores its exact prior writer set and reports `resumed`; update
+  leaves writers stopped, publishes no stage/bundle, avoids migration, preserves
+  the installed receipt, and reports `stopped`.
+
+The live quickstart cleanup change is also sound. Automatic source builds ignore
+the obsolete input image tag, so teardown now reads the disposable project's
+private installed receipt, verifies the random project and expected source, and
+removes that receipt-owned image. It cannot select a neighboring installation.
+
+### Final evidence and limits
+
+The package binds all twelve Make/Git handoff cases and the ERP controller/probe
+test GREEN to the corrected exact source. The handoff record is
+`1794852727082466000-5620f0eccedd4ce096e6edb47086146a.json`; the ERP record is
+`1794852795827009000-c813397b7b1144b0997679ec895613c3.json`. Adjacent env,
+lifecycle, quickstart, optional-SMTP, ERP contract/read/owner/source checks,
+planner, architecture, syntax, and diff checks are reported GREEN. The source-scope
+check used an isolated random-port disposable MariaDB and passed setup/test/teardown.
+
+The two additional bounded real-Docker checks completed GREEN before this record
+was finalized. Fresh clone + copied env + `make deploy` covered login, replay,
+stop/start, and actual receipt-owned image cleanup; harness record
+`1794852739339008000-540a7d76b4e0413696abf1ed1b9efc7f.json`. The isolated
+`pilot_jobs_compose` check covered jobs delivery and restart. Neither check touched
+a live server or real external integration. All planner local obligations are now
+covered. Exact-source GitHub CI remains `UNKNOWN` and is not implied by this
+approval. The owner prohibition on local full `make test`/`make verify` was
+respected.
+
+### Final decision
+
+Independent final review is **APPROVED** for commit `13efd65a` and exact source
+`7c50701de...`. F1-F3 are closed and no new code finding remains. Publication,
+PR readiness, merge, and deployment still require the selected exact-source CI;
+this review grants none of them by itself.

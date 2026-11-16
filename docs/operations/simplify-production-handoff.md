@@ -47,3 +47,10 @@ regression in the first F2 correction. Root added pinned pull/local backup witne
 (pull intended RED, local GREEN), independent reviewer approved the delta, executor
 preserved old installed pull/local mode while resolving old build to local. All
 three targeted mode cases PASS. No compatibility expectation was weakened.
+
+Final review APPROVED for code commit13efd65a; F1–F3 closed. Full12-case handoff and
+public probe GREEN on exact source. Actual clean clone/copied-env/deploy/login/
+repeat/stop-start with receipt-owned image cleanup PASS; isolated jobs Compose
+startup/restart PASS. Local canonical full suite was not run. Final metadata commit
+adds only this delivery update and the independent approval record; application,
+operator and test bytes remain those reviewed. Exact-source GitHub CI follows.
