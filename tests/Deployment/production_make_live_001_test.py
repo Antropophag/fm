@@ -3,7 +3,7 @@
 One built image, two unique projects. Tests may seed synthetic bytes/credentials;
 product flow upload regression is supplied by production_runtime_browser_001_test.php.
 """
-import atexit,hashlib,html,http.cookiejar,json,os,pathlib,re,secrets,shutil,socket,subprocess,tempfile,urllib.request
+import atexit,hashlib,html,http.cookiejar,json,os,pathlib,re,secrets,shutil,socket,subprocess,tempfile,urllib.parse,urllib.request
 ROOT=pathlib.Path(__file__).resolve().parents[2];MANAGE=ROOT/'deploy/production/manage'
 assert MANAGE.is_file(), 'INTENDED_RED: production deployment public workflow missing'
 
@@ -32,7 +32,6 @@ def login(d,password):
     jar=http.cookiejar.CookieJar();opener=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
     base=d['FMONITOR_PUBLIC_BASE_URL']
     body=opener.open(base+'/pilot/login',timeout=15).read().decode()
-    import urllib.parse
     for fields in [{'email':d['FMONITOR_INITIAL_OWNER_EMAIL']},{'email':d['FMONITOR_INITIAL_OWNER_EMAIL'],'password':password}]:
         token=html.unescape(re.search(r'name="_csrf" value="([^"]+)"',body).group(1))
         fields['_csrf']=token
