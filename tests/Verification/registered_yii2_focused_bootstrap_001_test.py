@@ -180,8 +180,15 @@ raise SystemExit(75)
         rationales = set(command.get("rationales", [command.get("rationale")]))
         self.assertTrue({"acceptance mapping", "changed registered test"}.issubset(rationales),
                         "all direct selection reasons must merge onto the one route")
-        self.assertEqual(set(), rationales - {"acceptance mapping", "changed registered test", "semantic integration closure"},
-                         "only the protected-capability closure may augment the focused route")
+        frontier = [item for item in plan["consumer_expansions"] if item["verifier"] == TARGET]
+        self.assertEqual(bool(frontier), "consumer ownership frontier" in rationales,
+                         "consumer rationale must have an actual matching verifier expansion")
+        for expansion in frontier:
+            self.assertEqual(["php", TARGET], expansion["argv"],
+                             "consumer verifier must deduplicate onto the same registered test")
+        self.assertEqual(set(), rationales - {"acceptance mapping", "changed registered test",
+                                             "semantic integration closure", "consumer ownership frontier"},
+                         "only registered semantic/consumer closure may augment the focused route")
         self.assertEqual("local", command.get("execution", "local"),
                          "local execution priority must survive deduplication")
 

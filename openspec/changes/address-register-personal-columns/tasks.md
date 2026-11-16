@@ -1,0 +1,7 @@
+- [x] 1. Read sources and record production access/owner production-first authorization.
+- [x] 2. Root contract and design.
+- [x] 3. Harness plan, root focused regression tests and RED.
+- [x] 4. Separate sol/low implementation.
+- [x] 5. Focused GREEN and desktop/mobile inspection.
+- [x] 6. Independent final review and scoped production deployment.
+- [ ] 7. Git pipeline (owner-deferred until after production).

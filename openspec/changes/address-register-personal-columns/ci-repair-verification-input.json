@@ -1,0 +1,32 @@
+{
+  "change": "address-register-ci-repair",
+  "planned_paths": [
+    "tests/Verification/registered_yii2_focused_bootstrap_001_test.py",
+    "tests/Yii2/sidebar_state_icons_browser.mjs",
+    "docs/operations/address-register-integration-20261116.md",
+    "docs/operations/current-delivery-goal.md",
+    "openspec/changes/address-register-personal-columns/ci-repair-verification-input.json",
+    "reviews/tests/ADDRESS-REGISTER-INTEGRATION-20261116.md",
+    "reviews/code/ADDRESS-REGISTER-INTEGRATION-20261116.md"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "ADDRESS-REGISTER-001",
+      "acceptance_id": "A1-shared-navigation-browser-compatibility",
+      "spec_path": "specs/ADDRESS-REGISTER-001.md",
+      "seam": "real authenticated Yii shell browser retains exact 12 permitted routes including address-register and existing geometry/state checks",
+      "tests": [
+        "tests/Yii2/yii2_sidebar_state_icons_001_test.php"
+      ]
+    },
+    {
+      "spec_id": "REGISTERED-FOCUSED-BOOTSTRAP-001",
+      "acceptance_id": "RFB001-E-consumer-route-deduplication",
+      "spec_path": "specs/REGISTERED-FOCUSED-BOOTSTRAP-001.md",
+      "seam": "prepared command retains exact wrapper identity, services and one route when registered consumer ownership also selects it",
+      "tests": [
+        "tests/Verification/registered_yii2_focused_bootstrap_001_test.py"
+      ]
+    }
+  ]
+}
