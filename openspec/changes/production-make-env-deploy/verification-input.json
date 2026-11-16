@@ -1,0 +1,62 @@
+{
+  "change": "production-make-env-deploy",
+  "planned_paths": [
+    "Makefile",
+    ".dockerignore",
+    "deploy/production",
+    "deploy/dependencies",
+    "deploy/runtime/Dockerfile",
+    "tools/delivery/Dockerfile.runtime.in",
+    "tools/delivery/render-dependencies.py",
+    "docs/operations/current-delivery-goal.md",
+    "docs/operations/production-runtime-runbook.md",
+    "docs/operations/runtime-recovery-runbook.md",
+    "docs/operations/production-make-env-delivery.md",
+    "README.md",
+    "openspec/changes/production-make-env-deploy",
+    "specs/PRODUCTION-MAKE-ENV-001.md",
+    "tests/Deployment/production_make_env_001_test.py",
+    "tests/Deployment/production_make_lifecycle_001_test.py",
+    "tests/Deployment/production_dependencies_001_test.py",
+    "tests/Deployment/production_make_live_001_test.py",
+    "tools/verification/suites.tsv"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "PRODUCTION-MAKE-ENV-001",
+      "acceptance_id": "A01,A02,A04,A05",
+      "spec_path": "specs/PRODUCTION-MAKE-ENV-001.md",
+      "seam": "Make production operator and dependency installer public process boundary",
+      "tests": [
+        "tests/Deployment/production_make_env_001_test.py"
+      ]
+    },
+    {
+      "spec_id": "PRODUCTION-MAKE-ENV-001",
+      "acceptance_id": "A03,A07,A08,A09,A10",
+      "spec_path": "specs/PRODUCTION-MAKE-ENV-001.md",
+      "seam": "Make production operator and dependency installer public process boundary",
+      "tests": [
+        "tests/Deployment/production_make_lifecycle_001_test.py"
+      ]
+    },
+    {
+      "spec_id": "PRODUCTION-MAKE-ENV-001",
+      "acceptance_id": "A11,A12",
+      "spec_path": "specs/PRODUCTION-MAKE-ENV-001.md",
+      "seam": "Make production operator and dependency installer public process boundary",
+      "tests": [
+        "tests/Deployment/production_dependencies_001_test.py"
+      ]
+    },
+    {
+      "spec_id": "PRODUCTION-MAKE-ENV-001",
+      "acceptance_id": "A03,A06,A07,A09,A13",
+      "spec_path": "specs/PRODUCTION-MAKE-ENV-001.md",
+      "seam": "Make production operator and dependency installer public process boundary",
+      "tests": [
+        "tests/Deployment/production_make_live_001_test.py"
+      ]
+    }
+  ]
+}

@@ -1,3 +1,13 @@
+# Текущая цель — production Make и единый environment
+
+Поручение владельца16.11.2026 в текущей беседе: реализовать согласованный пакет чистого production-развёртывания через Make; все ключи, токены и первоначальная учётка находятся в одном приватном `.env`. При недоступности Composer repositories автоматически скачивать закреплённые пакеты напрямую с проверкой digest. Существующие базы не переносить. Это разрешение на реализацию, isolated acceptance, PR/push; фактическая выкладка на корпоративный сервер, отправка почты, изменения живого production и merge не входят.
+
+Worktree `fmonitor-2-production-make-env-deploy`, change `production-make-env-deploy`, контракт `PRODUCTION-MAKE-ENV-001`. Base — свежий main7c6b8e14 после merge PR294; соседние worktrees и параллельная сессия сохраняются. Root — спецификация/tests; отдельные gpt-5.6-sol/low executors — deployment и dependency installer; независимый reviewer — Gate3/final. План выбирает lane/reviews. Проверки локально bounded, полный matrix только exact-source GitHub CI. Секреты и полные журналы вне Git. UNKNOWN не означает GREEN.
+
+Предыдущая очередь сохранена ниже; её production-first/merge authorization не переносится на эту задачу.
+
+---
+
 # Текущая цель — исправить весь production performance audit
 
 Поручение владельца 15.11.2026: «Исправь все прямо на проде, потом прогони правки по гейтам через наш CI до мерджа в мейн». Это явное разрешение на scoped production deployment, последующее прохождение гейтов, PR/push/merge после exact-source CI. Scope — все F01–F12 аудита performance-audit-20261114, без очистки данных/истории или изменения финансовой допустимости.
