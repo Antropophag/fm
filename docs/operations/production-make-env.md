@@ -3,19 +3,30 @@
 Нужны Bash, Make, Docker Engine и Compose v2. PHP, Composer, Node и Python на
 сервере не требуются. Все секреты находятся в одном regular-файле mode `0600`.
 
+Обычная передача подготовленного environment:
+
 ```sh
-make env-init ENV_FILE=/absolute/private/runtime.env
-# заполнить hostname и owner email; integrations — только если включены jobs
-make deploy ENV_FILE=/absolute/private/runtime.env
-make status ENV_FILE=/absolute/private/runtime.env
+git clone <corporate-git-url> fmonitor-2
+cd fmonitor-2
+cp /protected/handoff/.env .env
+make deploy
+make status
 ```
 
-`env-init` без Docker определяет текущий Git revision, выбирает source build,
-создаёт уникальный image tag и private state/backup directories под `$HOME`.
+Deploy безопасно сужает права обычной operator-owned single-link копии `.env` до
+`0600`, не меняя bytes или file identity. Значения `auto` создают private state и
+backup directories для выбранного `COMPOSE_PROJECT_NAME`; `sudo`, `chmod` и
+`ENV_FILE` для этого маршрута не нужны. Symlink, hardlink, foreign/nonregular env
+и небезопасные существующие directories отклоняются до Docker.
+
+`env-init` без Docker определяет текущий Git revision и выбирает source build с
+уникальным image tag. Он записывает portable `auto`, но directories не создаёт.
 Оператору остаётся заполнить public hostname, owner email и требуемые внешние
 credentials. Если Git недоступен, source initialization отказывает; для
 air-gapped сервера используйте environment из проверенного release package.
 Чистота source checkout проверяется при `make deploy`, перед сборкой image.
+`check-config` остаётся read-only и требует, чтобы выбранный env уже имел mode
+`0600`; автоматическое сужение прав выполняет только `deploy`.
 
 `FMONITOR_IMAGE_MODE=build` собирает чистый checkout exact revision, `pull`
 требует digest-pinned registry reference, `local` использует уже загруженный

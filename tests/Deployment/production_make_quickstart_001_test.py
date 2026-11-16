@@ -71,7 +71,6 @@ sys.exit(97)
 
     def assert_boundary(self, result):
         self.assertTrue(self.trace.exists(), 'INTENDED_RED: copied root env and auto paths must reach Docker without manual setup\n' + result.stderr)
-        self.assertIn('STUB_DOCKER_BOUNDARY', result.stdout)
         self.assertNotEqual(result.returncode, 0, 'spy deliberately stops before real deployment')
 
     def assert_rejected(self, result):

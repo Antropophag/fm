@@ -29,6 +29,41 @@ regular_private(){
   [[ $mode == 600 ]]
 }
 
+path_identity(){
+  stat -c '%d:%i:%u:%h:%a' -- "$1" 2>/dev/null || stat -f '%d:%i:%u:%l:%Lp' "$1" 2>/dev/null
+}
+
+fd_identity(){
+  stat -L -c '%i:%u:%h:%a' -- /dev/fd/9 2>/dev/null || stat -L -f '%i:%u:%l:%Lp' /dev/fd/9 2>/dev/null
+}
+
+prepare_deploy_env_file(){
+  local before stable opened after_fd after_path digest fd_digest after_digest mode inode uid links
+  [[ -f "$ENV_FILE" && ! -L "$ENV_FILE" ]] || fail ENV_FILE
+  before=$(path_identity "$ENV_FILE") || fail ENV_FILE
+  IFS=: read -r _ inode uid links mode <<EOF
+$before
+EOF
+  [[ $uid == "$(id -u)" && $links == 1 ]] || fail ENV_FILE
+  digest=$(sha256sum "$ENV_FILE" | awk '{print $1}') || fail ENV_FILE
+  stable=$(path_identity "$ENV_FILE") || fail ENV_FILE
+  [[ $stable == "$before" && -f $ENV_FILE && ! -L $ENV_FILE ]] || fail ENV_FILE
+  exec 9<>"$ENV_FILE" || fail ENV_FILE
+  opened=$(fd_identity) || { exec 9<&-; fail ENV_FILE; }
+  fd_digest=$(sha256sum /dev/fd/9 | awk '{print $1}') || { exec 9<&-; fail ENV_FILE; }
+  [[ $opened == "$inode:$uid:$links:$mode" && $fd_digest == "$digest" ]] || { exec 9<&-; fail ENV_FILE; }
+  if [[ $mode != 600 ]]; then
+    chmod 0600 /dev/fd/9 || { exec 9<&-; note 'Use a Linux filesystem or WSL filesystem that supports private file modes.' >&2; return 64; }
+  fi
+  after_fd=$(fd_identity) || { exec 9<&-; fail ENV_FILE; }
+  after_path=$(path_identity "$ENV_FILE") || { exec 9<&-; fail ENV_FILE; }
+  [[ $after_fd == "$inode:$uid:$links:600" ]] || { exec 9<&-; note 'Use a Linux filesystem or WSL filesystem that supports private file modes.' >&2; return 64; }
+  [[ $after_path == "${before%:*}:600" && -f $ENV_FILE && ! -L $ENV_FILE ]] || { exec 9<&-; fail ENV_FILE; }
+  after_digest=$(sha256sum "$ENV_FILE" | awk '{print $1}') || { exec 9<&-; fail ENV_FILE; }
+  exec 9<&-
+  [[ $after_digest == "$digest" ]] || fail ENV_FILE
+}
+
 random_hex(){ od -An -N32 -tx1 /dev/urandom | tr -d ' \n'; }
 
 env_init(){
@@ -41,11 +76,6 @@ env_init(){
   fi
   operator_home=${HOME:-}
   [[ $operator_home == /* && -d $operator_home && ! -L $operator_home ]] || fail HOME
-  local private_home="$operator_home/.fmonitor2-production" private_mode private_owner
-  if [[ ! -e $private_home && ! -L $private_home ]]; then (umask 077; mkdir "$private_home") || fail HOME; fi
-  [[ -d $private_home && ! -L $private_home ]] || fail HOME
-  private_mode=$(stat -c '%a' "$private_home" 2>/dev/null || stat -f '%Lp' "$private_home"); private_owner=$(stat -c '%u' "$private_home" 2>/dev/null || stat -f '%u' "$private_home")
-  [[ $private_mode == 700 && $private_owner == "$(id -u)" ]] || fail HOME
   if [[ -f "$ROOT/release.defaults" && -f "$ROOT/release.json" && -f "$ROOT/SHA256SUMS" && -f "$ROOT/images.tar" ]]; then
     (cd "$ROOT" && sha256sum -c --quiet SHA256SUMS) >/dev/null 2>&1 || fail release
     local release_keys='|' release_key release_value
@@ -88,8 +118,6 @@ env_init(){
     line=${line//@DATABASE_PLATFORM@/$database_platform}
     line=${line//@IMAGE_ARCHIVE@/$image_archive}
     line=${line//@IMAGE_ARCHIVE_SHA256@/$image_archive_sha}
-    line=${line//@DEPLOY_STATE_DIR@/$private_home\/state}
-    line=${line//@BACKUP_ROOT@/$private_home\/backups}
     printf '%s\n' "$line" >>"$tmp" || { rm -f "$tmp"; fail ENV_FILE; }
   done <"$ROOT/deploy/production/env.example"
   chmod 600 "$tmp"
@@ -129,6 +157,47 @@ load_config(){
 
 need(){ local name=$1 value; [[ $SEEN_KEYS == *"|$name|"* ]] || fail "$name"; value=${!name}; [[ -n $value && $value != replace_me && $value != *replace_me* ]] || fail "$name"; }
 
+AUTO_STATE=false
+AUTO_BACKUP=false
+MANAGED_PROJECT_ROOT=
+
+resolve_auto_paths(){
+  local canonical_home home_uid
+  [[ ${FMONITOR_DEPLOY_STATE_DIR:-} == auto || ${FMONITOR_BACKUP_ROOT:-} == auto ]] || return 0
+  [[ $HOME == /* && -d $HOME && ! -L $HOME ]] || fail HOME
+  home_uid=$(stat -c '%u' "$HOME" 2>/dev/null || stat -f '%u' "$HOME") || fail HOME
+  [[ $home_uid == "$(id -u)" ]] || fail HOME
+  canonical_home=$(cd "$HOME" 2>/dev/null && pwd -P) || fail HOME
+  [[ $canonical_home == "$HOME" ]] || fail HOME
+  [[ ${COMPOSE_PROJECT_NAME:-} =~ ^fm2-prod-[a-z0-9][a-z0-9-]*$ ]] || fail COMPOSE_PROJECT_NAME
+  MANAGED_PROJECT_ROOT="$canonical_home/.fmonitor2-production/$COMPOSE_PROJECT_NAME"
+  if [[ ${FMONITOR_DEPLOY_STATE_DIR:-} == auto ]]; then AUTO_STATE=true; FMONITOR_DEPLOY_STATE_DIR="$MANAGED_PROJECT_ROOT/state"; fi
+  if [[ ${FMONITOR_BACKUP_ROOT:-} == auto ]]; then AUTO_BACKUP=true; FMONITOR_BACKUP_ROOT="$MANAGED_PROJECT_ROOT/backups"; fi
+}
+
+private_directory(){
+  local path=$1 mode owner
+  [[ -d $path && ! -L $path ]] || return 1
+  mode=$(stat -c '%a' "$path" 2>/dev/null || stat -f '%Lp' "$path") || return 1
+  owner=$(stat -c '%u' "$path" 2>/dev/null || stat -f '%u' "$path") || return 1
+  [[ $mode == 700 && $owner == "$(id -u)" ]]
+}
+
+create_private_directory(){
+  local path=$1
+  if [[ ! -e $path && ! -L $path ]]; then (umask 077; mkdir "$path") || fail "$2"; fi
+  private_directory "$path" || fail "$2"
+}
+
+prepare_managed_paths(){
+  [[ $AUTO_STATE == true || $AUTO_BACKUP == true ]] || return 0
+  local base="$HOME/.fmonitor2-production"
+  create_private_directory "$base" HOME
+  create_private_directory "$MANAGED_PROJECT_ROOT" COMPOSE_PROJECT_NAME
+  [[ $AUTO_STATE == false ]] || create_private_directory "$FMONITOR_DEPLOY_STATE_DIR" FMONITOR_DEPLOY_STATE_DIR
+  [[ $AUTO_BACKUP == false ]] || create_private_directory "$FMONITOR_BACKUP_ROOT" FMONITOR_BACKUP_ROOT
+}
+
 validate(){
   local k
   for k in COMPOSE_PROJECT_NAME FMONITOR_IMAGE_MODE FMONITOR_RUNTIME_IMAGE FMONITOR_DATABASE_IMAGE FMONITOR_SOURCE_REVISION FMONITOR_HTTP_PORT FMONITOR_DB_NAME FMONITOR_DB_USER FMONITOR_DB_PASSWORD FMONITOR_MIGRATION_DB_USER FMONITOR_MIGRATION_DB_PASSWORD FMONITOR_PROCESS_TABLE_PREFIX FMONITOR_LEGACY_TABLE_PREFIX FMONITOR_SESSION_INSTANCE FMONITOR_YII_COOKIE_VALIDATION_KEY FMONITOR_YII_IDENTITY_KEY FMONITOR_TRUSTED_REQUEST_HOST FMONITOR_TRUSTED_REQUEST_SCHEME FMONITOR_RUNTIME_ENV FMONITOR_PUBLIC_BASE_URL FMONITOR_ALLOW_HTTP FMONITOR_INITIAL_OWNER_EMAIL FMONITOR_BOOTSTRAP_SUPERADMIN_PASSWORD FMONITOR_JOBS_ENABLED FMONITOR_DEPLOY_STATE_DIR FMONITOR_BACKUP_ROOT; do need "$k"; done
@@ -150,13 +219,24 @@ validate(){
   [[ ${#FMONITOR_YII_COOKIE_VALIDATION_KEY} -ge 32 && ${#FMONITOR_YII_IDENTITY_KEY} -ge 32 ]] || fail FMONITOR_YII_IDENTITY_KEY
   [[ ${FMONITOR_INITIAL_OWNER_EMAIL} =~ ^[^@]+@shlz\.ru$ ]] || fail FMONITOR_INITIAL_OWNER_EMAIL
   [[ ${FMONITOR_DEPLOY_STATE_DIR} == /* && ${FMONITOR_BACKUP_ROOT} == /* ]] || fail FMONITOR_DEPLOY_STATE_DIR
+  if [[ $AUTO_STATE == true || $AUTO_BACKUP == true ]]; then
+    local managed_component
+    for managed_component in "$HOME/.fmonitor2-production" "$MANAGED_PROJECT_ROOT"; do
+      if [[ -e $managed_component || -L $managed_component ]]; then private_directory "$managed_component" || fail FMONITOR_DEPLOY_STATE_DIR; fi
+    done
+  fi
   local env_parent env_absolute path parent canonical path_name
   env_parent=$(cd "$(dirname "$ENV_FILE")" 2>/dev/null && pwd -P) || fail ENV_FILE
   env_absolute="$env_parent/$(basename "$ENV_FILE")"
   if [[ $env_absolute == "$ROOT/"* && $env_absolute != "$ROOT/.env" ]]; then fail ENV_FILE; fi
   for path_name in FMONITOR_DEPLOY_STATE_DIR FMONITOR_BACKUP_ROOT; do
     path=${!path_name}
-    parent=$(dirname "$path"); [[ -d $parent && ! -L $parent ]] || fail FMONITOR_DEPLOY_STATE_DIR
+    parent=$(dirname "$path")
+    if [[ ! -d $parent || -L $parent ]]; then
+      if { [[ $path_name == FMONITOR_DEPLOY_STATE_DIR && $AUTO_STATE == true ]] || [[ $path_name == FMONITOR_BACKUP_ROOT && $AUTO_BACKUP == true ]]; } \
+        && [[ $VERB == deploy || $VERB == check-config ]]; then continue; fi
+      fail FMONITOR_DEPLOY_STATE_DIR
+    fi
     local parent_mode parent_owner
     parent_mode=$(stat -c '%a' "$parent" 2>/dev/null || stat -f '%Lp' "$parent"); parent_owner=$(stat -c '%u' "$parent" 2>/dev/null || stat -f '%u' "$parent")
     [[ $parent_mode == 700 && $parent_owner == "$(id -u)" ]] || fail "$path_name"
@@ -168,6 +248,9 @@ validate(){
       local path_mode path_owner
       path_mode=$(stat -c '%a' "$path" 2>/dev/null || stat -f '%Lp' "$path"); path_owner=$(stat -c '%u' "$path" 2>/dev/null || stat -f '%u' "$path")
       [[ $path_mode == 700 && $path_owner == "$(id -u)" ]] || fail "$path_name"
+    elif { [[ $path_name == FMONITOR_DEPLOY_STATE_DIR && $AUTO_STATE == true ]] || [[ $path_name == FMONITOR_BACKUP_ROOT && $AUTO_BACKUP == true ]]; } \
+      && [[ $VERB != deploy && $VERB != check-config ]]; then
+      fail "$path_name"
     fi
     printf -v "$path_name" '%s' "$path"
   done
@@ -371,11 +454,14 @@ fi
 main(){
   parse_args "$@"
   [[ $VERB == env-init ]] && { env_init; return; }
+  [[ $VERB != deploy ]] || prepare_deploy_env_file
   while IFS='=' read -r inherited _; do case $inherited in FMONITOR_*|COMPOSE_*) unset "$inherited";; esac; done < <(env)
   load_config
   if [[ $VERB == is-production ]]; then [[ ${FMONITOR_RUNTIME_ENV:-} == production && ${COMPOSE_PROJECT_NAME:-} =~ ^fm2-prod- ]] && return 0; return 1; fi
+  resolve_auto_paths
   validate
   [[ $VERB == check-config ]] && return
+  [[ $VERB != deploy ]] || prepare_managed_paths
   export_config
   case $VERB in
     deploy) deploy;; status) status_cmd;; logs) installed; installed_image; dc logs --follow;; stop) stop_cmd;; start) start_cmd;; backup) do_backup;; update) update_cmd;; restore) restore_cmd;; release) release_cmd;; *) fail verb;;
