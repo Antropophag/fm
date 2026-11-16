@@ -1,3 +1,17 @@
+# Текущая цель — устранить PECL blocker корпоративной установки
+
+Owner продолжает установку clone/env/make на WSL; предоставленный16.11.2026 файл
+Downloads/логи.txt показывает timeout pecl.php.net при sqlsrv/pdo_sqlsrv5.13.0.
+Это bounded correction ранее порученной установки с недоступными package sources:
+PECL-first и проверенный официальный GitHub source fallback без смены версий.
+Worktree pecl-direct-install-fallback, base29e4fd90. Root spec/tests; отдельный
+sol/low executor implementation; independent planner-required reviews. Full local
+suite запрещён; focused checks и один exact-source GitHub CI. Standing owner
+merge/tested-main GitLab authorization сохраняется; live production не менять.
+Приватные env обновлять только source/image metadata, остальные bytes сохранить.
+
+---
+
 # Текущая цель — clone, .env, make deploy
 
 Owner16.11.2026 потребовал простой первый запуск: git clone из корпоративного GitLab, копирование готового `.env` в корень, одна команда `make deploy`. WSL и Make уже есть. GitHub остаётся местом разработки/PR/CI, после проверок в GitLab переносится только main. Это bounded correction существующего production Make workflow: приватные managed directories и безопасное сужение прав собственного env; domain/schema/legacy/Excel-import не меняются. Root пишет контракт/tests, отдельный sol/low executor код, независимый reviewer Gate3/final по planner. Full local suite запрещён. Новые private trial/production handoffs и Downloads обновляются после source delivery; существующие production/данные/соседние worktrees не меняются. Для публикации используем GitHub PR/CI и owner-directed tested-main handoff; автоматический admission UNKNOWN не переопределяется.

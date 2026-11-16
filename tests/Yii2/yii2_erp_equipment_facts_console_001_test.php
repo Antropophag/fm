@@ -9,7 +9,13 @@ use FMonitor2\YiiRuntime\Commands\ErpEquipmentFactsSyncController;
 $root = dirname(__DIR__, 2);
 $dockerfile = file_get_contents($root . '/deploy/runtime/Dockerfile');
 $compose = file_get_contents($root . '/deploy/runtime/compose.yaml');
-assertSameValue(true, str_contains($dockerfile, 'pdo_sqlsrv'), 'production image contains SQL Server PDO driver');
+$driverInstaller = file_get_contents($root . '/deploy/dependencies/install-sqlsrv');
+assertSameValue(true, str_contains($dockerfile, 'COPY deploy/dependencies/install-sqlsrv /usr/local/bin/fmonitor-install-sqlsrv'),
+    'production image includes the SQL Server driver installer');
+assertSameValue(true, str_contains($dockerfile, 'bash /usr/local/bin/fmonitor-install-sqlsrv --version '),
+    'production image invokes the pinned SQL Server driver installer');
+assertSameValue(true, str_contains($driverInstaller, 'docker-php-ext-enable sqlsrv pdo_sqlsrv'),
+    'production installer enables both SQL Server drivers');
 foreach (['FMONITOR_ERP_HOST', 'FMONITOR_ERP_DATABASE', 'FMONITOR_ERP_USER', 'FMONITOR_ERP_PASSWORD', 'FMONITOR_ERP_EQUIPMENT_FACTS_HMAC_KEY'] as $key) {
     assertSameValue(true, str_contains($compose, $key), 'jobs worker receives direct ERP configuration ' . $key);
 }

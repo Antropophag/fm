@@ -1,0 +1,37 @@
+{
+  "change": "pecl-direct-install-fallback",
+  "planned_paths": [
+    "deploy/dependencies/install-sqlsrv",
+    "deploy/dependencies/README.md",
+    "deploy/runtime/Dockerfile",
+    "tools/delivery/Dockerfile.runtime.in",
+    "tools/delivery/dependencies.env",
+    "docs/operations/current-delivery-goal.md",
+    "docs/operations/pecl-direct-install-fallback.md",
+    "specs/PECL-DIRECT-FALLBACK-001.md",
+    "tests/Deployment/pecl_direct_fallback_001_test.py",
+    "tests/Deployment/pecl_direct_fallback_live_001_test.py",
+    "tools/verification/suites.tsv",
+    "tools/delivery/render-dependencies.py"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "PECL-DIRECT-FALLBACK-001",
+      "acceptance_id": "P01,P02,P03",
+      "spec_path": "specs/PECL-DIRECT-FALLBACK-001.md",
+      "seam": "public pinned extension installer PECL and direct installation branches",
+      "tests": [
+        "tests/Deployment/pecl_direct_fallback_001_test.py"
+      ]
+    },
+    {
+      "spec_id": "PECL-DIRECT-FALLBACK-001",
+      "acceptance_id": "P04",
+      "spec_path": "specs/PECL-DIRECT-FALLBACK-001.md",
+      "seam": "actual PHP8.5 Docker with PECL unreachable and both extensions loaded",
+      "tests": [
+        "tests/Deployment/pecl_direct_fallback_live_001_test.py"
+      ]
+    }
+  ]
+}
