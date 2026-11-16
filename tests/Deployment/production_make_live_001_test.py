@@ -156,8 +156,10 @@ test "$(cat /tmp/project/vendor/retained-sentinel)" = sentinel
         before_running=running(d)
         make('backup',cfg,'BACKUP='+str(home/'backups'/'running-point'),timeout=300)
         assert running(d)==before_running
-        failbackup=docker_boundary('fail-backup','case " $* " in *" fmonitor2-runtime-recovery.php "*" backup "*) exit 45;; esac')
+        backup_failed=home/'backup-failure-injected'
+        failbackup=docker_boundary('fail-backup','case " $* " in *" bin/fmonitor2-runtime-recovery.php "*" backup "*) touch '+str(backup_failed)+'; exit 45;; esac')
         failure=make('backup',cfg,'BACKUP='+str(home/'backups'/'failed-point'),env=failbackup,ok=False,timeout=300)
+        assert backup_failed.exists(),'backup failure fixture must hit the public CLI boundary'
         assert failure.returncode!=0
         assert not (home/'backups'/'failed-point').exists()
         assert running(d)==before_running or not {'web','php'}.intersection(running(d))
@@ -165,7 +167,7 @@ test "$(cat /tmp/project/vendor/retained-sentinel)" = sentinel
         if running(d)!=before_running:make('start',cfg,timeout=300)
         # Hold a backup inside Docker after project lock acquisition. Contender may read but not mutate.
         held=home/'held';release_lock=home/'release-lock'
-        hold=docker_boundary('hold-backup','case " $* " in *" fmonitor2-runtime-recovery.php "*" backup "*) touch '+str(held)+'; while [ ! -f '+str(release_lock)+' ]; do sleep 0.1; done;; esac')
+        hold=docker_boundary('hold-backup','case " $* " in *" bin/fmonitor2-runtime-recovery.php "*" backup "*) touch '+str(held)+'; while [ ! -f '+str(release_lock)+' ]; do sleep 0.1; done;; esac')
         first=subprocess.Popen(['make','--no-print-directory','backup','ENV_FILE='+str(cfg),'BACKUP='+str(home/'backups'/'concurrent-point')],cwd=ROOT,env=hold,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
         import time
         deadline=time.monotonic()+90
