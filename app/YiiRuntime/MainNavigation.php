@@ -16,6 +16,7 @@ final class MainNavigation
         $groups = [
             'Монтаж' => [
                 ['objects.read', 'objects', '/pilot/objects', 'Объекты монтажа', 'docs'],
+                ['objects.read', 'address-register', '/pilot/address-register', 'Адресный перечень', 'bar-chart-square-plus'],
                 ['access.administer', 'completion-register', '/pilot/completion-register', 'ПТО и декларации', 'folder-file-open'],
                 ['construction_control.read', 'construction-control', '/pilot/construction-control', 'Стройконтроль', 'eye'],
                 [null, 'calendar', '/pilot/calendar', 'Календарь', 'calendar-interface'],

@@ -89,6 +89,7 @@ final class FeedbackApplication extends Component
         }
         $simple = [
             "/pilot/objects",
+            "/pilot/address-register",
             "/pilot/installers",
             "/pilot/construction-control",
             "/pilot/calendar",

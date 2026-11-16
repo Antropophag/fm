@@ -1,0 +1,30 @@
+{
+  "change": "address-register-adaptive-columns",
+  "planned_paths": [
+    "app/AddressRegister/Columns.php",
+    "app/AddressRegister/ColumnPreferences.php",
+    "app/InstallationProcess/MariaDbAddressRegister.php",
+    "app/YiiRuntime/Controllers/AddressRegisterController.php",
+    "app/YiiRuntime/Views/address-register.php",
+    "app/YiiRuntime/Assets/address-register.css",
+    "app/YiiRuntime/Assets/address-register.js",
+    "tests/AddressRegister/column_preferences_001_test.php",
+    "tests/Yii2/yii2_address_register_001_test.php",
+    "tests/Yii2/yii2_address_register_browser_001_test.php",
+    "tests/Yii2/address_register_browser.mjs",
+    "specs/ADDRESS-REGISTER-001.md"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "ADDRESS-REGISTER-001",
+      "acceptance_id": "A9-A11",
+      "spec_path": "specs/ADDRESS-REGISTER-001.md",
+      "seam": "public preferences version2 + real Yii/browser current multi-installer projection",
+      "tests": [
+        "tests/AddressRegister/column_preferences_001_test.php",
+        "tests/Yii2/yii2_address_register_001_test.php",
+        "tests/Yii2/yii2_address_register_browser_001_test.php"
+      ]
+    }
+  ]
+}

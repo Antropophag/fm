@@ -2,9 +2,33 @@
 
 Поручение владельца16.11.2026 в текущей беседе: реализовать согласованный пакет чистого production-развёртывания через Make; все ключи, токены и первоначальная учётка находятся в одном приватном `.env`. При недоступности Composer repositories автоматически скачивать закреплённые пакеты напрямую с проверкой digest. Существующие базы не переносить. Это разрешение на реализацию, isolated acceptance, PR/push; фактическая выкладка на корпоративный сервер, отправка почты, изменения живого production и merge не входят.
 
-Worktree `fmonitor-2-production-make-env-deploy`, change `production-make-env-deploy`, контракт `PRODUCTION-MAKE-ENV-001`. Base — свежий main7c6b8e14 после merge PR294; соседние worktrees и параллельная сессия сохраняются. Root — спецификация/tests; отдельные gpt-5.6-sol/low executors — deployment и dependency installer; независимый reviewer — Gate3/final. План выбирает lane/reviews. Проверки локально bounded, полный matrix только exact-source GitHub CI. Секреты и полные журналы вне Git. UNKNOWN не означает GREEN.
+Worktree `fmonitor-2-production-make-env-deploy`, change `production-make-env-deploy`, контракт `PRODUCTION-MAKE-ENV-001`. Исходная база — main7c6b8e14 после PR294; в эту ветку также включён main6cf725fc после завершения параллельного PR295; соседние worktrees и параллельная сессия сохраняются. Root — спецификация/tests; отдельные gpt-5.6-sol/low executors — deployment и dependency installer; независимый reviewer — Gate3/final. План выбирает lane/reviews. Проверки локально bounded, полный matrix только exact-source GitHub CI. Секреты и полные журналы вне Git. UNKNOWN не означает GREEN.
 
 Предыдущая очередь сохранена ниже; её production-first/merge authorization не переносится на эту задачу.
+
+---
+
+# Текущая цель — адресный перечень через PR/CI до main
+
+Owner16.11.2026 явно поручил проверить/дописать тесты, провести изменения черезPR и полныйCI и влить вmain. Работа в отдельном worktree address-register-integration на main7c6b8e14, содержащем mergedPR294. Объединены все original/repaired/adaptive address-register commits с сохранением авторства и историй. Production менять не требуется. Root specs/tests/integration; independent retrospective test/final review; требуемыегейты и полныйexact-sourceCI теперь обязательны, прежние owner-deferred записи ниже остаются историей. Full local make test/verify запрещён: только focused checks. Разрешеныpush/PR/merge после review/CI; чужиеworktrees/WIP не менять.
+
+PR295 открыт, first full CI43819674368 разобран полностью: только2 regression failures (sidebar old11-link oracle; focused-bootstrap rationale oracle missing consumer frontier), verify aggregate failed accordingly. Root bounded test-only corrections preserve runtime/policy; independent correction reviews and next exact-source fullCI mandatory before merge. Active repair input: openspec/changes/address-register-personal-columns/ci-repair-verification-input.json, base817b49f8.
+
+---
+
+# Текущая цель — все колонки, регномер первым, адаптивная ширина
+
+Owner15.11.2026 просит первым регномер, показать все колонки, убрать настройку пикселей, сделать адаптив и проверить ячейку нескольких монтажников. Desktop приоритет; телефон не требует отдельной полировки. Dedicated worktree address-register-adaptive-columns на aeaca219, включает сохранённое восстановление послеPR294. Root scope/spec/tests; отдельный sol/low implementation; independent final review. Production-first authorization сохраняется, full local suite запрещён, полныйGitCI позже. Legacy preferences history сохраняется, новая v2 presentation не переписывает файлы, domain data не меняется.
+
+Поставлено15.11 22:46МСК:regnumberfirst/all22/autowidth/full multiline crews, currentimage `fmonitor2-runtime:address-register-adaptive-20261115-092f3fa944e9`. [Delivery](address-register-adaptive-20261115.md). Scopedchecks/finalreview PASS,1043otherfiles retained from latest parallel image; fullCI deferred. After v2 saves, do not code-only rollback to v1reader; use forward-compatible recovery and preserve all history.
+
+---
+
+# Текущая цель — восстановить адресный перечень после параллельной выкладки
+
+Owner15.11.2026 сообщил404 и попросил проверить параллельныйPR. Подтверждено: production shared web/assets/asset-controller bytes точно равныPR2944cdd3d5 и потеряли регистрации address-register; остальные16runtime files сохранены. Новый dedicated worktree restore-address-register-after-perf объединяет publishedPR294 + два reviewed address commits локально, не меняет чужой worktree/ветку/PR. Root bounded correction author; independent final review до точечного восстановления3shared files. Старые разрешения production-first сохраняются; данные/settings не менять. Full local suite запрещён.
+
+Восстановлено15.11 22:16МСК:3shared registrations returned, immutable derived PHP image persisted,1047other files preserved, focused HTTP/browser and independent review PASS. [Recovery record](address-register-recovery-20261115.md). PublishedPR294 still requires preservation of these additive routes/assets before future rollout; its worktree/WIP is untouched.
 
 ---
 
@@ -107,3 +131,26 @@ WIP №257 и остальные worktrees сохранить. Полные ло
 Не входят №157 `compact-task-context-manifest`, завершённый hotfix №258/PR №282, параллельный отдельный worktree/PR №276 `reconcile-completed-installation-state`, application/product behavior, production deployment, изменение CI admission, автоматическая правка Docker Desktop settings, глобальный prune, удаление persistent stand/foreign resources и угадывание владельца исторических anonymous volumes. Предыдущие и параллельные цели сохранены в Git history и не включаются в этот candidate.
 
 Текущее состояние, PR и CI читаются только через `python3 tools/delivery/harness.py state`. Merge/deploy/settings не выполнять.
+
+
+---
+
+# Parallel address-register delivery history
+
+# Текущая цель этой ветки — адресный перечень с персональными колонками
+
+Поручение владельца 13.11.2026: спроектировать и поставить на production отдельный адресный перечень для пользователей широких Excel-таблиц; каждый пользователь настраивает свои колонки, интерфейс использует shlz-ui. Владелец явно задал production-first с последующим Git pipeline. Worktree `fmonitor-2-address-register-personal-columns`; независимые parallel sessions/production patches сохраняются. Root пишет контракт/tests, отдельный sol/low executor реализует, independent final review и bounded focused checks сохраняются. Полный local make test/verify запрещён, формальная последовательность Gates/CI отложена владельцем и не объявляется GREEN. Очистка базы/смена прав не входят в scope.
+
+Поставка выполнена14.11.2026 00:18МСК:15runtime files, independent final APPROVED, focused HTTP/browser/preferences и architecture GREEN,309objects/7pages read-only qualification, external health200. [Delivery record](address-register-20261114.md). Ожидать обратной связи владельца; полный Git pipeline остаётся следующим этапом, не GREEN.
+
+По дополнительному поручению владельца постоянный маршрут production сохранён в [production-access.md](production-access.md). Предыдущая очередь ниже — история, не scope этой ветки.
+
+
+
+---
+
+# Текущая коррекция — вёрстка адресного перечня на штатных shlz-ui компонентах
+
+Owner14.11.2026 отверг поставленный UI: серый самодельный блок настроек, прилипание к краям, два вертикальных скролла, недостаточное использование shlz-ui. Это bounded presentation correction действующего контракта, root автор regression/tests/implementation по разрешённому ordinary bounded fix route; independent final review обязателен. Продолжаем существующий delivery worktree, base e52457801ab38c16995567f6aee9c78077acd7e5, production-first authorization сохраняется. Данные/права/preferences storage не меняются. Прежнее визуальное APPROVED опровергнуто владельцем и не принимается как доказательство этой коррекции.
+
+Исправление поставлено14.11.2026 00:45МСК:4runtime files, publicSHLZ drawers/select, white single-scroll viewport, preserved preferences; fresh independent APPROVED и focused browser/architecture PASS. [Коррекция](address-register-ui-repair-20261114.md). Ждать пользовательской проверки; fullCI остаётся следующим этапом.
