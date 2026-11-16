@@ -5,7 +5,7 @@ import http.client
 from html.parser import HTMLParser
 import os
 import pathlib
-import secrets
+import shutil
 import socket
 import subprocess
 import tempfile
@@ -27,12 +27,17 @@ class Help(unittest.TestCase):
         assert (ROOT/'vendor/autoload.php').is_file(),'SETUP_FAILURE: install locked Composer dependencies'
         cls.tmp=tempfile.TemporaryDirectory(prefix='fm2-help-http-')
         cls.private=pathlib.Path(cls.tmp.name).resolve()
+        cls.site=cls.private/'site';cls.site.mkdir()
+        # Exact application/config/public bytes in a private fixture permit replacing
+        # an ALLOWED screenshot with a symlink without mutating repository files.
+        for folder in ['app','config','public']:shutil.copytree(ROOT/folder,cls.site/folder)
+        (cls.site/'vendor').symlink_to(ROOT/'vendor',target_is_directory=True)
         with socket.socket() as sock:sock.bind(('127.0.0.1',0));cls.port=sock.getsockname()[1]
         cls.host='127.0.0.1:'+str(cls.port)
         env={k:v for k,v in os.environ.items() if not k.startswith('FMONITOR_')}
         env.update(FMONITOR_TRUSTED_REQUEST_HOST=cls.host,FMONITOR_TRUSTED_REQUEST_SCHEME='http',FMONITOR_YII_COOKIE_VALIDATION_KEY='synthetic-help-cookie-key-'*3,FMONITOR_YII_IDENTITY_KEY='synthetic-help-identity-key-'*3,FMONITOR_YII_RUNTIME_PATH=str(cls.private/'runtime'),FMONITOR_YII_SESSION_PATH=str(cls.private))
         cls.log=(cls.private/'http.log').open('wb')
-        cls.server=subprocess.Popen(['php','-d','display_errors=0','-S',cls.host,'-t',str(ROOT/'public'),str(ROOT/'public/yii.php')],cwd=ROOT,env=env,stdout=cls.log,stderr=cls.log)
+        cls.server=subprocess.Popen(['php','-d','display_errors=0','-S',cls.host,'-t',str(cls.site/'public'),str(cls.site/'public/yii.php')],cwd=cls.site,env=env,stdout=cls.log,stderr=cls.log)
         for _ in range(80):
             if cls.server.poll() is not None:raise RuntimeError('SETUP_FAILURE: help HTTP fixture exited')
             try:
@@ -84,13 +89,15 @@ class Help(unittest.TestCase):
 
     def test_symlink_cannot_expose_outside_file(self):
         target=self.private/'private-source';target.write_bytes(b'PRIVATE_HELP_SENTINEL')
-        name='help-test-'+secrets.token_hex(8)+'.webp';link=ROOT/'public/help/screenshots'/name
+        name='01-login.webp';link=self.site/'public/help/screenshots'/name
+        original=link.read_bytes();link.unlink()
         try:
             link.symlink_to(target)
             status,_,body=self.request('/help/screenshots/'+name)
             self.assertEqual(status,404);self.assertNotIn(b'PRIVATE_HELP_SENTINEL',body)
         finally:
             if link.is_symlink():link.unlink()
+            link.write_bytes(original)
 
     def test_host_and_unsupported_method_boundaries(self):
         self.assertEqual(self.request('/help/',host='unexpected.invalid')[0],400)
