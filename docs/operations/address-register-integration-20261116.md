@@ -19,3 +19,11 @@ PR/full CI/merge: pending. Historical production-first/deferred records remain a
 Independent final review found one P2: internal object-ID search exceeded A3 and the UI fields. Root added a negative public read regression for an ID-only match; `search-red.log` reproduces the unwanted row. Root owns this declared bounded correction of established A3 behavior: remove only that predicate, preserving the four effective public search fields and literal escaping. The original CHANGES_REQUESTED review remains intact; correction review and focused GREEN follow separately.
 
 Correction review: independent test delta PASS and final APPROVED; no open blockers. `search-green.log` passes corrected HTTP/read and browser flows with the package executable-source digest. Full exact-source GitHub CI remains mandatory before the owner-authorized merge.
+
+## PR295 first full CI and test-only corrections
+
+PR: https://github.com/Antropophag/fmonitor-2/pull/295. Exact head817b49f89b24f126e3d98c10440ed04690072cee. PR-triggered run appeared after a delay; the temporary manual duplicate43819598015 was cancelled when PR run43819674368 was confirmed for the same head/base/full lane.
+
+Full run https://github.com/Antropophag/fmonitor-2/actions/runs/43819674368 finished with fast, unit and both integration shards PASS. Complete failed-job inventory: e2e, governance, and their verify aggregate. Complete REGRESSION_FAILURE inventory: `tests/Yii2/yii2_sidebar_state_icons_001_test.php` and `tests/Verification/registered_yii2_focused_bootstrap_001_test.py`. Full logs plus inventory are private `ci-full.log` / `ci-failure-inventory.json`. Every failure was inspected before any correction/push.
+
+Root owns two bounded test-only corrections: replace stale 11-link mobile oracle with the exact 12-route sequence including address register; allow the consumer-ownership rationale only when a matching verifier expansion exists, preserving exact wrapper identity, services, one-command deduplication and all other rationale restrictions. These update adjacent executable oracles for the reviewed feature; runtime, fixtures, CI selection and admission policy are unchanged. CI failures are RED evidence; focused GREEN and independent correction reviews are required before the next exact-head full run.

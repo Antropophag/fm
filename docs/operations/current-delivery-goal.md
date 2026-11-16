@@ -2,6 +2,8 @@
 
 Owner16.11.2026 явно поручил проверить/дописать тесты, провести изменения черезPR и полныйCI и влить вmain. Работа в отдельном worktree address-register-integration на main7c6b8e14, содержащем mergedPR294. Объединены все original/repaired/adaptive address-register commits с сохранением авторства и историй. Production менять не требуется. Root specs/tests/integration; independent retrospective test/final review; требуемыегейты и полныйexact-sourceCI теперь обязательны, прежние owner-deferred записи ниже остаются историей. Full local make test/verify запрещён: только focused checks. Разрешеныpush/PR/merge после review/CI; чужиеworktrees/WIP не менять.
 
+PR295 открыт, first full CI43819674368 разобран полностью: только2 regression failures (sidebar old11-link oracle; focused-bootstrap rationale oracle missing consumer frontier), verify aggregate failed accordingly. Root bounded test-only corrections preserve runtime/policy; independent correction reviews and next exact-source fullCI mandatory before merge. Active repair input: openspec/changes/address-register-personal-columns/ci-repair-verification-input.json, base817b49f8.
+
 ---
 
 # Текущая цель — все колонки, регномер первым, адаптивная ширина
