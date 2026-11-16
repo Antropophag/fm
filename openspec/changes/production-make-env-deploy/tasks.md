@@ -9,6 +9,8 @@
 - [x] 2.4 Обновить production/runbook/reverse proxy/recovery instructions; документировать local compatibility и ownership.
 
 ## 3. Delivery
-- [ ] 3.1 Выполнить bounded clean-install/restart/login/upload/backup/restore acceptance на isolated target, сохранить private evidence.
-- [ ] 3.2 Независимый final review и correction verification.
+- [x] 3.1 Выполнить bounded clean-install/restart/login/upload/backup/restore acceptance на isolated target, сохранить private evidence.
+- [x] 3.2 Независимый final review и correction verification.
 - [ ] 3.3 Commit/PR и один exact-source CI; при падении разобрать полный inventory, записать фактический outcome. Merge/live deployment не выполнять.
+
+Publication checkpoint: reviewed implementation is complete; task3.3 external PR/CI outcome is recorded in the PR checks after this source is frozen. No merge/live deployment.

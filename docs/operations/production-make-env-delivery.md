@@ -65,3 +65,12 @@ On7a2b5a63 the outer bundle verifier passed but canonical verify returned BUNDLE
 
 
 Recovery executor subsequently completed the unchanged full focused live acceptance with exit0 after the container-owned staging correction: real empty deploy/replay/login/restart/v39 backup/empty restore, release, successful update and injected update failures. Synthetic project containers were removed. Independent reviewer approved the trust/privilege transition in principle; original backup remains readonly, canonical verification is unchanged, SQL/tar processing occurs only after dropping to10001. Root is freezing the corrected source for harness-bound acceptance and final review; CI/PR remain pending at this checkpoint.
+
+
+## Final reviewed candidate and publication handoff
+
+Root source-bound acceptance oncbcc04db is GREEN: record1794819773831147000-c99ca0ae0d4742aea7f94937e71fe9b9,240.9seconds. Four accompanying exact-source checks are GREEN; complete identities are in the final review. Candidate82720bf8c7482679f193dc1d7a2cd209127a0f6054b72c172ee806dbe1667e4a, base6cf725fc, formal independent Gate5 APPROVED; final decision recorded before appending review documentation. Gate3 had two returns, implementation review had two findings rounds; subsequent bounded runtime/fixture corrections and diagnostics are preserved above and in review records. Repeated live runs followed observed failures/source corrections; no local full suite was run.
+
+The publication checkpoint adds only review records, this delivery outcome and OpenSpec task state to the reviewed implementation. Exact-source full CI will run through the PR-triggered existing Quality Graph consumer; its live check result and final run link belong to the PR. At this committed checkpoint that external result is pending, not GREEN. No merge or corporate deployment is performed.
+
+Owner clarified the server is believed to run Debian, architecture unknown. Neighbor ic has no fixed Compose platform; its local backend is linux/arm64, which does not establish the remote server architecture. Sysadmin must confirm server architecture before selecting a release archive.

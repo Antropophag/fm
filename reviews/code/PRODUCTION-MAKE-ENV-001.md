@@ -74,3 +74,49 @@ These properties do not offset D1-D9. The first live run is evidence for D1, not
 ## Review consequence
 
 Implementation review for `3aea5fee` is **CHANGES_REQUESTED**. Correct D1-D9 as one coherent candidate, run the planner-selected bounded checks including the full disposable live acceptance, and prepare a fresh source-bound reviewer package. Do not interpret this record as approval of the in-progress working tree or as a request for the prohibited full local suite.
+
+---
+
+## Final Gate 5 rereview — corrected implementation
+
+- Date: `2026-11-16`
+- Base: `6cf725fcf10b865613c6f91d1db225fb29542266`
+- Reviewed HEAD: `cbcc04dbb4283db5c9e1e4161b03330cc97523d9`
+- Exact candidate source: `82720bf8c7482679f193dc1d7a2cd209127a0f6054b72c172ee806dbe1667e4a`
+- Reviewer package: `20261116T090737Z-9cd6a4c843`
+- Verification plan SHA-256: `04ad94b7fab41de37880de27ed42f0826a6b157e63f68f94fb2c2c7055a4dba2`
+- Reviewer: `/root/independent_review`; implementation authors: separate deployment, recovery, and dependency executors
+- Harness review record: final `APPROVED`, recorded `2026-11-16T09:08:20Z`
+- Verdict: **APPROVED**
+
+### D1-D9 and D7-R dispositions
+
+- **D1 closed:** staged Composer vendor is made runtime-readable before atomic publication; the final image and live acceptance load it as UID10001.
+- **D2 closed:** build mode requires the exact HEAD with all untracked source absent, uses a random unique tag, and refuses a pre-existing tag before build.
+- **D3 closed:** every installed lifecycle seam validates the receipt-bound database/state/secrets volume and network identities before observation or mutation.
+- **D4 closed:** update verifies and executes recovery through the stored immutable old image ID while retaining the old human reference in its manifest.
+- **D5 closed:** enabled jobs must each be present, running, and healthy for status success; disabled jobs remain explicitly disabled.
+- **D6 closed:** deployment state and backup roots require private operator ownership/mode, reject links/files/public directories, and backup destinations are new direct children of the canonical private root.
+- **D7 and D7-R closed:** release records and checksum-binds exact application/database IDs and equal platforms, seeds both identities into the release environment, and verifies the loaded application ID, database ID, and platforms before DB effects. Release tooling comes from the verified immutable application image.
+- **D8 closed:** deploy/update include final receipt publication in the guarded success transition; publication failure stops all writers and leaves an unresolved marker that blocks start.
+- **D9 closed:** provisioning, integration, migration, health, receipt, backup, and recovery helper steps propagate failures explicitly rather than relying on conditional-context `errexit`.
+
+The later Bash3 stopped-backup correction safely handles an empty writer set without changing running-writer restoration. Restore keeps the host bundle read-only, performs outer validation, copies fixed members into a container-owned private overlay, drops to UID/GID10001 for canonical verify/restore, and uses a minimal writable credential tmpfs. The separate target environment mount, password cleanup, deep readiness, service start, and installed receipt behavior were reviewed and exercised by the final live run.
+
+### Exact-source evidence
+
+All package evidence below is `GREEN`, has no missing tests, and binds source `82720bf8c7482679f193dc1d7a2cd209127a0f6054b72c172ee806dbe1667e4a`:
+
+- `python3 tests/Deployment/production_make_env_001_test.py` — record `1794819783571220000-3499668a43914939ac0e2efc9666d120`
+- `python3 tests/Deployment/production_make_lifecycle_001_test.py` — record `1794819783566494000-baf7729467d542009c863833d460b6f2`
+- `python3 tests/Deployment/production_dependencies_001_test.py` — record `1794819783578518000-87fa83b8ef77455c9d6e9ee832d854b9`
+- `php tests/Runtime/production_recovery_preflight_001_test.php` — record `1794819783582351000-7e9b075a67fd49cc9a4fd00ceecaddbc`
+- `python3 tests/Deployment/production_make_live_001_test.py` — record `1794819773831147000-c99ca0ae0d4742aea7f94937e71fe9b9`
+
+The live record covers the real offline dependency fallback, empty v39 deployment, owner login, exact replay, stop/start and durable state, running/stopped/error backup, contention exclusion, corrupt and semantically invalid restore rejection before target resources, empty-target restore and login, release identities/defaults, successful update ordering/data/secrets, receipt-publication failure, and failed-migration writer shutdown.
+
+Historical failed live runs and both earlier `CHANGES_REQUESTED` decisions remain authoritative diagnostics and are not reclassified as GREEN.
+
+### Final boundary
+
+Gate 5 is **APPROVED** for the exact candidate above. No code-review findings remain. Three broad historical recovery/canonical-integration consumers and the planner-selected full matrix remain assigned to exact-source GitHub CI; CI is still `UNKNOWN` and this verdict does not authorize merge or production deployment. The owner-prohibited full local suite was not run.

@@ -182,3 +182,34 @@ The update publication fixture marks the point at which new web/php writers are 
 Two real reconstructed-baseline REDs were inspected. The environment test fails exactly because `3aea5fee` accepts the unsafe backup root (log SHA-256 `5224b9f068540a371958e7c1aab8fff70f7612dc3010c6a0c54fbecbc0428264`). The lifecycle test fails exactly because the old ignored-untracked check reaches Docker build (log SHA-256 `0842426d4e798f1dd9c9b7ed43a12d8707fd5af0fce3993bbb8f4fefa0f60408`). The Docker-dependent D7/D8 cases remain pending the corrected full live run and are not claimed RED or GREEN here.
 
 No findings in this delta. All prior expectations remain. This approval does not approve the correction implementation, close D1-D9, or replace final source-bound live evidence and code rereview.
+
+---
+
+## Final fixture-delta and GREEN evidence disposition
+
+- Date: `2026-11-16`
+- Reviewed HEAD: `cbcc04dbb4283db5c9e1e4161b03330cc97523d9`
+- Exact candidate source: `82720bf8c7482679f193dc1d7a2cd209127a0f6054b72c172ee806dbe1667e4a`
+- Reviewer package: `20261116T090737Z-9cd6a4c843`
+- Verdict: **APPROVED**
+
+The narrow fixture corrections reviewed in principle during implementation are formally approved on the frozen source:
+
+- canonical Yii bootstrap is loaded after Composer autoload;
+- cleanup targets only random test-owned image tags;
+- the expected application image ID distinguishes same-label wrong images from the exact release image;
+- `urllib.parse` is module-scoped, avoiding a function-local `urllib` binding;
+- backup failure/hold injection matches adjacent Docker argv structurally and proves boundary reach with markers;
+- stopped-backup acceptance remains unchanged while Bash3 empty-array behavior is corrected in production code.
+
+No assertion was weakened. Earlier fixture failures (`urllib` scope and recovery command matching) and production/runtime failures (Bash3 empty-array behavior, nested read-only mount, and Docker Desktop bind ownership) remain recorded in delivery history as failures, not GREEN.
+
+The five exact-source GREEN records are:
+
+- environment `1794819783571220000-3499668a43914939ac0e2efc9666d120`, command blob `74048085b861e97010a98ee115cba31ec7e11d3323ed871ca5121031db6cf5b4`
+- lifecycle `1794819783566494000-baf7729467d542009c863833d460b6f2`, command blob `150ff774dd4e09c4c6f62e155e285b02f6b09a56c65ea13969e954b6c4de4420`
+- dependencies `1794819783578518000-87fa83b8ef77455c9d6e9ee832d854b9`, command blob `c56c08bd2409e5402355b266524becbdcb096ded906f9e79b0f3163ae785ab8d`
+- canonical recovery preflight `1794819783582351000-7e9b075a67fd49cc9a4fd00ceecaddbc`, command blob `2ed1246a3a104f00c683b30404a49e048be7bad77acf83c500f83978e6bf0c73`
+- complete live acceptance `1794819773831147000-c99ca0ae0d4742aea7f94937e71fe9b9`, command blob `0f6f09d48aba2e89d7499f37af4408ebffdf6e9cfa76c2378536a6ee4425c29f`
+
+Gate 3 expectations and all correction oracles are satisfied by the frozen implementation. This tests verdict supports final code approval but does not claim full CI, merge readiness, or live corporate deployment.
