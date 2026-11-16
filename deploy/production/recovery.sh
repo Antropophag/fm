@@ -10,16 +10,20 @@ recovery_running_writers(){
 }
 
 recovery_stop_writers(){
-  local running_name=$1 service inventory final_inventory current=()
+  local running_name=$1 service inventory final_inventory
   inventory=$(recovery_running_writers) || return 1
-  while IFS= read -r service; do [[ -z $service ]] || current+=("$service"); done <<<"$inventory"
-  eval "$running_name=(\"\${current[@]}\")"
+  eval "$running_name=()"
   for service in jobs-scheduler jobs-worker web php; do
-    if [[ " ${current[*]} " == *" $service "* ]]; then dc stop "$service" || return 1; fi
+    if grep -qx "$service" <<<"$inventory"; then
+      eval "$running_name+=(\"$service\")"
+      dc stop "$service" || return 1
+    fi
   done
   final_inventory=$(dc ps --status running --services) || return 1
-  for service in "${current[@]}"; do
-    if grep -qx "$service" <<<"$final_inventory"; then note "Writer failed to stop: $service" >&2; return 1; fi
+  for service in jobs-scheduler jobs-worker web php; do
+    if grep -qx "$service" <<<"$inventory" && grep -qx "$service" <<<"$final_inventory"; then
+      note "Writer failed to stop: $service" >&2; return 1
+    fi
   done
 }
 
@@ -61,19 +65,20 @@ backup_core(){
   fi
   stage="$destination.stage.$$.$RANDOM"
   if ! (umask 077; set -o noclobber; mkdir -m 700 "$stage"); then
-    [[ $keep_stopped == false ]] && recovery_resume_writers "${running[@]}" || true
+    if [[ $keep_stopped == false && ${#running[@]} -gt 0 ]]; then recovery_resume_writers "${running[@]}" || true; fi
     fail BACKUP
   fi
   canonical="$stage/runtime"; config="$stage/restore.env"
   if ! cp "$config_source" "$config" || ! chmod 600 "$config"; then
     rm -rf "$stage"
-    [[ $keep_stopped == false ]] && recovery_resume_writers "${running[@]}" || true
+    if [[ $keep_stopped == false && ${#running[@]} -gt 0 ]]; then recovery_resume_writers "${running[@]}" || true; fi
     return 1
   fi
   if ! docker run --rm --network none --user 0:0 --entrypoint chown \
       --mount "type=bind,source=$stage,target=/backup" "$backup_image" 10001:10001 /backup; then
     recovery_host_ownership "$stage" "$backup_image" || true; rm -rf "$stage"
-    [[ $keep_stopped == false ]] && recovery_resume_writers "${running[@]}" || true; return 1
+    if [[ $keep_stopped == false && ${#running[@]} -gt 0 ]]; then recovery_resume_writers "${running[@]}" || true; fi
+    return 1
   fi
   if ! ( export FMONITOR_DB_HOST=db FMONITOR_DB_PORT=3306; \
     docker run --rm --network "${COMPOSE_PROJECT_NAME}_default" --user 10001:10001 \
@@ -92,7 +97,7 @@ backup_core(){
       php bin/fmonitor2-runtime-recovery.php backup --destination /backup/runtime \
       --source-commit "$backup_source" --image-reference "$backup_image_reference" --image-id "$backup_image_id" --writers-stopped ); then
     recovery_host_ownership "$stage" "$backup_image" || true; rm -rf "$stage"
-    if [[ $keep_stopped == false ]] && recovery_resume_writers "${running[@]}"; then resumed=true; fi
+    if [[ $keep_stopped == false && ${#running[@]} -gt 0 ]] && recovery_resume_writers "${running[@]}"; then resumed=true; fi
     note "Backup failed; writers $([[ $resumed == true ]] && printf resumed || printf stopped)." >&2
     return 1
   fi
@@ -102,11 +107,11 @@ backup_core(){
       || ! find "$stage" -type f -exec chmod 600 {} + \
       || ! mv -n "$stage" "$destination" || [[ -e $stage ]]; then
     rm -rf "$stage"
-    if [[ $keep_stopped == false ]] && recovery_resume_writers "${running[@]}"; then resumed=true; fi
+    if [[ $keep_stopped == false && ${#running[@]} -gt 0 ]] && recovery_resume_writers "${running[@]}"; then resumed=true; fi
     note "Backup publication failed; writers $([[ $resumed == true ]] && printf resumed || printf stopped)." >&2
     return 1
   fi
-  if [[ $keep_stopped == false ]] && ! recovery_resume_writers "${running[@]}"; then
+  if [[ $keep_stopped == false && ${#running[@]} -gt 0 ]] && ! recovery_resume_writers "${running[@]}"; then
     note 'Backup created, but prior writers could not be resumed.' >&2
     return 1
   fi

@@ -5,7 +5,7 @@
 
 ```sh
 make env-init ENV_FILE=/absolute/private/runtime.env
-# заполнить replace_me и выбрать image mode
+# заполнить hostname и owner email; integrations — только если включены jobs
 make deploy ENV_FILE=/absolute/private/runtime.env
 make status ENV_FILE=/absolute/private/runtime.env
 ```
@@ -15,14 +15,39 @@ make status ENV_FILE=/absolute/private/runtime.env
 Оператору остаётся заполнить public hostname, owner email и требуемые внешние
 credentials. Если Git недоступен, source initialization отказывает; для
 air-gapped сервера используйте environment из проверенного release package.
+Чистота source checkout проверяется при `make deploy`, перед сборкой image.
 
 `FMONITOR_IMAGE_MODE=build` собирает чистый checkout exact revision, `pull`
 требует digest-pinned registry reference, `local` использует уже загруженный
 image. Для переноса archive укажите абсолютные `FMONITOR_IMAGE_ARCHIVE` и
 `FMONITOR_IMAGE_ARCHIVE_SHA256`. Ни один режим не переключается на другой молча.
+`FMONITOR_APPLICATION_IMAGE_ID` может оставаться пустым только для source build
+или non-archive acquisition: затем workflow проверяет и фиксирует фактический ID.
+Release/archive задаёт exact application/database image IDs и обе platform.
+Workflow требует одинаковую платформу images; соответствие платформе
+Docker-сервера оператор проверяет до установки командой
+`docker info --format '{{.OSType}}/{{.Architecture}}'` и по `release.json`:
+`x86_64` соответствует `amd64`, `aarch64` — `arm64`.
 
 Jobs выключены по умолчанию. `FMONITOR_JOBS_ENABLED=true` включает worker и
 scheduler единым bundle и требует полную конфигурацию Bitrix, ERP и SMTP.
+Это разрешает реальные синхронизации и отправку почты сразу после запуска.
+Нужны workforce webhook `https://host/rest/<id>/<token>/`, непустой JSON-массив
+department IDs, ERP host/database/user/password и SMTP host/user/password/from.
+Document webhook того же формата необязателен, но задаётся только вместе с
+положительным document root ID.
+
+## Сеть и TLS
+
+Единственный входящий endpoint — `127.0.0.1:FMONITOR_HTTP_PORT`; MariaDB и
+PHP-FPM на host не публикуются. `FMONITOR_TRUSTED_REQUEST_HOST` содержит exact
+hostname (и нестандартный port) без scheme; authority в
+`FMONITOR_PUBLIC_BASE_URL=https://...` должна совпадать.
+
+Source build требует egress к registry/base images и источникам
+apt/npm/Microsoft/PHP dependency archives. Release installation этого egress для
+сборки не требует. Jobs=true требует DNS/CA и egress к Bitrix HTTPS, ERP
+endpoint/DB port и SMTP host/port.
 
 HTTP runtime слушает только loopback. Внешний TLS proxy должен передавать
 исходный `Host` и `X-Forwarded-Proto: https`, принимать body больше 21 MiB и не
@@ -67,10 +92,23 @@ source при остановленных writers и применяет толь�
 make update ENV_FILE=/absolute/private/runtime.env
 ```
 
+Перед source update получите чистый reviewed checkout нового commit, обновите
+`FMONITOR_SOURCE_REVISION` и задайте новый, ещё не существующий runtime image tag.
+Для `pull` задайте новый digest-pinned reference; для `local` заранее загрузите
+проверенный image/archive и обновите exact identity fields. Mutable tag нельзя
+перезаписывать как update.
+
 Restore допустим только для другого, ещё не существующего `fm2-prod-*` project с
 пустыми volumes. Он сохраняет cookie/identity keys исходного backup, использует
 новые DB credentials target и отказывает до создания Docker resources при
 повреждённом bundle.
+
+Создайте отдельный target environment. Из backup `restore.env` без изменений
+перенесите `FMONITOR_SESSION_INSTANCE`, cookie validation key и identity key;
+source/image identity должна соответствовать bundle. Задайте новые project,
+HTTP port, deployment state directory и runtime/root DB passwords. Source project
+не останавливается и не изменяется; target containers/network/volumes должны
+отсутствовать.
 
 ```sh
 make restore ENV_FILE=/absolute/private/restore.env BACKUP=/absolute/private/backups/point-1
