@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+fail(){ printf '%s\n' 'SQLSRV_INSTALL_FAILED' >&2; exit 64; }
+
+version=
+revision=
+digest=
+mode=auto
+seen='|'
+while (($#)); do
+  case "$1" in
+    --version|--source-revision|--source-sha256|--mode)
+      (($# >= 2)) || fail
+      key=${1#--}; value=$2; shift 2
+      [[ $seen != *"|$key|"* ]] || fail
+      seen="$seen$key|"
+      case "$key" in
+        version) version=$value;;
+        source-revision) revision=$value;;
+        source-sha256) digest=$value;;
+        mode) mode=$value;;
+      esac
+      ;;
+    *) fail;;
+  esac
+done
+
+[[ $seen == *'|version|'* && $seen == *'|source-revision|'* && $seen == *'|source-sha256|'* ]] || fail
+[[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail
+[[ $revision =~ ^[0-9a-f]{40}$ ]] || fail
+[[ $digest =~ ^[0-9a-f]{64}$ ]] || fail
+[[ $mode == auto || $mode == direct ]] || fail
+
+workspace=
+cleanup(){ [[ -z $workspace ]] || rm -rf -- "$workspace"; }
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+fallback=false
+if [[ $mode == auto ]]; then
+  if ! timeout 180 pecl install "sqlsrv-$version" "pdo_sqlsrv-$version"; then fallback=true; fi
+else
+  fallback=true
+fi
+
+if [[ $fallback == true ]]; then
+  printf '%s\n' 'SQLSRV_SOURCE_FALLBACK'
+  workspace=$(mktemp -d "${TMPDIR:-/tmp}/fmonitor-sqlsrv.XXXXXXXX")
+  archive="$workspace/source.tar.gz"
+  source_root="$workspace/source-tree"
+  mkdir -m 0700 "$source_root"
+  url="https://codeload.github.com/microsoft/msphpsql/tar.gz/$revision"
+  curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --retry 2 --connect-timeout 15 --max-time 120 -o "$archive" "$url"
+  printf '%s  %s\n' "$digest" "$archive" | sha256sum --check - >/dev/null
+  tar -xzf "$archive" -C "$source_root" --strip-components=1
+  for path in source/shared/core_sqlsrv.h source/shared/version.h source/sqlsrv/config.m4 source/pdo_sqlsrv/config.m4; do
+    [[ -f "$source_root/$path" && ! -L "$source_root/$path" ]] || fail
+  done
+  grep -Eq "PHP_SQLSRV_VERSION[[:space:]]+\"$version\"" "$source_root/source/shared/version.h" || fail
+  grep -Eq "PHP_PDO_SQLSRV_VERSION[[:space:]]+\"$version\"" "$source_root/source/shared/version.h" || fail
+  cp -R "$source_root/source/shared" "$source_root/source/sqlsrv/shared"
+  cp -R "$source_root/source/shared" "$source_root/source/pdo_sqlsrv/shared"
+  (
+    cd "$source_root/source/sqlsrv"
+    phpize
+    ./configure --enable-sqlsrv
+    make -j"$(nproc)"
+    make install
+    phpize --clean
+  )
+  (
+    cd "$source_root/source/pdo_sqlsrv"
+    phpize
+    ./configure --with-pdo_sqlsrv
+    make -j"$(nproc)"
+    make install
+    phpize --clean
+  )
+fi
+
+docker-php-ext-enable sqlsrv pdo_sqlsrv
+php -r '
+$expected=$argv[1];
+foreach (["sqlsrv","pdo_sqlsrv"] as $extension) {
+    if (!extension_loaded($extension) || phpversion($extension) !== $expected) exit(1);
+}
+if (!function_exists("sqlsrv_connect")) exit(1);
+if (!in_array("sqlsrv", PDO::getAvailableDrivers(), true)) exit(1);
+' "$version"

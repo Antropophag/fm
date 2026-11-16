@@ -18,6 +18,7 @@ RUN npm ci --no-audit --no-fund \
 
 FROM php:8.5-fpm-bookworm
 ENV FMONITOR_RUNTIME_BUILD_ID_FILE=/usr/local/share/fmonitor2/runtime-build-id
+COPY deploy/dependencies/install-sqlsrv /usr/local/bin/fmonitor-install-sqlsrv
 RUN apt-get update \
     && apt-get install -y --no-install-recommends nginx libfcgi-bin curl mariadb-client unzip util-linux ca-certificates gnupg unixodbc-dev libjpeg62-turbo-dev libpng-dev libwebp-dev \
     && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
@@ -26,8 +27,7 @@ RUN apt-get update \
     && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 \
     && docker-php-ext-configure gd --with-jpeg --with-webp \
     && docker-php-ext-install -j"$(nproc)" gd mysqli pdo_mysql pcntl \
-    && pecl install sqlsrv-5.13.0 pdo_sqlsrv-5.13.0 \
-    && docker-php-ext-enable sqlsrv pdo_sqlsrv \
+    && bash /usr/local/bin/fmonitor-install-sqlsrv --version 5.13.0 --source-revision fd6d71d987dddcea413d9fc94234191cb82e4a28 --source-sha256 7ea3eeef0d615c884628285a647f9cb29db4e206be2cd5b418c10360085cf04a \
     && groupadd --gid 10001 fmonitor \
     && useradd --uid 10001 --gid 10001 --home-dir /home/fmonitor --create-home --shell /usr/sbin/nologin fmonitor \
     && mkdir -p /home/fmonitor/.local/state/fmonitor2/artifacts /run/fmonitor-secrets /var/log/fmonitor /tmp/nginx-client-body /tmp/nginx-proxy /tmp/nginx-fastcgi /tmp/nginx-uwsgi /tmp/nginx-scgi \

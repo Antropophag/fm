@@ -26,6 +26,7 @@ if name=='curl':
  if os.environ.get('DOWNLOAD_FAIL'):sys.exit(28)
  assert args[-1]=='https://codeload.github.com/microsoft/msphpsql/tar.gz/'+os.environ['REV'] or 'https://codeload.github.com/microsoft/msphpsql/tar.gz/'+os.environ['REV'] in args
  assert '-k' not in args and '--insecure' not in args
+ assert args[args.index('--proto')+1]=='=https' and args[args.index('--proto-redir')+1]=='=https'
  assert '--connect-timeout' in args and '--max-time' in args
  out=args[args.index('-o')+1] if '-o' in args else args[args.index('--output')+1]
  shutil.copyfile(os.environ['ARCHIVE'],out);sys.exit(0)

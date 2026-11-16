@@ -15,3 +15,26 @@ Source-level fallback preserves architecture portability and exact5.13.0 ABI che
 No version bump or runtime business behavior change. Known I1 automatic admission
 adapter remains UNKNOWN; no policy/enforcement change. Full local suite banned.
 Private evidence: ~/.local/share/fmonitor-2/pecl-direct-install-fallback/.
+
+
+## Reviewed implementation and focused acceptance
+
+Gate3 initially returned T1/T2. Root clarified production pin authority and strengthened
+both-module/runtime verification expectations; independent rereview APPROVED at
+71344b89. Separate deployment_executor implemented the installer, canonical pins,
+Docker template/generated consumer and dependency docs. One necessary renderer fix
+extends placeholder names to digits, matching the existing pin parser; this resolves
+SQLSRV_SOURCE_SHA256 substitution and is covered by real renderer/drift tests.
+Root additionally asserted strict HTTPS protocols through curl redirects.
+
+Actual blocked-PECL Docker build and network-free module inspection passed:
+1794832304928917000-52f52a0646ee4f0c86d9fc5c578fe3d9 GREEN.
+Nine public-installer cases passed:
+1794832314125115000-8c52a5c6f00e4163bfd69d221426f9f8 GREEN.
+All4 other planned checks passed (change verification, verification CI contract,
+generated source, architecture guard). No full local suite or production changes.
+Final reviewer recorded APPROVED12:33:56Z on source38b83437 with no code findings.
+The corresponding review record retains exact complete hashes and evidence IDs.
+Only this delivery note and final review documentation are added after approval.
+Full exact-source GitHub CI and tested-main GitLab transfer remain the publication
+steps; known I1 automatic admission stays UNKNOWN, not silently overridden.

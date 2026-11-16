@@ -68,6 +68,23 @@ Git clone и npm также требуют заранее доступных sou
 application и database images. Composer binary входит в application build image;
 direct fallback не скачивает и не подменяет его.
 
+## SQL Server extensions
+
+`deploy/dependencies/install-sqlsrv` устанавливает закреплённые `sqlsrv` и
+`pdo_sqlsrv`. Режим `auto` сначала ограниченно по времени вызывает PECL для обеих
+точных версий. При недоступности PECL installer печатает безопасный marker
+`SQLSRV_SOURCE_FALLBACK`, скачивает только официальный source archive Microsoft
+для закреплённого commit, проверяет SHA-256 и собирает оба extension из одного
+дерева. Режим `direct` сразу использует этот путь.
+
+Версия, source revision и digest принадлежат `tools/delivery/dependencies.env` и
+передаются generated runtime Dockerfile literal arguments. После любого пути
+installer включает оба extension и требует их exact runtime versions, функцию
+`sqlsrv_connect` и PDO driver `sqlsrv`. Hash mismatch, ошибка сборки или загрузки
+останавливает image build. Это fallback от PECL timeout, а не offline build:
+официальный GitHub archive всё равно должен быть доступен; полностью закрытый
+сервер использует заранее собранный release image.
+
 Справочные первичные источники:
 
 - [Composer install и точные версии lock](https://getcomposer.org/doc/03-cli.md#install-i)

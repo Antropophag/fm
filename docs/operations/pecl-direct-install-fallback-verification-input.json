@@ -11,7 +11,8 @@
     "specs/PECL-DIRECT-FALLBACK-001.md",
     "tests/Deployment/pecl_direct_fallback_001_test.py",
     "tests/Deployment/pecl_direct_fallback_live_001_test.py",
-    "tools/verification/suites.tsv"
+    "tools/verification/suites.tsv",
+    "tools/delivery/render-dependencies.py"
   ],
   "acceptances": [
     {
