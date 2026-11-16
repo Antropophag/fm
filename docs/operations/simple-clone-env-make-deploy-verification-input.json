@@ -1,0 +1,36 @@
+{
+  "change": "simple-clone-env-make-deploy",
+  "planned_paths": [
+    "deploy/production/manage",
+    "deploy/production/env.example",
+    "deploy/production/README.txt",
+    "docs/operations/production-make-env.md",
+    "docs/operations/current-delivery-goal.md",
+    "docs/operations/simple-clone-env-make-deploy.md",
+    "docs/operations/simple-clone-env-make-deploy-verification-input.json",
+    "specs/PRODUCTION-MAKE-QUICKSTART-001.md",
+    "tests/Deployment/production_make_quickstart_001_test.py",
+    "tests/Deployment/production_make_quickstart_live_001_test.py",
+    "tools/verification/suites.tsv"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "PRODUCTION-MAKE-QUICKSTART-001",
+      "acceptance_id": "Q01,Q02,Q03,Q04-rejections",
+      "spec_path": "specs/PRODUCTION-MAKE-QUICKSTART-001.md",
+      "seam": "public make deploy/check-config with copied root env and managed operator home",
+      "tests": [
+        "tests/Deployment/production_make_quickstart_001_test.py"
+      ]
+    },
+    {
+      "spec_id": "PRODUCTION-MAKE-QUICKSTART-001",
+      "acceptance_id": "Q03,Q04-live",
+      "spec_path": "specs/PRODUCTION-MAKE-QUICKSTART-001.md",
+      "seam": "fresh Git checkout plus plain make deploy real Docker initial login/replay/stop-start",
+      "tests": [
+        "tests/Deployment/production_make_quickstart_live_001_test.py"
+      ]
+    }
+  ]
+}

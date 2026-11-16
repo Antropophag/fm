@@ -1,3 +1,11 @@
+# Текущая цель — clone, .env, make deploy
+
+Owner16.11.2026 потребовал простой первый запуск: git clone из корпоративного GitLab, копирование готового `.env` в корень, одна команда `make deploy`. WSL и Make уже есть. GitHub остаётся местом разработки/PR/CI, после проверок в GitLab переносится только main. Это bounded correction существующего production Make workflow: приватные managed directories и безопасное сужение прав собственного env; domain/schema/legacy/Excel-import не меняются. Root пишет контракт/tests, отдельный sol/low executor код, независимый reviewer Gate3/final по planner. Full local suite запрещён. Новые private trial/production handoffs и Downloads обновляются после source delivery; существующие production/данные/соседние worktrees не меняются. Для публикации используем GitHub PR/CI и owner-directed tested-main handoff; автоматический admission UNKNOWN не переопределяется.
+
+Worktree `fmonitor-2-simple-clone-env-make-deploy`, base main1e4b6a61, контракт `PRODUCTION-MAKE-QUICKSTART-001`. Предыдущая история ниже сохранена.
+
+---
+
 # Текущая цель — production Make и единый environment
 
 Поручение владельца16.11.2026 в текущей беседе: реализовать согласованный пакет чистого production-развёртывания через Make; все ключи, токены и первоначальная учётка находятся в одном приватном `.env`. При недоступности Composer repositories автоматически скачивать закреплённые пакеты напрямую с проверкой digest. Существующие базы не переносить. Это разрешение на реализацию, isolated acceptance, PR/push; фактическая выкладка на корпоративный сервер, отправка почты, изменения живого production и merge не входят.
