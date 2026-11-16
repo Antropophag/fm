@@ -167,6 +167,7 @@ db	php	tests/Jobs/jobs_schema_001_test.php	integration
 db	php	tests/Jobs/jobs_schema_check_literals_001_test.php	integration
 db	php	tests/Jobs/legacy_workforce_once_delegation_001_test.php	integration
 db	php	tests/Jobs/operator_health_001_test.php	integration
+db	php	tests/Jobs/optional_smtp_cli_001_test.php	integration
 db	php	tests/Jobs/outbox_delivery_lifecycle_001_test.php	integration
 db	php	tests/Jobs/transactional_outbox_001_test.php	integration
 db	php	tests/Jobs/worker_grace_expiry_001_test.php	integration
@@ -337,6 +338,7 @@ e2e	python3	tests/Architecture/yii2_stand_restore_reconcile_boundary_001_test.py
 e2e	python3	tests/Deployment/local_integration_cross_platform_185_test.py	integration
 e2e	python3	tests/Deployment/local_integration_interruption_185_test.py	integration
 e2e	python3	tests/Deployment/local_integration_make_e2e_185_test.py	integration
+e2e	python3	tests/Deployment/optional_smtp_compose_001_test.py	e2e
 e2e	python3	tests/Deployment/pecl_direct_fallback_live_001_test.py	e2e
 e2e	python3	tests/Deployment/pilot_jobs_compose_001_test.py	e2e
 e2e	python3	tests/Deployment/production_make_live_001_test.py	e2e
@@ -426,6 +428,7 @@ unit	python3	tests/Deployment/production_dependencies_001_test.py	unit
 unit	python3	tests/Deployment/production_make_env_001_test.py	unit
 unit	python3	tests/Deployment/production_make_lifecycle_001_test.py	unit
 unit	python3	tests/Deployment/production_make_quickstart_001_test.py	unit
+unit	python3	tests/Deployment/production_optional_smtp_001_test.py	unit
 unit	python3	tests/Deployment/yii2_imports_workforce_package_001_test.py	unit
 unit	python3	tests/Deployment/yii2_local_data_bootstrap_001_test.py	unit
 unit	python3	tests/Deployment/yii2_local_integration_config_001_test.py	unit
@@ -552,6 +555,7 @@ unit	php	tests/InstallationProcess/selected_original_binding_001_test.php	integr
 unit	php	tests/InstallationProcess/selected_original_lifecycle_001_test.php	integration
 unit	php	tests/InstallationProcess/terminology_object_001_test.php	unit
 unit	php	tests/InstallationProcess/workforce_worker_cli_manual_pilot_test.php	integration
+unit	php	tests/Jobs/optional_smtp_001_test.php	unit
 unit	php	tests/Jobs/weekly_fkr_report_delivery_001_test.php	integration
 unit	php	tests/Jobs/weekly_fkr_unknown_delivery_001_test.php	integration
 unit	php	tests/Otiz/excel_calculation_001_test.php	unit

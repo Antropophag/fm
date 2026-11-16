@@ -1,3 +1,21 @@
+# Текущая цель — проверка реальных интеграций без почты
+
+Owner16.11.2026 поручил для существующего workstation trial включить реальные
+Bitrix/ERP, но не отправлять письма. Уточнил: достаточно пустого SMTP в env;
+новый флаг не добавлять. Четыре пустых SMTP credential fields выключают почту,
+частично заполненные отвергаются. Исправляем deployment validation, scheduler
+composition и health; sender/queue/history/schema не меняются. Это bounded
+configuration correction с root spec/tests, отдельным sol/low implementation,
+независимыми planner-required reviews. Продолжаем PR299 и help fix в существующем
+worktree. Trial env получает реальные Bitrix/ERP из уже приватного production
+handoff; SMTP пустой. Admin env сохраняет SMTP. Данные и bootstrap credentials
+сохраняются, обновление make update. Full local suite запрещён. Failed CI43880163739
+сохраняется, полная triage до correction push; address dialog test race исправляется
+ожиданием точного сохранённого состояния без смены runtime. Затем exact-source
+CI, owner-authorized merge и GitLab main only. Live production не менять.
+
+---
+
 # Текущая цель — восстановить инструкцию в чистой Docker-установке
 
 Owner вошёл в установленный FMonitor, но «Инструкция» возвращает NOT_FOUND.

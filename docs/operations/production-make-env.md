@@ -43,12 +43,22 @@ Docker-сервера оператор проверяет до установк�
 `x86_64` соответствует `amd64`, `aarch64` — `arm64`.
 
 Jobs выключены по умолчанию. `FMONITOR_JOBS_ENABLED=true` включает worker и
-scheduler единым bundle и требует полную конфигурацию Bitrix, ERP и SMTP.
-Это разрешает реальные синхронизации и отправку почты сразу после запуска.
-Нужны workforce webhook `https://host/rest/<id>/<token>/`, непустой JSON-массив
-department IDs, ERP host/database/user/password и SMTP host/user/password/from.
+scheduler единым bundle и требует полную конфигурацию Bitrix и ERP. Это разрешает
+реальные синхронизации сразу после запуска. Нужны workforce webhook
+`https://host/rest/<id>/<token>/`, непустой JSON-массив department IDs и ERP
+host/database/user/password.
 Document webhook того же формата необязателен, но задаётся только вместе с
 положительным document root ID.
+
+Почта включается только когда все четыре поля `FMONITOR_SMTP_HOST`,
+`FMONITOR_SMTP_USERNAME`, `FMONITOR_SMTP_PASSWORD` и
+`FMONITOR_SMTP_FROM_ADDRESS` заполнены. Если все четыре пусты или содержат только
+пробелы, scheduler не планирует новые weekly-email jobs и outbox dispatch; Bitrix
+и ERP остаются включены. Уже поставленный weekly generator может сохранить новый
+pending intent, но отправить его без SMTP нельзя. Частичная SMTP-конфигурация
+отклоняется. После изменения этих полей выполните `make update`. Ранее поставленные
+email jobs не отмечаются доставленными автоматически; включение SMTP сохраняет
+штатный явный recovery.
 
 ## Что передать сисадмину
 

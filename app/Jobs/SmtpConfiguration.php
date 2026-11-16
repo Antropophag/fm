@@ -12,6 +12,18 @@ final readonly class SmtpConfiguration
         public bool $verifyPeer, public string $publicBaseUrl, public ?string $testRecipient,
     ) {}
 
+    public static function isConfigured(array $environment): bool
+    {
+        $configured = false;
+        foreach (['FMONITOR_SMTP_HOST','FMONITOR_SMTP_USERNAME','FMONITOR_SMTP_PASSWORD','FMONITOR_SMTP_FROM_ADDRESS'] as $key) {
+            if (!array_key_exists($key, $environment)) continue;
+            $value = $environment[$key];
+            if (!is_string($value)) throw new \RuntimeException('SMTP_CONFIGURATION_INVALID');
+            if (trim($value) !== '') $configured = true;
+        }
+        return $configured;
+    }
+
     public static function fromEnvironment(array $environment): self
     {
         try {

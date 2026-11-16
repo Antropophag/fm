@@ -12,6 +12,8 @@ final class JobsRuntimeCommand
         $request=JobsRuntimeRequest::parse($arguments);$config=JobsRuntimeConfiguration::fromEnvironment();
         $instance=in_array($request->mode,['worker','scheduler','health','process-health'],true)?$config->instance():null;
         if($instance!==null){$config->erpEquipmentFacts();$config->erpEquipmentFactsHmacKey();}
+        $smtpConfigured=SmtpConfiguration::isConfigured(getenv());
+        if($smtpConfigured&&($request->mode==='scheduler'||($request->mode==='health'&&$config->optionalValue('FMONITOR_RUNTIME_ENV')==='production')))SmtpConfiguration::fromEnvironment(getenv());
         $db=MariaDbJobsConnection::open($config);
         try{
             $prefix=$config->prefix();if(!JobsSchemaMigration::isReady($db,$prefix))throw new \RuntimeException('JOBS_UNAVAILABLE');
@@ -26,7 +28,6 @@ final class JobsRuntimeCommand
                     $result=$operator->retry(['authority'=>'deployment-operator','jobId'=>$options['job-id'],'operationId'=>$options['operation-id'],'nowUtc'=>$options['now-utc']]);
                     return [match($result['status']){'created'=>0,'busy'=>75,'forbidden'=>77,default=>65},$result];
                 case 'health':
-                    if($config->optionalValue('FMONITOR_RUNTIME_ENV')==='production')SmtpConfiguration::fromEnvironment(getenv());
                     $result=(new MariaDbJobsHealth($db,$prefix,$clock,[
                         'workerHeartbeatId'=>'worker:'.$instance,'schedulerHeartbeatId'=>'scheduler:'.$instance,
                         'workerFreshSeconds'=>120,'schedulerFreshSeconds'=>120,'readyMaxAgeSeconds'=>300,
@@ -38,10 +39,10 @@ final class JobsRuntimeCommand
                     ]))->readProcess();return [$result['ok']?0:70,$result];
                 case 'scheduler':
                     $result=(new JobsSchedulerProcess(new MariaDbWorkforceScheduler($db,$prefix),
-                        new OutboxDispatchScheduler(new MariaDbOutbox($db,$prefix),$queue),
+                        $smtpConfigured?new OutboxDispatchScheduler(new MariaDbOutbox($db,$prefix),$queue):null,
                         new MariaDbOrderDocumentLinksScheduler($db,$prefix),
                         new MariaDbWorkerHeartbeat($db,$prefix),$clock,'scheduler:'.$instance,
-                        new MariaDbWeeklyFkrScheduler($db,$prefix),new MariaDbEquipmentFactsScheduler($db,$prefix),new MariaDbInstallerUtilizationScheduler($db,$prefix)))->run();
+                        $smtpConfigured?new MariaDbWeeklyFkrScheduler($db,$prefix):null,new MariaDbEquipmentFactsScheduler($db,$prefix),new MariaDbInstallerUtilizationScheduler($db,$prefix)))->run();
                     return [$result['exitCode'],$result];
                 case 'worker':
                     $command=static fn(array $job): array=>[PHP_BINARY,dirname(__DIR__,2).'/bin/fmonitor2-job-handler.php'];

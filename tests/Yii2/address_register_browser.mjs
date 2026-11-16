@@ -42,7 +42,8 @@ try{
  const row=key=>page.locator(`[data-register-settings] [data-column-key="${key}"]`);
  const search=page.locator('[data-register-column-search]');await search.fill('Комментарий');check(await row('comment').isVisible()&&!(await row('status').isVisible()),'column search really hides unmatched rows');await search.fill('');
  check(await page.locator('[data-register-settings] input[type=number]').count()===0,'no pixel width controls');check(await row('registrationNumber').locator('input[type=checkbox]').isDisabled(),'registration fixed');await row('comment').locator('input[type=checkbox]').uncheck();
- await page.locator('[data-register-cancel]').click();check(JSON.stringify(await visibleColumns(page))===JSON.stringify(initial),'cancel leaves saved view');
+ await page.locator('[data-register-cancel]').click();
+  await page.waitForFunction(expected => JSON.stringify([...document.querySelectorAll('[data-register-table] thead th[data-column]')].filter(e => e.getClientRects().length > 0).map(e => e.dataset.column)) === JSON.stringify(expected), initial);check(JSON.stringify(await visibleColumns(page))===JSON.stringify(initial),'cancel leaves saved view');
  await page.locator('[data-register-open]').click();check(await row('comment').locator('input[type=checkbox]').isChecked(),'cancel restores draft');
  await row('comment').locator('input[type=checkbox]').uncheck();await row('factoryNumber').locator('[data-column-up]').click();
  await page.locator('[data-register-settings] .shlz-drawer__body').evaluate(e=>e.scrollTop=0);await page.screenshot({path:c.artifacts+'/desktop-columns.png',fullPage:true});

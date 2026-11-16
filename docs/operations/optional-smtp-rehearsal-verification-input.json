@@ -1,0 +1,71 @@
+{
+  "change": "optional-smtp-rehearsal",
+  "planned_paths": [
+    "tools/verification/suites.tsv",
+    "docs/operations/current-delivery-goal.md",
+    "docs/operations/restore-runtime-help-route.md",
+    "app/Jobs/SmtpConfiguration.php",
+    "app/Jobs/JobsRuntimeCommand.php",
+    "app/Jobs/JobsSchedulerProcess.php",
+    "deploy/production/manage",
+    "specs/OPTIONAL-SMTP-001.md",
+    "tests/Deployment/production_optional_smtp_001_test.py",
+    "tests/Jobs/optional_smtp_001_test.php",
+    "tests/Jobs/optional_smtp_cli_001_test.php",
+    "tests/Yii2/address_register_browser.mjs",
+    "docs/operations/production-make-env.md",
+    "deploy/production/compose.yaml",
+    "deploy/runtime/compose.yaml",
+    "tests/Deployment/optional_smtp_compose_001_test.py"
+  ],
+  "lifecycle": {
+    "intent": "COMPACT_MAINTENANCE",
+    "issue": "Owner real integrations without mail; PR299 CI correction",
+    "change_kind": "BOUNDED_FIX",
+    "requirement_status": "CURRENT",
+    "semantic_change": "ESTABLISHED_BEHAVIOR_FIX",
+    "canonical_requirements": [
+      {
+        "path": "specs/OPTIONAL-SMTP-001.md"
+      }
+    ],
+    "executable_regression": "tests/Deployment/production_optional_smtp_001_test.py",
+    "sensitivity": {
+      "classification": "SENSITIVE",
+      "boundaries": [
+        "secrets"
+      ],
+      "rationale": "Optional SMTP configuration must preserve fail-closed sender and complete credentials validation while real integrations remain enabled."
+    }
+  },
+  "acceptances": [
+    {
+      "spec_id": "OPTIONAL-SMTP-001",
+      "acceptance_id": "S01,S04",
+      "spec_path": "specs/OPTIONAL-SMTP-001.md",
+      "seam": "public SMTP configuration and job handler",
+      "tests": [
+        "tests/Jobs/optional_smtp_001_test.php"
+      ]
+    },
+    {
+      "spec_id": "OPTIONAL-SMTP-001",
+      "acceptance_id": "S02",
+      "spec_path": "specs/OPTIONAL-SMTP-001.md",
+      "seam": "production check-config CLI",
+      "tests": [
+        "tests/Deployment/production_optional_smtp_001_test.py"
+      ]
+    },
+    {
+      "spec_id": "OPTIONAL-SMTP-001",
+      "acceptance_id": "S03",
+      "spec_path": "specs/OPTIONAL-SMTP-001.md",
+      "seam": "real Jobs scheduler/health CLI with disposable DB",
+      "tests": [
+        "tests/Jobs/optional_smtp_cli_001_test.php",
+        "tests/Deployment/optional_smtp_compose_001_test.py"
+      ]
+    }
+  ]
+}
