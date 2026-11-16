@@ -42,3 +42,21 @@ both; root added two regressions and clarified Q01. The16-case suite against
 Evidence: private simple-clone-env-make-deploy/final-review-correction-red.log
 and corrected-unit.log. Existing14 cases retained. Final exact-source Docker
 qualification, independent final verdict and full GitHub CI still pending.
+
+
+## Qualification checkpoint
+
+Corrected implementation8711dab8 passed the real Docker fresh-main clone,
+copied env, plain Make and login/replay/stop-start acceptance:
+1794827593055057000-2631f4c0a42a4163a54a014866b125a6 GREEN.
+The final16-case unit result is
+1794827689138931000-8a61dfdae91d499ab8ed37bb232de2dc GREEN.
+Its immediately preceding command passed but was marked STALE by a concurrent
+governance fingerprint fixture; one settled-source repeat supplied bound evidence.
+The3 other planned local checks passed: pilot jobs Compose, change verification,
+and architecture guard. No full local suite ran. Test/implementation review Q1/Q2
+closed both findings; docs-only9a022931 retains that disposition. Executable
+source dc0a3eff5828da247c5685409622e2a7b1b190bfcd7b623115eed835ddf07c03.
+Full CI and tested-main publication follow the independent final review. The
+known missing I1 automatic admission adapter remains UNKNOWN; these local
+results and owner-directed publication do not claim automatic admission.
