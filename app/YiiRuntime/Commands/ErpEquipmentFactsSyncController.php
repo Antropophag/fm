@@ -11,6 +11,13 @@ final class ErpEquipmentFactsSyncController extends Controller
 {
     // Production transport boundary: PDO::SQLSRV_ATTR_QUERY_TIMEOUT, TOP (, fetch(PDO::FETCH_ASSOC); incremental rows only.
     public function actionRun():int{$result=self::production(JobsRuntimeConfiguration::fromEnvironment());echo json_encode($result,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR),"\n";return$result['status']==='completed'?0:1;}
+    public function actionProbe():int
+    {
+        try{$source=JobsRuntimeConfiguration::fromEnvironment()->erpEquipmentFacts();$result=(new NativeErpEquipmentFactsDelivery($source,new MariaDbSqlServerEquipmentFactsTransport($source)))->probe();}
+        catch(\Throwable){$result=['status'=>'failed'];}
+        echo json_encode($result,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR),"\n";
+        return$result['status']==='completed'?0:1;
+    }
     public static function runWith(callable$delivery,callable$owner,string$runId,string$observedAt):array{return ErpEquipmentFactsDelivery::run($delivery,$owner,$runId,$observedAt);}
     public static function runJob(JobsRuntimeConfiguration$config):array{return self::production($config);}
     private static function production(JobsRuntimeConfiguration$c):array

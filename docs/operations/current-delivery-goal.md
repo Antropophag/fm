@@ -1,3 +1,9 @@
+# Текущая цель — постоянный env и проверка интеграций при deploy
+
+Owner 2026-11-16 поручил быстро реализовать согласованную передачу: clone, готовый env, make deploy; дальнейшие git pull/make update без изменения env. ERP connectivity и первые штатные Bitrix sync проверяются до успеха установки; пустые объекты допустимы. Legacy import исключён, Excel loader отдельно. Dedicated worktree simplify-production-handoff от 42df3e1; root spec/tests, отдельный sol/low executor, independent planner-required reviews. Compact sensitive correction PRODUCTION-HANDOFF-001. Локально bounded checks; full CI только GitHub. Live deploy/merge/secrets не менять.
+
+---
+
 # Текущая цель — проверка реальных интеграций без почты
 
 Owner16.11.2026 поручил для существующего workstation trial включить реальные

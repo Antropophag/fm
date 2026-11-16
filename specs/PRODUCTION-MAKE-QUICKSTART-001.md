@@ -1,5 +1,8 @@
 # PRODUCTION-MAKE-QUICKSTART-001
 
+Q03 manual source/image handoff metadata is superseded for build installs by
+[PRODUCTION-HANDOFF-001](PRODUCTION-HANDOFF-001.md). The same env survives Git updates.
+
 Bounded correction of the established one-env production Make operator workflow.
 Normative delta to PRODUCTION-MAKE-ENV-001; existing identity, health, secrecy,
 backup/update/recovery and no-legacy-import contracts remain unchanged.

@@ -1,0 +1,63 @@
+{
+  "change": "simplify-production-handoff",
+  "planned_paths": [
+    "deploy/production",
+    "app/InstallationProcess/NativeErpEquipmentFactsDelivery.php",
+    "app/InstallationProcess/MariaDbSqlServerEquipmentFactsTransport.php",
+    "app/YiiRuntime/Commands/ErpEquipmentFactsSyncController.php",
+    "specs/PRODUCTION-HANDOFF-001.md",
+    "specs/PRODUCTION-MAKE-ENV-001.md",
+    "specs/PRODUCTION-MAKE-QUICKSTART-001.md",
+    "docs/operations/simplify-production-handoff.md",
+    "docs/operations/simplify-production-handoff-verification-input.json",
+    "docs/operations/current-delivery-goal.md",
+    "tests/Deployment/production_handoff_001_test.py",
+    "tests/Deployment/production_make_env_001_test.py",
+    "tests/Deployment/production_make_lifecycle_001_test.py",
+    "tests/Support/production_handoff_docker.py",
+    "tests/InstallationProcess/erp_equipment_facts_probe_001_test.php",
+    "tools/verification/suites.tsv"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "PRODUCTION-HANDOFF-001",
+      "acceptance_id": "H01,H02,H03,H04,H06",
+      "spec_path": "specs/PRODUCTION-HANDOFF-001.md",
+      "seam": "public Make deploy/update/status/backup with external Docker process fixture and real Git commits",
+      "tests": [
+        "tests/Deployment/production_handoff_001_test.py"
+      ]
+    },
+    {
+      "spec_id": "PRODUCTION-HANDOFF-001",
+      "acceptance_id": "H05",
+      "spec_path": "specs/PRODUCTION-HANDOFF-001.md",
+      "seam": "public ERP connectivity probe with callable external transport",
+      "tests": [
+        "tests/InstallationProcess/erp_equipment_facts_probe_001_test.php"
+      ]
+    }
+  ],
+  "lifecycle": {
+    "intent": "COMPACT_MAINTENANCE",
+    "issue": "Owner stable env and verified integration handoff 2026-11-16",
+    "change_kind": "BOUNDED_FIX",
+    "requirement_status": "CURRENT",
+    "semantic_change": "ESTABLISHED_BEHAVIOR_FIX",
+    "canonical_requirements": [
+      {
+        "path": "specs/PRODUCTION-HANDOFF-001.md"
+      }
+    ],
+    "executable_regression": "tests/Deployment/production_handoff_001_test.py",
+    "sensitivity": {
+      "classification": "SENSITIVE",
+      "boundaries": [
+        "deployment",
+        "recovery",
+        "integration"
+      ],
+      "rationale": "Preserve exact deployed identity, secrets and recovery while correcting manual env version maintenance and false positive integration readiness."
+    }
+  }
+}

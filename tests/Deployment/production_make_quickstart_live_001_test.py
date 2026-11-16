@@ -134,4 +134,10 @@ with tempfile.TemporaryDirectory(prefix='fm2-quick-live-') as raw:
     finally:
         assert project.startswith('fm2-prod-quick-live-') and token in project
         run(compose_args + ['--profile', 'deployment', '--profile', 'jobs', 'down', '--volumes', '--remove-orphans'], cwd=clone, env=compose_env, ok=False)
-        run(['docker', 'image', 'rm', image], ok=False)
+        # Source deployments choose their own unique tag; retain ownership through
+        # this disposable project's receipt rather than the obsolete input tag.
+        receipt_path = user_home / '.fmonitor2-production' / project / 'state' / 'installed'
+        if receipt_path.is_file():
+            installed = dict(line.split('=', 1) for line in receipt_path.read_text().splitlines())
+            assert installed['project'] == project and installed['source'] == revision
+            run(['docker', 'image', 'rm', installed['image']], ok=False)

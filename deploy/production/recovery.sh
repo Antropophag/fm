@@ -74,6 +74,38 @@ backup_core(){
     if [[ $keep_stopped == false && ${#running[@]} -gt 0 ]]; then recovery_resume_writers "${running[@]}" || true; fi
     return 1
   fi
+  local resolved="$stage/restore.env.resolved" receipt_file="${FMONITOR_DEPLOY_STATE_DIR}/installed"
+  local app_platform database_image database_image_id database_platform installed_mode= line value recovery_mode
+  while IFS= read -r line || [[ -n $line ]]; do
+    [[ $line == FMONITOR_IMAGE_MODE=* ]] || continue
+    value=${line#*=}
+    if [[ $value == \"*\" && ${value: -1} == \" ]] || [[ $value == \'*\' && ${value: -1} == \' ]]; then value=${value:1:${#value}-2}; fi
+    installed_mode=$value
+  done <"$config_source"
+  [[ $installed_mode =~ ^(build|pull|local)$ ]] || fail FMONITOR_IMAGE_MODE
+  recovery_mode=$installed_mode; [[ $recovery_mode != build ]] || recovery_mode=local
+  app_platform=$(sed -n 's/^application_platform=//p' "$receipt_file")
+  database_image=$(sed -n 's/^database_image=//p' "$receipt_file")
+  database_image_id=$(sed -n 's/^database_image_id=//p' "$receipt_file")
+  database_platform=$(sed -n 's/^database_platform=//p' "$receipt_file")
+  if ! awk -v mode="$recovery_mode" -v source="$backup_source" -v image="$backup_image_reference" -v image_id="$backup_image_id" \
+      -v app_platform="$app_platform" -v database_image="$database_image" \
+      -v database_image_id="$database_image_id" -v database_platform="$database_platform" '
+    BEGIN {
+      values["FMONITOR_IMAGE_MODE"]=mode; values["FMONITOR_SOURCE_REVISION"]=source
+      values["FMONITOR_RUNTIME_IMAGE"]=image; values["FMONITOR_APPLICATION_IMAGE_ID"]=image_id
+      values["FMONITOR_APPLICATION_PLATFORM"]=app_platform; values["FMONITOR_DATABASE_IMAGE"]=database_image
+      values["FMONITOR_DATABASE_IMAGE_ID"]=database_image_id; values["FMONITOR_DATABASE_PLATFORM"]=database_platform
+    }
+    /^[A-Z][A-Z0-9_]*=/ { key=$0; sub(/=.*/,"",key); if (key in values) { print key "=" values[key]; seen[key]=1; next } }
+    { print }
+    END { for (key in values) if (!(key in seen)) print key "=" values[key] }
+  ' "$config" >"$resolved" || ! chmod 600 "$resolved" || ! mv "$resolved" "$config"; then
+    rm -rf "$stage"
+    if [[ $keep_stopped == false && ${#running[@]} -gt 0 ]] && recovery_resume_writers "${running[@]}"; then resumed=true; fi
+    note "Backup recovery configuration failed; writers $([[ $resumed == true ]] && printf resumed || printf stopped)." >&2
+    return 1
+  fi
   if ! docker run --rm --network none --user 0:0 --entrypoint chown \
       --mount "type=bind,source=$stage,target=/backup" "$backup_image" 10001:10001 /backup; then
     recovery_host_ownership "$stage" "$backup_image" || true; rm -rf "$stage"
@@ -120,9 +152,11 @@ backup_core(){
 
 do_backup(){
   lock; prereq; installed; installed_image
-  IMAGE_ID=$(sed -n 's/^image_id=//p' "${FMONITOR_DEPLOY_STATE_DIR}/installed")
+  local receipt_file="${FMONITOR_DEPLOY_STATE_DIR}/installed" source image
+  IMAGE_ID=$(sed -n 's/^image_id=//p' "$receipt_file")
+  source=$(sed -n 's/^source=//p' "$receipt_file"); image=$(sed -n 's/^image=//p' "$receipt_file")
   local destination=${ARG_PATH:-"${FMONITOR_BACKUP_ROOT}/backup-$(date -u +%Y%m%dT%H%M%SZ)-$$"}
-  backup_core "$destination" false "$IMAGE_ID" "$FMONITOR_SOURCE_REVISION" "$IMAGE_ID" "$FMONITOR_RUNTIME_IMAGE"
+  backup_core "$destination" false "$IMAGE_ID" "$source" "$IMAGE_ID" "$image"
 }
 
 update_cmd(){
@@ -131,7 +165,8 @@ update_cmd(){
   old_source=$(sed -n 's/^source=//p' "$receipt_file"); old_image=$(sed -n 's/^image=//p' "$receipt_file"); old_image_id=$(sed -n 's/^image_id=//p' "$receipt_file")
   old_config_hash=$(sed -n 's/^config_hash=//p' "$receipt_file"); current_config_hash=$(sha256sum "$ENV_FILE" | awk '{print $1}')
   [[ $old_source != "$FMONITOR_SOURCE_REVISION" || $old_image != "$FMONITOR_RUNTIME_IMAGE" || $old_config_hash != "$current_config_hash" ]] || { installed_image; start_services; return; }
-  image
+  installed_database_image
+  if [[ $old_source == "$FMONITOR_SOURCE_REVISION" && $old_image == "$FMONITOR_RUNTIME_IMAGE" ]]; then image verify; else image; fi
   local new_image_id=$IMAGE_ID backup_path="${FMONITOR_BACKUP_ROOT}/update-$old_source-$(date -u +%Y%m%dT%H%M%SZ)-$$"
   local stored_old_source
   stored_old_source=$(docker image inspect "$old_image_id" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}') || fail update
@@ -139,7 +174,7 @@ update_cmd(){
   if ! backup_core "$backup_path" true "$old_image_id" "$old_source" "$old_image_id" "$old_image"; then return 1; fi
   [[ $(docker image inspect "$old_image_id" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}') == "$old_source" ]] || { note 'Old installed image identity changed during backup.' >&2; return 1; }
   IMAGE_ID=$new_image_id; receipt updating
-  if ! provision || ! start_services || ! receipt installed; then
+  if ! provision || ! qualify_integrations || ! start_services || ! receipt installed; then
     stop_all_writers || true
     receipt failed || note 'Failed update receipt remains unresolved.' >&2
     note "Update failed; writers stopped. Recovery backup: $backup_path" >&2
@@ -223,7 +258,8 @@ restore_cmd(){
 
 release_cmd(){
   [[ -n $ARG_PATH && $ARG_PATH == /* && ! -e $ARG_PATH && ! -L $ARG_PATH ]] || fail OUTPUT
-  lock; prereq; image
+  lock; prereq
+  if [[ ${FMONITOR_IMAGE_MODE} == build && -f ${FMONITOR_DEPLOY_STATE_DIR}/installed ]]; then installed; installed_image; IMAGE_ID=$(sed -n 's/^image_id=//p' "${FMONITOR_DEPLOY_STATE_DIR}/installed"); else image; fi
   local stage="$ARG_PATH.stage.$$.$RANDOM" db_image=$FMONITOR_DATABASE_IMAGE db_image_id app_platform db_platform
   mkdir -m 700 "$stage"; docker image inspect "$db_image" >/dev/null 2>&1 || fail FMONITOR_DATABASE_IMAGE
   db_image_id=$(docker image inspect "$db_image" --format '{{.Id}}') || fail OUTPUT

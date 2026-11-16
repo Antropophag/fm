@@ -5,6 +5,10 @@ namespace FMonitor2\InstallationProcess;
 /** Exact read-only legacy ERP query ownership for bounded local order candidates. */
 final class MariaDbErpEquipmentFactsSource
 {
+    public static function probeQuery(): string
+    {
+        return 'SELECT 1 AS available';
+    }
     public static function ordersQuery(int $count): string
     {
         return "SELECT sale.Номер AS sourceOrderNumber, NULLIF(CONVERT(varchar(10), MAX(sroki.ДатаКомплектности), 23), '0001-01-01') AS readinessDate, NULLIF(CONVERT(varchar(10), MAX(sroki.ДатаПолнойОтгрузки), 23), '0001-01-01') AS fullShipmentDate
