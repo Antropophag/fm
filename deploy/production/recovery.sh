@@ -170,11 +170,9 @@ restore_cmd(){
   ensure_unowned_or_owned; [[ ! -e "${FMONITOR_DEPLOY_STATE_DIR}/installed" ]] || fail installation
   ! docker network inspect "${COMPOSE_PROJECT_NAME}_default" >/dev/null 2>&1 || fail installation
   recovery_verify_bundle "$canonical" "$config" "$source" "$source_image" "$source_image_id" "$source_project" || fail BACKUP
-  local stage="${FMONITOR_DEPLOY_STATE_DIR}/restore-bundle.$$.$RANDOM" password_dir="${FMONITOR_DEPLOY_STATE_DIR}/restore-private.$$.$RANDOM" password_file
+  local password_dir="${FMONITOR_DEPLOY_STATE_DIR}/restore-private.$$.$RANDOM" password_file
   password_file="$password_dir/database-password"
-  (umask 077; mkdir -m 700 "$stage"; cp -p -- "$canonical/database.sql" "$canonical/manifest.json" "$canonical/state.tar" "$stage"/)
-  docker run --rm --network none --user 0:0 --entrypoint chown --mount "type=bind,source=$stage,target=/bundle" "$FMONITOR_RUNTIME_IMAGE" -R 10001:10001 /bundle
-  if ! ( export FMONITOR_DB_HOST=db FMONITOR_DB_PORT=3306; docker run --rm --network none --user 10001:10001 \
+  if ! ( export FMONITOR_DB_HOST=db FMONITOR_DB_PORT=3306; docker run --rm --network none --user 0:0 --entrypoint sh \
       -e FMONITOR_DB_HOST -e FMONITOR_DB_PORT -e FMONITOR_DB_NAME -e FMONITOR_DB_USER -e FMONITOR_DB_PASSWORD \
       -e FMONITOR_PROCESS_TABLE_PREFIX -e FMONITOR_LEGACY_TABLE_PREFIX -e FMONITOR_SESSION_INSTANCE \
       -e FMONITOR_YII_COOKIE_VALIDATION_KEY -e FMONITOR_YII_IDENTITY_KEY -e FMONITOR_TRUSTED_REQUEST_HOST -e FMONITOR_TRUSTED_REQUEST_SCHEME \
@@ -183,9 +181,10 @@ restore_cmd(){
       -e FMONITOR_ARTIFACT_STORAGE_ROOT=/home/fmonitor/.local/state/fmonitor2/artifacts \
       -e FMONITOR_ORIGINAL_DB_PASSWORD_FILE=/private/database-password \
       -e FMONITOR_ORIGINAL_SAFE_LOG_FILE=/home/fmonitor/.local/state/fmonitor2/log/original-safe.jsonl \
-      --mount "type=bind,source=$stage,target=/bundle,readonly" "$FMONITOR_RUNTIME_IMAGE" \
-      php bin/fmonitor2-runtime-recovery.php verify --bundle /bundle --source-commit "$source" --image-reference "$source_image" --image-id "$source_image_id" ); then
-    recovery_host_ownership "$stage" "$FMONITOR_RUNTIME_IMAGE" || true; rm -rf "$stage"; fail BACKUP
+      --mount "type=bind,source=$canonical,target=/source-bundle,readonly" \
+      "$FMONITOR_RUNTIME_IMAGE" -c 'set -eu; install -d -m 0700 -o 10001 -g 10001 /trusted/bundle; cp -p /source-bundle/database.sql /source-bundle/manifest.json /source-bundle/state.tar /trusted/bundle/; chown 10001:10001 /trusted/bundle/*; exec setpriv --reuid=10001 --regid=10001 --clear-groups php bin/fmonitor2-runtime-recovery.php "$@"' -- \
+      verify --bundle /trusted/bundle --source-commit "$source" --image-reference "$source_image" --image-id "$source_image_id" ); then
+    fail BACKUP
   fi
   dc up -d --wait db
   dc --profile deployment run --rm -e FMONITOR_MIGRATION_DB_USER -e FMONITOR_MIGRATION_DB_PASSWORD --entrypoint php prepare bin/yii local-runtime/provision-database --interactive=0
@@ -193,9 +192,8 @@ restore_cmd(){
     --mount "type=volume,source=${COMPOSE_PROJECT_NAME}_state,target=/home/fmonitor/.local/state,volume-nocopy" \
     "$FMONITOR_RUNTIME_IMAGE" -c 'test ! -e /home/fmonitor/.local/state/fmonitor2 && chown 10001:10001 /home/fmonitor/.local/state && chmod 0700 /home/fmonitor/.local/state'
   (umask 077; mkdir -m 700 "$password_dir"; printf '%s' "$FMONITOR_MIGRATION_DB_PASSWORD" >"$password_file"; chmod 600 "$password_file")
-  docker run --rm --network none --user 0:0 --entrypoint chown --mount "type=bind,source=$password_dir,target=/private" "$FMONITOR_RUNTIME_IMAGE" -R 10001:10001 /private
   if ! ( export FMONITOR_DB_HOST=db FMONITOR_DB_PORT=3306 FMONITOR_DB_USER="$FMONITOR_MIGRATION_DB_USER" FMONITOR_DB_PASSWORD="$FMONITOR_MIGRATION_DB_PASSWORD"; \
-  docker run --rm --network "${COMPOSE_PROJECT_NAME}_default" --user 10001:10001 \
+  docker run --rm --network "${COMPOSE_PROJECT_NAME}_default" --user 0:0 --entrypoint sh \
     -e FMONITOR_DB_HOST -e FMONITOR_DB_PORT -e FMONITOR_DB_NAME -e FMONITOR_DB_USER \
     -e FMONITOR_DB_PASSWORD -e FMONITOR_PROCESS_TABLE_PREFIX -e FMONITOR_LEGACY_TABLE_PREFIX \
     -e FMONITOR_SESSION_INSTANCE -e FMONITOR_YII_COOKIE_VALIDATION_KEY -e FMONITOR_YII_IDENTITY_KEY \
@@ -206,19 +204,17 @@ restore_cmd(){
     -e FMONITOR_ORIGINAL_DB_PASSWORD_FILE=/private/database-password \
     -e FMONITOR_ORIGINAL_SAFE_LOG_FILE=/home/fmonitor/.local/state/fmonitor2/log/original-safe.jsonl \
     --mount "type=volume,source=${COMPOSE_PROJECT_NAME}_state,target=/home/fmonitor/.local/state,volume-nocopy" \
-    --mount "type=bind,source=$password_dir,target=/private,readonly" \
-    --mount "type=bind,source=$stage,target=/bundle,readonly" "$FMONITOR_RUNTIME_IMAGE" \
-    php bin/fmonitor2-runtime-recovery.php restore --bundle /bundle --target-state-root /home/fmonitor/.local/state/fmonitor2 \
+    --mount "type=bind,source=$canonical,target=/source-bundle,readonly" \
+    --mount "type=bind,source=$password_dir,target=/source-private,readonly" \
+    --tmpfs /private:mode=0700 "$FMONITOR_RUNTIME_IMAGE" -c \
+    'set -eu; install -d -m 0700 -o 10001 -g 10001 /trusted/bundle; cp -p /source-bundle/database.sql /source-bundle/manifest.json /source-bundle/state.tar /trusted/bundle/; cp -p /source-private/database-password /private/database-password; chown 10001:10001 /trusted/bundle/* /private /private/database-password; exec setpriv --reuid=10001 --regid=10001 --clear-groups php bin/fmonitor2-runtime-recovery.php "$@"' -- \
+    restore --bundle /trusted/bundle --target-state-root /home/fmonitor/.local/state/fmonitor2 \
     --source-commit "$source" --image-reference "$source_image" --image-id "$source_image_id" ); then
-    recovery_host_ownership "$stage" "$FMONITOR_RUNTIME_IMAGE" || true
-    recovery_host_ownership "$password_dir" "$FMONITOR_RUNTIME_IMAGE" || true
-    rm -rf "$stage" "$password_dir"
+    rm -rf "$password_dir"
     note 'Restore failed; target writers remain stopped.' >&2
     return 1
   fi
-  recovery_host_ownership "$stage" "$FMONITOR_RUNTIME_IMAGE"
-  recovery_host_ownership "$password_dir" "$FMONITOR_RUNTIME_IMAGE"
-  rm -rf "$stage" "$password_dir"
+  rm -rf "$password_dir"
   dc --profile deployment run --rm prepare
   stage_integrations
   dc --profile deployment run --rm --entrypoint php prepare bin/fmonitor2-runtime-check.php

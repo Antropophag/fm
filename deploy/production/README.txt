@@ -79,3 +79,9 @@ Target containers/network/volumes должны отсутствовать. Sourc
 Source build сначала использует Composer, затем закреплённые архивы с SHA256.
 Если недоступны также base images/apt/npm/Microsoft/archive endpoints, соберите
 release на подходящей платформе и перенесите готовые images.
+
+Передача: release с SHA256SUMS, согласованные архитектура/домен/порт proxy; `.env`
+отдельно по защищённому каналу. Данные лежат в Docker volumes; metadata/backup —
+в FMONITOR_DEPLOY_STATE_DIR/FMONITOR_BACKUP_ROOT. Нужен свободный диск под images,
+данные, backup и временную копию restore. Расписание, срок хранения и вынос backup
+на отдельный носитель настраивает сисадмин; автоматического удаления копий нет.
