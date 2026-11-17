@@ -185,6 +185,137 @@ class Handoff(unittest.TestCase):
         self.assertEqual(receipt, (self.state / 'installed').read_bytes())
         self.assertFalse(any('run' in x['args'] or 'up' in x['args'] for x in self.calls()[count:]))
 
+    def failed_initial_source(self):
+        self.env['HANDOFF_FAIL_INTEGRATION'] = 'erp'
+        self.assertNotEqual(0, self.make('deploy', ok=False).returncode)
+        self.env.pop('HANDOFF_FAIL_INTEGRATION')
+        self.assertEqual('initializing', self.receipt()['state'])
+        return self.receipt()
+
+    def test_initial_retry_advances_corrected_source_and_preserves_resources(self):
+        old = self.failed_initial_source()
+        b = self.commit('B')
+        count = len(self.calls())
+        self.make('deploy')
+        new = self.receipt()
+        self.assertEqual(b, new['source'], 'INTENDED_RED initial retry must use corrected Git source')
+        self.assertEqual('installed', new['state'])
+        self.assertNotEqual(old['image'], new['image'])
+        self.assertNotEqual(old['image_id'], new['image_id'])
+        self.assertEqual(old['application_platform'], new['application_platform'])
+        for key in ('identity_hash', 'database_id', 'state_id', 'secrets_id', 'network_id', 'database_image_id'):
+            self.assertEqual(old[key], new[key], key)
+        docker = json.loads((self.home / 'docker.json').read_text())
+        self.assertEqual(old['image_id'], docker['images'][old['image']]['id'])
+        trace = self.calls()[count:]
+        for command in ('migrate', 'bin/fmonitor2-provision-initial-admin.php', 'erp-equipment-facts-sync/probe'):
+            self.assertTrue(any(command in c['args'] and c['image'] == new['image'] for c in trace), command)
+        self.assertFalse(any('down' in c['args'] or 'prune' in c['args'] or c['args'][:2] == ['volume', 'rm'] for c in trace))
+        self.assertEqual(self.before, self.cfg.read_bytes())
+
+    def test_initial_new_source_build_failure_preserves_receipt(self):
+        self.failed_initial_source()
+        old = (self.state / 'installed').read_bytes()
+        self.commit('B')
+        self.env['HANDOFF_FAIL_BUILD'] = '1'
+        count = len(self.calls())
+        result = self.make('deploy', ok=False)
+        self.assertNotEqual(0, result.returncode, 'INTENDED_RED initial retry must build corrected source')
+        self.assertEqual(old, (self.state / 'installed').read_bytes())
+        self.assertFalse(any('run' in c['args'] or 'up' in c['args'] for c in self.calls()[count:]))
+        self.assertEqual(self.before, self.cfg.read_bytes())
+
+    def test_initial_new_source_rejects_drift_before_build(self):
+        self.failed_initial_source()
+        old = (self.state / 'installed').read_bytes()
+        self.commit('B')
+        for flag, value in [('HANDOFF_DB_DRIFT', '1'), ('HANDOFF_RESOURCE_DRIFT', 'volume'), ('HANDOFF_RESOURCE_DRIFT', 'network')]:
+            with self.subTest(flag=flag, value=value):
+                self.env[flag] = value
+                count = len(self.calls())
+                self.assertNotEqual(0, self.make('deploy', ok=False).returncode)
+                self.assertEqual(old, (self.state / 'installed').read_bytes())
+                self.assertFalse(any(c['args'][0] in ('build', 'pull', 'run') or 'up' in c['args'] for c in self.calls()[count:]))
+                self.env.pop(flag)
+        self.data['FMONITOR_YII_IDENTITY_KEY'] = 'x' * 64
+        self.write()
+        count = len(self.calls())
+        self.assertNotEqual(0, self.make('deploy', ok=False).returncode)
+        self.assertEqual(old, (self.state / 'installed').read_bytes())
+        self.assertFalse(any(c['args'][0] in ('build', 'pull', 'run') or 'up' in c['args'] for c in self.calls()[count:]))
+
+    def test_initial_new_source_invalid_candidate_preserves_receipt(self):
+        self.failed_initial_source()
+        old = (self.state / 'installed').read_bytes()
+        self.commit('B')
+        for mismatch in ('source', 'id', 'platform'):
+            with self.subTest(mismatch=mismatch):
+                self.env['HANDOFF_BAD_BUILD'] = mismatch
+                count = len(self.calls())
+                self.assertNotEqual(0, self.make('deploy', ok=False).returncode, 'invalid candidate must fail before receipt rotation')
+                self.assertEqual(old, (self.state / 'installed').read_bytes())
+                self.assertFalse(any('run' in c['args'] or 'up' in c['args'] for c in self.calls()[count:]))
+
+    def test_initial_new_source_failure_retries_candidate_without_rebuild(self):
+        self.failed_initial_source()
+        b = self.commit('B')
+        self.env['HANDOFF_FAIL_INTEGRATION'] = 'erp'
+        self.assertNotEqual(0, self.make('deploy', ok=False).returncode)
+        self.assertEqual(b, self.receipt()['source'], 'INTENDED_RED failed corrected candidate retained for retry')
+        self.assertEqual('initializing', self.receipt()['state'])
+        image = self.receipt()['image_id']
+        count = len(self.calls())
+        self.env.pop('HANDOFF_FAIL_INTEGRATION')
+        self.make('deploy')
+        self.assertEqual(image, self.receipt()['image_id'])
+        self.assertFalse(any(c['args'][0] == 'build' for c in self.calls()[count:]))
+        self.assertEqual('installed', self.receipt()['state'])
+
+    def test_initial_dirty_source_and_noninitial_states_do_not_advance(self):
+        self.failed_initial_source()
+        self.commit('B')
+        old = (self.state / 'installed').read_bytes()
+        (self.repo / 'source.txt').write_text('dirty')
+        count = len(self.calls())
+        self.assertNotEqual(0, self.make('deploy', ok=False).returncode)
+        self.assertEqual(old, (self.state / 'installed').read_bytes())
+        self.assertFalse(any(c['args'][0] == 'build' for c in self.calls()[count:]))
+        self.git('checkout', '--', 'source.txt')
+        for state in (b'failed', b'updating'):
+            altered = old.replace(b'state=initializing\n', b'state=' + state + b'\n')
+            (self.state / 'installed').write_bytes(altered)
+            count = len(self.calls())
+            self.assertNotEqual(0, self.make('deploy', ok=False).returncode)
+            self.assertEqual(altered, (self.state / 'installed').read_bytes())
+            self.assertFalse(any(c['args'][0] == 'build' or 'run' in c['args'] or 'up' in c['args'] for c in self.calls()[count:]))
+
+    def test_installed_deploy_after_pull_keeps_installed_source(self):
+        self.make('deploy')
+        old = (self.state / 'installed').read_bytes()
+        self.commit('B')
+        count = len(self.calls())
+        self.make('deploy')
+        self.assertEqual(old, (self.state / 'installed').read_bytes())
+        self.assertFalse(any(c['args'][0] == 'build' or 'migrate' in c['args'] for c in self.calls()[count:]))
+
+    def assert_pinned_initial_retry(self, mode):
+        old = self.failed_initial_source()
+        self.data.update(FMONITOR_IMAGE_MODE=mode, FMONITOR_SOURCE_REVISION=old['source'],
+                         FMONITOR_RUNTIME_IMAGE=old['image'], FMONITOR_APPLICATION_IMAGE_ID=old['image_id'])
+        self.write()
+        self.commit('B')
+        count = len(self.calls())
+        self.make('deploy')
+        self.assertEqual(old['source'], self.receipt()['source'])
+        self.assertEqual(old['image_id'], self.receipt()['image_id'])
+        self.assertFalse(any(c['args'][0] in ('build', 'pull') for c in self.calls()[count:]))
+
+    def test_pinned_local_initial_retry_keeps_recorded_source(self):
+        self.assert_pinned_initial_retry('local')
+
+    def test_pinned_pull_initial_retry_keeps_recorded_source(self):
+        self.assert_pinned_initial_retry('pull')
+
     def test_installed_config_change_still_requires_update(self):
         self.make('deploy')
         receipt = (self.state / 'installed').read_bytes()

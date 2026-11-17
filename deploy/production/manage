@@ -96,13 +96,14 @@ random_hex(){ od -An -N32 -tx1 /dev/urandom | tr -d ' \n'; }
 
 resolve_build_identity(){
   [[ ${FMONITOR_IMAGE_MODE:-} == build ]] || return 0
-  local receipt="${FMONITOR_DEPLOY_STATE_DIR}/installed" head recorded_source
+  local receipt="${FMONITOR_DEPLOY_STATE_DIR}/installed" head recorded_source recorded_state
   if [[ $VERB == deploy || $VERB == update ]]; then
     head=$(git -C "$ROOT" rev-parse --verify HEAD 2>/dev/null) || fail FMONITOR_SOURCE_REVISION
     [[ $head =~ ^[0-9a-f]{40}$ && -z $(git -C "$ROOT" status --porcelain --untracked-files=all) ]] || fail FMONITOR_SOURCE_REVISION
     if [[ -f $receipt ]]; then
       recorded_source=$(sed -n 's/^source=//p' "$receipt")
-      if [[ $VERB == deploy || $recorded_source == "$head" ]]; then
+      recorded_state=$(sed -n 's/^state=//p' "$receipt")
+      if [[ $recorded_source == "$head" || ( $VERB == deploy && $recorded_state != initializing ) ]]; then
         FMONITOR_SOURCE_REVISION=$recorded_source
         FMONITOR_RUNTIME_IMAGE=$(sed -n 's/^image=//p' "$receipt")
         FMONITOR_APPLICATION_IMAGE_ID=$(sed -n 's/^image_id=//p' "$receipt")
@@ -492,6 +493,22 @@ network_identity(){ docker network inspect "$1" --format '{{.Id}}|{{.Created}}|{
 installed_env_path(){ printf '%s/installed.env\n' "$FMONITOR_DEPLOY_STATE_DIR"; }
 persist_installed_env(){ local target tmp; target=$(installed_env_path) || return 1; tmp="$target.new.$$.$RANDOM"; (umask 077; cp "$ENV_FILE" "$tmp" && chmod 600 "$tmp") || { rm -f "$tmp"; return 1; }; mv "$tmp" "$target" || return 1; }
 
+verify_receipt_images(){
+  local installed="${FMONITOR_DEPLOY_STATE_DIR}/installed" ref expected actual
+  ref=$(sed -n 's/^image=//p' "$installed"); expected=$(sed -n 's/^image_id=//p' "$installed")
+  actual=$(docker image inspect "$ref" --format '{{.Id}}') || fail FMONITOR_RUNTIME_IMAGE
+  [[ $actual == "$expected" ]] || fail FMONITOR_RUNTIME_IMAGE
+  expected=$(sed -n 's/^source=//p' "$installed")
+  [[ $(docker image inspect "$ref" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}') == "$expected" ]] || fail FMONITOR_SOURCE_REVISION
+  expected=$(sed -n 's/^application_platform=//p' "$installed")
+  [[ $(docker image inspect "$ref" --format '{{.Os}}/{{.Architecture}}') == "$expected" ]] || fail FMONITOR_APPLICATION_PLATFORM
+  ref=$(sed -n 's/^database_image=//p' "$installed"); [[ $ref == "$FMONITOR_DATABASE_IMAGE" ]] || fail FMONITOR_DATABASE_IMAGE
+  expected=$(sed -n 's/^database_image_id=//p' "$installed")
+  [[ $(docker image inspect "$ref" --format '{{.Id}}') == "$expected" ]] || fail FMONITOR_DATABASE_IMAGE_ID
+  expected=$(sed -n 's/^database_platform=//p' "$installed")
+  [[ $(docker image inspect "$ref" --format '{{.Os}}/{{.Architecture}}') == "$expected" ]] || fail FMONITOR_DATABASE_PLATFORM
+}
+
 receipt(){
   local state=${1:-installed} tmp="${FMONITOR_DEPLOY_STATE_DIR}/installed.new.$$"
   local config_hash identity_hash database_id=pending state_id=pending secrets_id=pending network_id=pending
@@ -510,10 +527,23 @@ receipt(){
 deploy(){
   lock; prereq
   local installed="${FMONITOR_DEPLOY_STATE_DIR}/installed"
-  if [[ -f $installed ]]; then image verify; else image; fi
-  ensure_unowned_or_owned
   if [[ -f $installed ]]; then
-    local configured_hash installed_hash
+    local configured_hash installed_hash recorded_source
+    ensure_unowned_or_owned
+    if grep -qx 'state=installed' "$installed"; then
+      image verify
+    elif grep -qx 'state=initializing' "$installed"; then
+      recorded_source=$(sed -n 's/^source=//p' "$installed")
+      if [[ $FMONITOR_IMAGE_MODE == build && $recorded_source != "$FMONITOR_SOURCE_REVISION" ]]; then
+        verify_receipt_images
+        image
+        receipt initializing || return 1
+      else
+        image verify
+      fi
+    else
+      fail update
+    fi
     configured_hash=$(sha256sum "$ENV_FILE" | awk '{print $1}'); installed_hash=$(sed -n 's/^config_hash=//p' "$installed")
     grep -qx "source=${FMONITOR_SOURCE_REVISION}" "$installed" || fail update
     grep -qx "image=${FMONITOR_RUNTIME_IMAGE}" "$installed" || fail update
@@ -524,6 +554,8 @@ deploy(){
     fi
     grep -qx 'state=initializing' "$installed" || fail update
   else
+    image
+    ensure_unowned_or_owned
     receipt initializing
   fi
   if ! provision \

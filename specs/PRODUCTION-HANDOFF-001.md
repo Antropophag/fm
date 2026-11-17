@@ -61,6 +61,10 @@ objects. It does not enumerate ERP objects, query local domain rows, import obje
 publish equipment facts or mutate either database. Connection/query timeouts bounded
 by configured timeout. Exit0 and safe status completed only for the expected response;
 connection/query/shape errors produce failed status/nonzero without exception details.
+The expected response is exactly one row with the sole key `available`, whose value
+is either integer `1` or string `"1"` (PDO SQL Server may return either). No loose
+numeric coercion: booleans, floats, null, other strings, missing/extra columns and
+multiple rows fail. Both representations must succeed through the public CLI.
 Public callable transport seam `NativeErpEquipmentFactsDelivery::probe(): array` (constructor-injected transport)
 allows a deterministic external-adapter witness. The production controller composes
 this seam with the real SQL Server transport, not a test flag/fake adapter.
@@ -74,3 +78,18 @@ success, exception, malformed response, bounded read-only query and no local obj
 dependency. Existing production env/lifecycle/quickstart/optional-SMTP checks remain.
 CI performs existing real Docker installation/backup/restore checks on exact source.
 No live production or credential changes; no real Bitrix/ERP access needed for tests.
+
+## H07 Resume failed first deployment after a source correction
+For build-mode `make deploy`, an exact `initializing` receipt may advance to a
+different clean Git HEAD. Verify existing project/installation identity, recorded
+resource identities and database image identity before acquiring the new image.
+Build a uniquely tagged candidate and verify its source/image/platform before
+atomically replacing the initializing receipt; never overwrite the old image.
+Build/validation failures preserve the old receipt. Resume provisioning/bootstrap
+and integration qualification with the candidate without deleting volumes or data,
+resetting credentials, changing env bytes or rerunning legacy import. A later
+qualification failure leaves the candidate initializing for a same-source retry.
+Installed receipts retain their installed image on deploy and use update for source
+changes. Pinned pull/local modes and failed/updating receipts never acquire this
+source-advance behavior. Identity/resource/database drift and dirty source reject
+before build or provisioning. No schema change is introduced by this correction.

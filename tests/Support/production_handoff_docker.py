@@ -25,10 +25,18 @@ def done(code=0, value=None):
 if a[0] == 'info' or a[:2] == ['compose', 'version']:
     done(value='fixture')
 if a[0] == 'build':
+    if os.environ.get('HANDOFF_FAIL_BUILD'):
+        done(71)
     tag = a[a.index('-t') + 1]
     revision = next(v.split('=', 1)[1] for v in a if v.startswith('FMONITOR_SOURCE_REVISION='))
     identity = 'sha256:' + hashlib.sha256(tag.encode()).hexdigest()
+    if os.environ.get('HANDOFF_BAD_BUILD') == 'source':
+        revision = 'f' * 40
+    if os.environ.get('HANDOFF_BAD_BUILD') == 'id':
+        identity = 'invalid-image-id'
     s['images'][tag] = s['images'][identity] = {'source': revision, 'id': identity}
+    if os.environ.get('HANDOFF_BAD_BUILD') == 'platform':
+        s['images'][tag]['platform'] = 'linux/arm64'
     done()
 if a[0] == 'pull':
     ref = a[1]
@@ -46,9 +54,10 @@ if a[:2] == ['image', 'inspect']:
     if value is None:
         done(1)
     fmt = a[a.index('--format') + 1] if '--format' in a else ''
-    done(value=value['source'] if 'revision' in fmt else 'linux/amd64' if '.Os' in fmt else value['id'])
+    done(value=value['source'] if 'revision' in fmt else value.get('platform', 'linux/amd64') if '.Os' in fmt else value['id'])
 if a[0] in ('volume', 'network'):
-    done(0 if s['resources'] else 1, a[0] + ':' + a[2] if s['resources'] else None)
+    suffix = ':replaced' if os.environ.get('HANDOFF_RESOURCE_DRIFT') == a[0] else ''
+    done(0 if s['resources'] else 1, a[0] + ':' + a[2] + suffix if s['resources'] else None)
 if a[0] == 'ps':
     done(value='')
 if a[0] == 'inspect':
