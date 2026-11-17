@@ -19,6 +19,7 @@ namespace FMonitor2\InstallationProcess {
         public function __invoke(string$sql,array$params,array$options):array {
             file_put_contents($GLOBALS['probeTrace'],json_encode([$sql,$params,$options])."\n",FILE_APPEND);
             if($GLOBALS['probeMode']==='query-failure')throw new \RuntimeException('synthetic-private-value query SQL');
+            if($GLOBALS['probeMode']==='string-success')return [['available'=>'1']];
             return $GLOBALS['probeMode']==='malformed'?[['available'=>0]]:[['available'=>1]];
         }
     }

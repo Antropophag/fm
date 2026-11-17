@@ -16,7 +16,15 @@ assertSameValue(1,count($calls),'one bounded probe even when object catalogue ab
 assertSameValue('SELECT 1 AS available',$calls[0][0],'probe never scans source catalogue');
 assertSameValue([],$calls[0][1],'probe takes no object identifiers');
 assertSameValue(['maxRows'=>1,'timeoutSeconds'=>7,'readOnly'=>true],$calls[0][2],'bounded read-only transport');
-foreach([[],[1],['invalid'],[['available'=>0]],[['unexpected'=>1]],[['available'=>1],['available'=>1]]]as$rows){
+foreach([1,'1']as$value){
+    $r=(new NativeErpEquipmentFactsDelivery($config,static fn():array=>[['available'=>$value]]))->probe();
+    assertSameValue('completed',$r['status']??null,'PDO SQL Server integer or string one qualifies connectivity');
+}
+foreach([0,'0',2,'2',true,false,1.0,null,'','01','1.0','1e0',' 1','1 ',[],[1]]as$value){
+    $r=(new NativeErpEquipmentFactsDelivery($config,static fn():array=>[['available'=>$value]]))->probe();
+    assertSameValue('failed',$r['status']??null,'probe rejects values other than exact integer or string one');
+}
+foreach([[],[1],['invalid'],[[]],[['available'=>0]],[['unexpected'=>1]],[['available'=>1,'extra'=>1]],[['available'=>'1','extra'=>1]],[['available'=>1],['available'=>1]],[['available'=>'1'],['available'=>'1']]]as$rows){
     $r=(new NativeErpEquipmentFactsDelivery($config,static fn():array=>$rows))->probe();
     assertSameValue('failed',$r['status']??null,'invalid probe response cannot qualify connection');
 }
@@ -34,14 +42,15 @@ file_put_contents($temporary.'/vendor/autoload.php',"<?php\n");
 $copied=$temporary.'/app/YiiRuntime/Commands/ErpEquipmentFactsSyncController.php';
 copy($root.'/app/YiiRuntime/Commands/ErpEquipmentFactsSyncController.php',$copied);
 try{
-    foreach(['success','malformed','connect-failure','query-failure']as$mode){
+    foreach(['success','string-success','malformed','connect-failure','query-failure']as$mode){
         $trace=$temporary.'/trace';@unlink($trace);
         $process=proc_open([PHP_BINARY,$root.'/tests/Support/erp_probe_controller.php',$root,$copied,$mode,$trace],[1=>['pipe','w'],2=>['pipe','w']],$pipes);
         $stdout=stream_get_contents($pipes[1]);$stderr=stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);$exit=proc_close($process);
-        assertSameValue($mode==='success', $exit===0,'public controller exit matches actual probe outcome '.$mode);
+        $success=in_array($mode,['success','string-success'],true);
+        assertSameValue($success, $exit===0,'public controller exit matches actual probe outcome '.$mode);
         assertSameValue(false,str_contains($stdout.$stderr,'synthetic-private-value'),'public controller suppresses private errors '.$mode);
         $out=json_decode($stdout,true,8,JSON_THROW_ON_ERROR);
-        assertSameValue($mode==='success'?'completed':'failed',$out['status']??null,'public command produces safe structured status '.$mode);
+        assertSameValue($success?'completed':'failed',$out['status']??null,'public command produces safe structured status '.$mode);
         assertSameValue('', $stderr, 'public command emits no raw adapter diagnostic '.$mode);
         $observed=array_map(static fn(string$line):array=>json_decode($line,true,8,JSON_THROW_ON_ERROR),file($trace,FILE_IGNORE_NEW_LINES));
         assertSameValue(['host'=>'fixture-host','database'=>'fixture-db','user'=>'reader','timeout'=>7],$observed[0],'controller composes configured real transport boundary');
