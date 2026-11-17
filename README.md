@@ -1,81 +1,63 @@
-# FMonitor 2.0
+# FM
 
-Репозиторий нового процесса управления монтажом FMonitor. Legacy-приложение
-остаётся в `../fmonitor`, публичные UI-экспорты поставляет закреплённый checkout
-`../shlz-ui`.
+Портал управления монтажными работами АО «ЩЛЗ»: объекты, монтажники, ход работ и расчёт ОТиЗ.
 
-## Локальный Yii2 quickstart
+## Требования
 
-Для запуска актуального локального стенда нужны Git, Make, `curl`, запущенный
-Docker и Compose v2:
+- Linux x86_64, Git, Make и Bash;
+- Docker Engine с Docker Compose v2 и доступ пользователя к Docker;
+- DNS и TLS для `fm.shlz.ru`;
+- сетевой доступ к настроенным интеграциям (ERP SQL Server, Битрикс, SMTP) и источникам зависимостей для сборки;
+- отдельное место и регламент резервного копирования базы данных и файлов.
+
+## Развёртывание
 
 ```bash
-git clone https://github.com/Antropophag/fmonitor-2.git
-cd fmonitor-2
+git clone http://10.178.69.56/ts.grishin/fm.git
+cd fm
+```
+
+Поместите переданный по защищённому каналу файл `.env` в корень репозитория. Если файл называется `fm-production.env`, переименуйте его:
+
+```bash
+mv fm-production.env .env
+make deploy
+make status
+```
+
+Сборка, миграции базы данных и создание первого администратора выполняются автоматически по переданному `.env`. При включённых в `.env` фоновых задачах деплой проверяет доступ к ERP и запускает настроенные синхронизации с Битрикс. Для первого входа используйте значения `FMONITOR_INITIAL_OWNER_EMAIL` и `FMONITOR_BOOTSTRAP_SUPERADMIN_PASSWORD` из него. Старые объекты не переносятся.
+
+Для внешнего HTTPS-прокси на том же сервере направьте `fm.shlz.ru` на `http://127.0.0.1:8093`, передавайте `Host: fm.shlz.ru` и `X-Forwarded-Proto: https`, установите лимит запроса `28 MB` для загрузки PDF размером до 20 МБ.
+
+Обновление не требует правки версий в переданном `.env`:
+
+```bash
+git pull --ff-only
+make update
+```
+
+Основные команды:
+
+```bash
+make status
+make logs
+make backup
+make stop
+make start
+```
+
+Подробнее: [production Make runbook](docs/operations/production-make-env.md) и [настройка среды разработки](docs/development-setup.md).
+
+<details>
+<summary>Локальный quickstart</summary>
+
+Нужны Git, Make, `curl`, Docker и Docker Compose v2. Создайте отдельный уникальный project с именем `fm2-local-*`, замените все `replace_me` и укажите email владельца в домене `@shlz.ru`:
+
+```bash
 cp .env.example .env
-# Замените все replace_me; owner email должен оканчиваться на @shlz.ru,
-# а project должен иметь уникальное имя fm2-local-*.
 make up
 ```
 
-После успешных live/ready проверок стенд доступен на
-<http://127.0.0.1:8093/>. Повторный `make up` сохраняет данные. `make down`
-сохраняет volumes; `make ps` и `make logs` наблюдают тот же project. Только
-явный `make reset` удаляет его локальные volumes.
+После запуска портал доступен на <http://127.0.0.1:8093/>.
 
-Quickstart не запускает Bitrix/jobs, import или production deployment.
-Исторический `rapid-pilot` остаётся oracle/adapter, но обычные Make-команды от
-него больше не зависят.
-
-## Production запуск
-
-Для запуска стенда на Linux или macOS нужны Git, Make и запущенный Docker
-с Compose v2. PHP, Node.js, Composer и соседние репозитории на хосте не нужны:
-закреплённые зависимости собираются внутри Docker.
-
-Актуальный операторский маршрут описан в
-[production Make runbook](docs/operations/production-make-env.md). Один приватный
-`.env` управляет exact image, чистой БД, первым owner-admin, жизненным циклом,
-backup, update и восстановлением в новый пустой project. Низкоуровневая
-[production runtime инструкция](docs/operations/production-runtime-runbook.md)
-сохраняется как справочник публичных runtime seams.
-
-Порт `8092`, demo bootstrap и Bitrix worker относятся к историческому
-rapid-pilot contour. Они сохраняются для совместимости и расследования, но не
-являются canonical local quickstart. [Инструкция Bitrix](docs/bitrix-startup.md)
-описывает этот исторический opt-in adapter; реальная синхронизация не включается
-production setup автоматически.
-
-Для **разработки и локальных тестов** нужны дополнительные инструменты:
-PHP 8.5, Node.js 22.22.0, npm, Python 3.12.11, Bash и ripgrep.
-Выполните `make setup` по [инструкции разработки](docs/development-setup.md).
-Эта команда не запускает БД, не меняет `.env` и не заменяет существующие
-dependency checkout и `vendor` молча.
-
-Основной ручной маршрут: загрузить или исправить подписанный оригинал распоряжения,
-вернуться в карточку и отдельным явным действием открыть работы с фактической
-датой начала. Ручной номер/регистрация распоряжения в пилоте отсутствует.
-
-## Проверки
-
-```bash
-make test CATEGORY=unit
-```
-
-Команда даёт быструю локальную обратную связь. В delivery-задачах локально
-запускают только выбранные focused/fast проверки. Exact-source GitHub CI
-выполняет проверки, выбранные planner/policy; когда выбран полный matrix, его
-каноническая команда — `make test` (alias — `make verify`). Полная команда
-пересоздаёт одноразовую БД из `compose.test.yaml`; по умолчанию она
-занимает порт `23306`. Локальный полный прогон требует нового прямого поручения
-владельца. Актуальное
-свидетельство проверки установки публикуется отдельно:
-[docs/operations/development-setup-evidence-2026-09-08.md](docs/operations/development-setup-evidence-2026-09-08.md).
-
-## Документы
-
-- Продукт и границы: [PRODUCT.md](PRODUCT.md), [CONTEXT.md](CONTEXT.md).
-- Контракт пилота: [docs/fmonitor-2-pilot-spec.md](docs/fmonitor-2-pilot-spec.md).
-- Модель процесса: [docs/fmonitor-2-pilot-data-model.md](docs/fmonitor-2-pilot-data-model.md).
-- Процесс разработки: [docs/development-process.md](docs/development-process.md).
-- Исторический migration demo: [app/demo/](app/demo/).
+</details>
