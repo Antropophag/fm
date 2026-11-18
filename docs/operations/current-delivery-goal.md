@@ -1,3 +1,18 @@
+# Контуры FM — решение владельца 18.11.2026
+
+Домашний сервер `fmonitor.antropophag.ru` теперь **dev**.
+Корпоративный `fm.shlz.ru` — **production**.
+Перед подключением, проверкой состояния или выкладкой читать запись нужного контура:
+[dev: адреса и доступ](development-access.md),
+[production: адреса, доступы и ограничения](production-access.md).
+
+Старые цели ниже сохранены как история. Упоминания домашнего production и
+production-first не переносят прежние разрешения на корпоративный сервер.
+Текущее поручение — уточнение агентских инструкций; серверы, данные и настройки
+доступа этим изменением не меняются.
+
+---
+
 # Текущая цель — постоянный env и проверка интеграций при deploy
 
 Owner 2026-11-16 поручил быстро реализовать согласованную передачу: clone, готовый env, make deploy; дальнейшие git pull/make update без изменения env. ERP connectivity и первые штатные Bitrix sync проверяются до успеха установки; пустые объекты допустимы. Legacy import исключён, Excel loader отдельно. Dedicated worktree simplify-production-handoff от 42df3e1; root spec/tests, отдельный sol/low executor, independent planner-required reviews. Compact sensitive correction PRODUCTION-HANDOFF-001. Локально bounded checks; full CI только GitHub. Live deploy/merge/secrets не менять.
