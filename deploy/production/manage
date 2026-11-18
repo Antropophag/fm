@@ -346,20 +346,15 @@ dc(){ docker compose --env-file /dev/null -p "${COMPOSE_PROJECT_NAME}" -f "$COMP
 writers(){ local a=(php web); [[ ${FMONITOR_JOBS_ENABLED} == true ]] && a+=(jobs-worker jobs-scheduler); printf '%s\n' "${a[@]}"; }
 
 lock(){
-  local global=/tmp/fmonitor2-production-locks mode owner deploy_uid parent
-  if [[ ! -e $global ]]; then (umask 077; mkdir "$global") || exit 75; fi
-  [[ -d $global && ! -L $global ]] || { note "PRODUCTION_LOCK_UNAVAILABLE path=$global reason=invalid_directory" >&2; exit 64; }
-  mode=$(stat -c '%a' "$global" 2>/dev/null || stat -f '%Lp' "$global"); owner=$(stat -c '%u' "$global" 2>/dev/null || stat -f '%u' "$global")
-  deploy_uid=$(id -u)
-  [[ $mode == 700 && $owner == "$deploy_uid" ]] || { note "PRODUCTION_LOCK_UNAVAILABLE path=$global actual_mode=$mode owner_uid=$owner deploy_uid=$deploy_uid" >&2; exit 64; }
+  local mode owner parent
   parent=$(dirname "$FMONITOR_DEPLOY_STATE_DIR")
   [[ -d $parent && ! -L $parent ]] || fail FMONITOR_DEPLOY_STATE_DIR
   if [[ ! -e $FMONITOR_DEPLOY_STATE_DIR ]]; then (umask 077; mkdir "$FMONITOR_DEPLOY_STATE_DIR") || fail FMONITOR_DEPLOY_STATE_DIR; fi
   [[ -d $FMONITOR_DEPLOY_STATE_DIR && ! -L $FMONITOR_DEPLOY_STATE_DIR ]] || fail FMONITOR_DEPLOY_STATE_DIR
   mode=$(stat -c '%a' "$FMONITOR_DEPLOY_STATE_DIR" 2>/dev/null || stat -f '%Lp' "$FMONITOR_DEPLOY_STATE_DIR"); owner=$(stat -c '%u' "$FMONITOR_DEPLOY_STATE_DIR" 2>/dev/null || stat -f '%u' "$FMONITOR_DEPLOY_STATE_DIR")
   [[ $mode == 700 && $owner == "$(id -u)" ]] || fail FMONITOR_DEPLOY_STATE_DIR
-  LOCK="$global/${COMPOSE_PROJECT_NAME}.lock"
-  mkdir "$LOCK" 2>/dev/null || { note 'Production operation already running.' >&2; exit 75; }
+  LOCK="/tmp/${COMPOSE_PROJECT_NAME}.lock"
+  (umask 077; mkdir "$LOCK") 2>/dev/null || { note 'Production operation already running.' >&2; exit 75; }
   trap 'rmdir "$LOCK" 2>/dev/null || true' EXIT
 }
 
