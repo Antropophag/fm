@@ -38,6 +38,8 @@ QUALITY_GRAPH_REPORT_FAILURE category=input|provenance|output с exit1.
 
 ## Normative behavior
 
+The existing blocking E2E job has a 30-minute budget including setup. Its category command, coverage and failure propagation remain unchanged.
+
 ## Stock publisher admission guard
 
 Stock0.1.7 сохраняется без patch. Перед completed publish выполняется read-only
