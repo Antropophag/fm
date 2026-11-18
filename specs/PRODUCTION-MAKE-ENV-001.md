@@ -37,6 +37,23 @@ Deploy: preflight -> acquire image -> DB -> DML-only account public provisioning
 
 `status` reports exact selected project/live/ready and enabled jobs health; disabled jobs displayed as disabled, not failure/success observation. Failed readiness exits nonzero. `stop` and `start` only affect own recorded project; stop never removes volumes; start uses installed image and does not migrate/reprovision/import. Logs route to production only when selected env declares production, otherwise preserve original local behavior. No reset/prune/down --volumes in production public interface. Restart policies/graceful stops/log rotation configured; DB/FPM not host-published; HTTP binds loopback behind external proxy.
 
+### A05-portainer Container ownership after recreation
+
+Owner18.11.2026 authorizes restoring the existing `dev_3d-dev` Portainer account's
+access to the corporate FM containers, including a GitLab production trial before
+full GitHub CI. The production Compose services `db`, `php`, `web`, `jobs-worker`
+and `jobs-scheduler` carry `io.portainer.accesscontrol.users: dev_3d-dev` on each
+created container. No public/team grant, new account, host permission change or
+secret/configuration input is introduced. These labels are scoped to the five
+persistent production services, not the shared app anchor, deployment helpers,
+volumes/networks or local/dev Compose. Existing commands, images, ports, mounts,
+profiles and health checks remain unchanged. Compose config qualifies label
+placement; live acceptance requires a fresh login to the existing Portainer
+account to see all five healthy FM services after the authorized update. Metadata
+alone does not prove Portainer applied access. If visibility remains incomplete,
+report the blocker; do not broaden privileges. Existing update backup and health
+gates remain in force; DB recreation preserves its named data volume.
+
 ### A06 Runtime package
 
 Production image loads `deploy/runtime/php.ini` as actual PHP config; upload/post limits support20MiB PDF plus multipart overhead, nginx limit compatible. Image source label/build identity recorded. Secrets excluded build context; helper scripts required by production copied into image. Existing local compose/Make behavior not silently changed. Public proxy example passes Host and HTTPS configuration, supports upload limits; no secret query logging for activation links. Public services non-root application UID10001, persistent paths outside public document root.
