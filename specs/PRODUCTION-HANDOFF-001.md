@@ -93,3 +93,21 @@ Installed receipts retain their installed image on deploy and use update for sou
 changes. Pinned pull/local modes and failed/updating receipts never acquire this
 source-advance behavior. Identity/resource/database drift and dirty source reject
 before build or provisioning. No schema change is introduced by this correction.
+
+## H08 Corporate GitLab deployment runner
+The root `.gitlab-ci.yml` exposes one production deployment job for `main`,
+including pushes and Run pipeline. It uses runner tag `web-03` and resource group
+`web-03-fm2` to serialize jobs for this installation. The job is non-interruptible.
+It runs in the existing `/opt/fm2` checkout, verifies that checkout is on `main`,
+then runs read-only `make status` before any pull/build/stop. This qualifies the
+runner user's access to the existing private env, installation state and Docker.
+It performs `git pull --ff-only`, requires HEAD to equal `CI_COMMIT_SHA`, runs
+`make update`, and finally `make status`. Any failed step stops subsequent steps.
+A superseded pipeline must not silently deploy a different commit. Existing
+backup/migration/integration checks and failure recovery remain owned by Make.
+No sudo, privilege changes, copied secrets, env output or alternate deployment
+implementation is introduced. The admin-provisioned runner needs access to the
+existing installation; missing permissions remain a deployment blocker.
+Root tests execute the job script with isolated Git/Make adapters and check
+success, wrong branch, failed preflight/pull/update/postflight and wrong HEAD.
+GitLab CI Lint additionally validates the actual configuration before publication.
