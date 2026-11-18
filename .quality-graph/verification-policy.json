@@ -183,6 +183,7 @@
       "patterns": [
         ".quality-graph/**",
         ".github/**",
+        ".gitlab-ci.yml",
         "tools/**",
         "specs/**",
         "openspec/**",

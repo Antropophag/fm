@@ -1,0 +1,19 @@
+stages:
+  - deploy
+
+deploy_fm2_production:
+  stage: deploy
+  tags:
+    - web-03
+  only:
+    - main
+  resource_group: web-03-fm2
+  interruptible: false
+  script:
+    - cd /opt/fm2
+    - test "$(git branch --show-current)" = main
+    - make status
+    - git pull --ff-only
+    - test "$(git rev-parse HEAD)" = "$CI_COMMIT_SHA"
+    - make update
+    - make status
