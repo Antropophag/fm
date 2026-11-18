@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+"""Capture complete failing Docker build streams for the E2E CI job."""
+from __future__ import annotations
+
+import os
+import signal
+import subprocess
+import sys
+import threading
+import uuid
+from pathlib import Path
+
+
+OPTIONS_WITH_VALUES = {
+    "--config", "--context", "--host", "-H", "--log-level", "-l",
+    "--tlscacert", "--tlscert", "--tlskey",
+}
+COMPOSE_OPTIONS_WITH_VALUES = {
+    "--ansi", "--env-file", "-f", "--file", "--parallel", "--profile",
+    "--project-directory", "-p", "--project-name",
+}
+BUILDX_OPTIONS_WITH_VALUES = {"--builder"}
+
+
+def command_index(args: list[str], start: int, options_with_values: set[str]) -> int | None:
+    index = start
+    while index < len(args):
+        value = args[index]
+        if value == "--":
+            return index + 1 if index + 1 < len(args) else None
+        option = value.split("=", 1)[0]
+        if not value.startswith("-"):
+            return index
+        index += 2 if option in options_with_values and "=" not in value else 1
+    return None
+
+
+def build_command(args: list[str]) -> tuple[bool, list[str]]:
+    top = command_index(args, 0, OPTIONS_WITH_VALUES)
+    if top is None:
+        return False, args
+    command = args[top]
+    if command == "build":
+        return True, normalize_build_options(args, top)
+    if command == "buildx":
+        subcommand = command_index(args, top + 1, BUILDX_OPTIONS_WITH_VALUES)
+        if subcommand is None or args[subcommand] != "build":
+            return False, args
+        return True, normalize_build_options(args, subcommand)
+    if command != "compose":
+        return False, args
+    subcommand = command_index(args, top + 1, COMPOSE_OPTIONS_WITH_VALUES | {"--progress"})
+    if subcommand is None or args[subcommand] != "build":
+        return False, args
+    rewritten: list[str] = []
+    index = 0
+    while index < len(args):
+        value = args[index]
+        if value in {"--quiet", "-q"} and index > subcommand:
+            index += 1
+            continue
+        if index < subcommand and value == "--progress":
+            index += 2
+            continue
+        if index < subcommand and value.startswith("--progress="):
+            index += 1
+            continue
+        rewritten.append(value)
+        index += 1
+    build = rewritten.index("build", top + 1)
+    rewritten[build:build] = ["--progress", "plain"]
+    return True, rewritten
+
+
+def normalize_build_options(args: list[str], build: int) -> list[str]:
+    rewritten = args[:build + 1]
+    index = build + 1
+    while index < len(args):
+        value = args[index]
+        if value in {"--quiet", "-q"}:
+            index += 1
+            continue
+        if value == "--progress":
+            index += 2
+            continue
+        if value.startswith("--progress="):
+            index += 1
+            continue
+        rewritten.append(value)
+        index += 1
+    rewritten.insert(build + 1, "--progress=plain")
+    return rewritten
+
+
+def copy_stream(source, destination_fd: int, log) -> None:
+    try:
+        while True:
+            chunk = source.read(65536)
+            if not chunk:
+                return
+            try:
+                view = memoryview(chunk)
+                while view:
+                    view = view[os.write(destination_fd, view):]
+            except OSError:
+                pass
+            try:
+                log.write(chunk)
+                log.flush()
+            except OSError:
+                pass
+    finally:
+        source.close()
+
+
+def discard_success_log(path: Path, log) -> None:
+    """Discard only the log inode created by this wrapper, without masking Docker."""
+    try:
+        current = path.stat(follow_symlinks=False)
+        owned = os.fstat(log.fileno())
+        if (current.st_dev, current.st_ino) == (owned.st_dev, owned.st_ino):
+            path.unlink()
+            return
+    except OSError:
+        pass
+    try:
+        os.ftruncate(log.fileno(), 0)
+    except OSError:
+        try:
+            os.write(2, b"DOCKER_DIAGNOSTIC_CLEANUP_FAILURE\n")
+        except OSError:
+            pass
+
+
+class DockerNotStarted(OSError):
+    """Capture was unavailable before Docker could be executed."""
+
+
+def run_captured(real_docker: str, args: list[str], log_dir: Path) -> int:
+    stdout_path: Path | None = None
+    stderr_path: Path | None = None
+    stdout_fd: int | None = None
+    stderr_fd: int | None = None
+    stdout_log = None
+    stderr_log = None
+    child = None
+    stem = uuid.uuid4().hex
+    try:
+        log_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+        stdout_path = log_dir / f"{stem}.stdout.log"
+        stderr_path = log_dir / f"{stem}.stderr.log"
+        stdout_fd = os.open(stdout_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        stderr_fd = os.open(stderr_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        stdout_log = os.fdopen(stdout_fd, "wb", buffering=0)
+        stdout_fd = None
+        stderr_log = os.fdopen(stderr_fd, "wb", buffering=0)
+        stderr_fd = None
+        child = subprocess.Popen([real_docker, *args], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except OSError as error:
+        for fd in (stdout_fd, stderr_fd):
+            if fd is not None:
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+        for path in (stdout_path, stderr_path):
+            if path is not None:
+                try:
+                    path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+        for log in (stdout_log, stderr_log):
+            if log is not None:
+                try:
+                    log.close()
+                except OSError:
+                    pass
+        raise DockerNotStarted(str(error)) from error
+    with stdout_log, stderr_log:
+        def forward(signum, _frame):
+            try:
+                child.send_signal(signum)
+            except ProcessLookupError:
+                pass
+
+        previous = {sig: signal.signal(sig, forward) for sig in (signal.SIGINT, signal.SIGTERM)}
+        threads = [
+            threading.Thread(target=copy_stream, args=(child.stdout, 1, stdout_log)),
+            threading.Thread(target=copy_stream, args=(child.stderr, 2, stderr_log)),
+        ]
+        for thread in threads:
+            thread.start()
+        status = child.wait()
+        for thread in threads:
+            thread.join()
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+        if status == 0:
+            discard_success_log(stdout_path, stdout_log)
+            discard_success_log(stderr_path, stderr_log)
+    return 128 - status if status < 0 else status
+
+
+def main() -> int:
+    real_docker = os.environ.get("FM_CI_REAL_DOCKER")
+    if not real_docker:
+        return 127
+    capture, args = build_command(sys.argv[1:])
+    if not capture:
+        os.execv(real_docker, [real_docker, *sys.argv[1:]])
+    log_dir = os.environ.get("FM_CI_DOCKER_LOG_DIR")
+    if not log_dir:
+        return subprocess.call([real_docker, *args])
+    try:
+        return run_captured(real_docker, args, Path(log_dir))
+    except DockerNotStarted:
+        return subprocess.call([real_docker, *args])
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
