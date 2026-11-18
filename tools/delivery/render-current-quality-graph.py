@@ -15,45 +15,6 @@ BOUNDARIES = ["quality-graph.yml", ".github/workflows/quality-graph.yml",
               ".github/workflows/quality-graph-publish.yml",
               "tools/delivery/quality-graph-preflight.py", "tools/delivery/quality-graph-report.py"]
 
-E2E_JOB = """  e2e:
-    needs: plan
-    if: needs.plan.outputs.full == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-    - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-      with:
-        ref: ${{ github.event.pull_request.head.sha || github.sha }}
-        persist-credentials: 'false'
-        fetch-depth: '0'
-    - uses: ./.github/actions/setup-runtime
-    - name: Enable Docker build diagnostics
-      shell: bash
-      run: |
-        diagnostic_dir="$RUNNER_TEMP/fmonitor-e2e-diagnostics"
-        install -d -m 700 "$diagnostic_dir"
-        printf 'FM_CI_REAL_DOCKER=%s\\n' "$(command -v docker)" >> "$GITHUB_ENV"
-        printf 'FM_CI_DOCKER_LOG_DIR=%s\\n' "$diagnostic_dir" >> "$GITHUB_ENV"
-        printf '%s\\n' "$GITHUB_WORKSPACE/tools/verification/docker-diagnostics" >> "$GITHUB_PATH"
-    - name: Prepare pinned integration dependencies
-      run: make ci-setup
-    - name: Prepare isolated test database
-      run: make test-db-reset migrate
-    - name: Run e2e category once
-      run: make test CATEGORY=e2e
-    - name: Tear down isolated test database
-      if: always()
-      run: make test-env-down
-    - name: Upload failed Docker build diagnostics
-      if: failure() || cancelled()
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
-      with:
-        name: e2e-docker-build-diagnostics-${{ github.run_attempt }}
-        path: ${{ runner.temp }}/fmonitor-e2e-diagnostics
-        if-no-files-found: ignore
-        retention-days: 7
-"""
-
 def publisher(source: str) -> str:
     embedded = "\n".join("          " + line if line else "" for line in source.splitlines())
     return f"""# Repository-owned trusted wrapper around pinned stock Quality Graph 0.1.7.
@@ -94,12 +55,6 @@ jobs:
 
 def canonical(value: object) -> str:
     return json.dumps(value, indent=2, sort_keys=True) + "\n"
-
-
-def enforce_e2e_policy(workflow: str) -> str:
-    start = workflow.index("\n  e2e:\n") + 1
-    end = workflow.index("\n  governance:\n", start) + 1
-    return workflow[:start] + E2E_JOB + workflow[end:]
 
 
 def quality_results(digest: str) -> str:
@@ -159,7 +114,7 @@ def expected() -> dict[str, str]:
     project = compile_graph(graph)
     compiled_manifest = next(f.content for f in project.files if str(f.path) == ".quality-graph/manifest.json")
     workflow_path = ROOT / ".github/workflows/quality-graph.yml"
-    current_workflow = enforce_e2e_policy(workflow_path.read_text())
+    current_workflow = workflow_path.read_text()
     prefix = current_workflow.split("\n  quality-results:\n", 1)[0] + "\n"
     workflow = prefix + quality_results(project.graph_digest)
     jobs = yaml.safe_load(workflow)['jobs']

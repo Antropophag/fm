@@ -123,14 +123,6 @@ jobs:
         persist-credentials: 'false'
         fetch-depth: '0'
     - uses: ./.github/actions/setup-runtime
-    - name: Enable Docker build diagnostics
-      shell: bash
-      run: |
-        diagnostic_dir="$RUNNER_TEMP/fmonitor-e2e-diagnostics"
-        install -d -m 700 "$diagnostic_dir"
-        printf 'FM_CI_REAL_DOCKER=%s\n' "$(command -v docker)" >> "$GITHUB_ENV"
-        printf 'FM_CI_DOCKER_LOG_DIR=%s\n' "$diagnostic_dir" >> "$GITHUB_ENV"
-        printf '%s\n' "$GITHUB_WORKSPACE/tools/verification/docker-diagnostics" >> "$GITHUB_PATH"
     - name: Prepare pinned integration dependencies
       run: make ci-setup
     - name: Prepare isolated test database
@@ -140,14 +132,6 @@ jobs:
     - name: Tear down isolated test database
       if: always()
       run: make test-env-down
-    - name: Upload failed Docker build diagnostics
-      if: failure() || cancelled()
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
-      with:
-        name: e2e-docker-build-diagnostics-${{ github.run_attempt }}
-        path: ${{ runner.temp }}/fmonitor-e2e-diagnostics
-        if-no-files-found: ignore
-        retention-days: 7
   governance:
     needs: plan
     if: needs.plan.outputs.full == 'true'
