@@ -187,3 +187,29 @@ review includes this test-only delta. No production change was needed.
 - Real clean/address calls0; actual-source offline preflight only. Paid permission
   absent, FIAS UNKNOWN, live dev/prod acceptance unperformed. No merge/main push,
   deployment or real import authorized/performed.
+
+## First exact-source CI triage — 20.11.2026
+
+Published commit06e73000 / PR307, run44626585565 completed. Full failed-job
+inventory: e2e135922029884 and aggregate verify135941967477. Complete3.3MB
+run log contains exactly one REGRESSION_FAILURE:
+`tests/Yii2/yii2_preopening_package_001_test.py`. Both integration shards
+(including capacity/restore), fast, unit and governance passed; verify failed
+solely because e2e failed. No other unresolved regression is hidden.
+
+The standalone `deploy/yii2/Dockerfile` omitted ext-zip after the importer added
+it to Composer requirements. All other PHP image consumers were audited and
+already include libzip-dev/zip. Existing real image/PDF test reproduces exact
+INTENDED_RED locally without altering the test. Supplemental Gate3v15 APPROVED
+this A11 dependency correction; separate application executor adds only the
+missing build library/extension. Root will run the unchanged bounded e2e and
+obtain independent final delta review before correction push. Prior run and
+all failure evidence remain retained; a fresh exact-source CI is still required.
+
+Yii image correction completed: the unchanged real package e2e is GREEN at
+Gate5 package20261119T225310Z-d99e84aa28. Independent final delta reviewv3
+APPROVED with no findings. The only production difference from06e73000 is
+libzip-dev and PHPzip in deploy/yii2/Dockerfile; importer code/tests byte-identical.
+First CI's complete failure inventory is resolved locally; the correction commit
+still requires a fresh full exact-source GitHub run. No local full suite, live
+provider call, merge or deployment occurred.

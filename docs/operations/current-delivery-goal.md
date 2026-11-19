@@ -1,3 +1,16 @@
+# CI-коррекция Yii image — 20.11.2026
+
+PR307 / commit06e73000: полный CI44626585565 завершён. Обе integration shards,
+fast/unit/governance GREEN; единственный regression — отсутствующий ext-zip
+в standalone deploy/yii2/Dockerfile, verify упал вследствие e2e. Полный inventory
+разобран. Gate3v15 APPROVED, отдельный executor исправил только зависимости
+этого image; bounded e2e GREEN, независимый final deltav3 APPROVED. Следующий
+шаг — correction commit/push и новый exact-source CI.
+Importer/application/schema bytes не меняются. Ограничения paid/live/merge/deploy
+сохраняются. История ниже сохранена.
+
+---
+
 # Адресный CLI-импортёр: final review пройден — 20.11.2026
 
 Выделенный worktree address-register-import: corrective Gate3v8/v10/v12/v13/v14

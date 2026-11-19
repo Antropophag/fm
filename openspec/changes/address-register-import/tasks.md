@@ -81,3 +81,14 @@ Only factual delivery metadata and the review were added after evidence; code/te
 remain byte-identical. Tasks4.4/6.4 remain pending exact-source GitHubCI at commit.
 4.2 and live parts of5.2 remain unperformed: no paid authorization, provider0,
 no dev/prod import, FIAS UNKNOWN. Commit/PR/CI allowed; merge/deploy prohibited.
+
+First full CI run44626585565 on commit06e73000: both integrations (including
+capacity), fast/unit/governance GREEN; sole e2e regression is missing ext-zip
+in standalone deploy/yii2 image. Full failure inventory and aggregate disposition
+recorded before correction. Gate3v15 APPROVED; separate executor owns the
+Dockerfile-only correction, followed by bounded e2e/final delta/next-source CI.
+
+Yii dependency correction: existing real package e2e GREEN; independent final
+delta reviewv3 APPROVED, production scope only deploy/yii2/Dockerfile. Corrective
+commit and new full exact-sourceCI follow; first run failure is retained, not
+relabelledGREEN. Importer code/tests and all prior acceptance proofs unchanged.
