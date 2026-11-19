@@ -47,6 +47,7 @@ final class ProductionPilotMigrationCatalogue
             37=>OtizSettlementV2CorrectionsSchemaMigration::class,
             38=>OtizPaymentDecisionObjectScopeSchemaMigration::class,
             39=>AssignmentOrderOriginalStartSchemaMigration::class,
+            40=>AddressRegisterImportSchemaMigration::class,
         ];
     }
 }

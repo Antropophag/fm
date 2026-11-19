@@ -3,7 +3,7 @@ FROM php:8.5-cli-bookworm
 
 # Test-only Linux tools for permission and descriptor-capture probes.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends util-linux libjpeg62-turbo-dev libpng-dev libwebp-dev \
+    && apt-get install -y --no-install-recommends util-linux libjpeg62-turbo-dev libpng-dev libwebp-dev libzip-dev \
     && docker-php-ext-configure gd --with-jpeg --with-webp \
-    && docker-php-ext-install -j"$(nproc)" gd mysqli pcntl \
+    && docker-php-ext-install -j"$(nproc)" gd mysqli pcntl zip \
     && rm -rf /var/lib/apt/lists/*

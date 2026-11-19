@@ -82,6 +82,7 @@ final class MariaDbRuntimeReadiness
                 Schema\AssignmentOrderIdentityRegistryDefinitionSchemaMigration::RECEIPTS] as $table) {
                 if (!Schema\MariaDbAssignmentOrderIdentityRegistryCatalog::compatible($connection, $prefix, $table, $collation)) throw new \RuntimeException();
             }
+            Schema\AddressRegisterImportSchemaMigration::assertCompatible($connection, $prefix);
         } catch (\Throwable) {
             throw new \RuntimeException('SCHEMA_NOT_READY');
         }

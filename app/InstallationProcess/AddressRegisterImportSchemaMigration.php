@@ -1,0 +1,66 @@
+<?php
+declare(strict_types=1);
+namespace FMonitor2\InstallationProcess;
+
+final class AddressRegisterImportSchemaMigration
+{
+    private const DDL = [
+        'fm2_address_import_packages' => "CREATE TABLE `%s`(package_id CHAR(36) NOT NULL,target VARCHAR(8) NOT NULL,operator_user_id BIGINT UNSIGNED NOT NULL,status VARCHAR(16) NOT NULL,source_sha256 CHAR(64) NOT NULL,preview_sha256 CHAR(64) NULL,year SMALLINT UNSIGNED NOT NULL,contract VARCHAR(255) NOT NULL,mode VARCHAR(16) NOT NULL,reason TEXT NOT NULL,source_json LONGTEXT NOT NULL,report_json LONGTEXT NOT NULL,budget_limit INT UNSIGNED NOT NULL DEFAULT 0,budget_reason TEXT NOT NULL,created_at_utc DATETIME(6) NOT NULL,updated_at_utc DATETIME(6) NOT NULL,PRIMARY KEY(package_id),KEY package_target(target,status),CHECK(JSON_VALID(source_json)),CHECK(JSON_VALID(report_json))) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+        'fm2_address_import_cache' => "CREATE TABLE `%s`(entry_id CHAR(36) NOT NULL,request_hash CHAR(64) NOT NULL,provider VARCHAR(64) NOT NULL,request_json LONGTEXT NOT NULL,response_json LONGTEXT NOT NULL,response_hash CHAR(64) NOT NULL,captured_at_utc DATETIME(6) NOT NULL,accepted TINYINT(1) NOT NULL,rules_version VARCHAR(64) NOT NULL,lock_owner CHAR(36) NULL,lock_key CHAR(64) NULL,PRIMARY KEY(entry_id),UNIQUE KEY one_inflight(lock_key),KEY request_time(request_hash,captured_at_utc),CHECK(JSON_VALID(request_json)),CHECK(JSON_VALID(response_json))) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+        'fm2_address_import_attempts' => "CREATE TABLE `%s`(attempt_id CHAR(36) NOT NULL,package_id CHAR(36) NOT NULL,request_hash CHAR(64) NOT NULL,attempt_no INT UNSIGNED NOT NULL,outcome VARCHAR(48) NOT NULL,created_at_utc DATETIME(6) NOT NULL,PRIMARY KEY(attempt_id),UNIQUE KEY package_attempt(package_id,attempt_no),KEY request_attempt(request_hash,created_at_utc),FOREIGN KEY(package_id) REFERENCES `%s`(package_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+        'fm2_address_import_objects' => "CREATE TABLE `%s`(source_identity_hash CHAR(64) NOT NULL,object_id BIGINT UNSIGNED NOT NULL,registration_number VARCHAR(120) NOT NULL,unom VARCHAR(120) NOT NULL,house_fias_id CHAR(36) NOT NULL,entrance VARCHAR(80) NOT NULL,source_json LONGTEXT NOT NULL,created_at_utc DATETIME(6) NOT NULL,PRIMARY KEY(source_identity_hash),UNIQUE KEY import_object(object_id),KEY import_reg(registration_number),KEY import_unom(unom),CHECK(JSON_VALID(source_json))) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+        'fm2_address_import_operations' => "CREATE TABLE `%s`(operation_id CHAR(36) NOT NULL,request_fingerprint CHAR(64) NOT NULL,package_id CHAR(36) NOT NULL,outcome_json LONGTEXT NOT NULL,created_at_utc DATETIME(6) NOT NULL,PRIMARY KEY(operation_id),KEY operation_package(package_id),FOREIGN KEY(package_id) REFERENCES `%s`(package_id),CHECK(JSON_VALID(outcome_json))) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+        'fm2_address_import_ids' => "CREATE TABLE `%s`(allocation_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,object_id BIGINT UNSIGNED NULL,PRIMARY KEY(allocation_id),UNIQUE KEY allocated_object(object_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+        'fm2_address_import_payload_chunks' => "CREATE TABLE `%s`(package_id CHAR(36) NOT NULL,generation_id CHAR(36) NOT NULL,kind VARCHAR(32) NOT NULL,ordinal INT UNSIGNED NOT NULL,item_count SMALLINT UNSIGNED NOT NULL,payload_json LONGTEXT NOT NULL,payload_sha256 CHAR(64) NOT NULL,created_at_utc DATETIME(6) NOT NULL,PRIMARY KEY(package_id,generation_id,kind,ordinal),CONSTRAINT `%s` FOREIGN KEY(package_id) REFERENCES `%s`(package_id) ON UPDATE RESTRICT ON DELETE RESTRICT,CHECK(JSON_VALID(payload_json)),CHECK(OCTET_LENGTH(payload_json)<=4194304),CHECK(payload_sha256=SHA2(payload_json,256)),CHECK(JSON_TYPE(payload_json)='ARRAY'),CHECK(item_count BETWEEN 1 AND 128),CHECK(JSON_LENGTH(payload_json)=item_count)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin",
+    ];
+
+    private const COLUMNS = [
+        'fm2_address_import_packages' => [
+            ['package_id','char(36)','NO',null,''],['target','varchar(8)','NO',null,''],['operator_user_id','bigint(20) unsigned','NO',null,''],['status','varchar(16)','NO',null,''],['source_sha256','char(64)','NO',null,''],['preview_sha256','char(64)','YES',null,''],['year','smallint(5) unsigned','NO',null,''],['contract','varchar(255)','NO',null,''],['mode','varchar(16)','NO',null,''],['reason','text','NO',null,''],['source_json','longtext','NO',null,''],['report_json','longtext','NO',null,''],['budget_limit','int(10) unsigned','NO','0',''],['budget_reason','text','NO',null,''],['created_at_utc','datetime(6)','NO',null,''],['updated_at_utc','datetime(6)','NO',null,''],
+        ],
+        'fm2_address_import_cache' => [
+            ['entry_id','char(36)','NO',null,''],['request_hash','char(64)','NO',null,''],['provider','varchar(64)','NO',null,''],['request_json','longtext','NO',null,''],['response_json','longtext','NO',null,''],['response_hash','char(64)','NO',null,''],['captured_at_utc','datetime(6)','NO',null,''],['accepted','tinyint(1)','NO',null,''],['rules_version','varchar(64)','NO',null,''],['lock_owner','char(36)','YES',null,''],['lock_key','char(64)','YES',null,''],
+        ],
+        'fm2_address_import_attempts' => [['attempt_id','char(36)','NO',null,''],['package_id','char(36)','NO',null,''],['request_hash','char(64)','NO',null,''],['attempt_no','int(10) unsigned','NO',null,''],['outcome','varchar(48)','NO',null,''],['created_at_utc','datetime(6)','NO',null,'']],
+        'fm2_address_import_objects' => [['source_identity_hash','char(64)','NO',null,''],['object_id','bigint(20) unsigned','NO',null,''],['registration_number','varchar(120)','NO',null,''],['unom','varchar(120)','NO',null,''],['house_fias_id','char(36)','NO',null,''],['entrance','varchar(80)','NO',null,''],['source_json','longtext','NO',null,''],['created_at_utc','datetime(6)','NO',null,'']],
+        'fm2_address_import_operations' => [['operation_id','char(36)','NO',null,''],['request_fingerprint','char(64)','NO',null,''],['package_id','char(36)','NO',null,''],['outcome_json','longtext','NO',null,''],['created_at_utc','datetime(6)','NO',null,'']],
+        'fm2_address_import_ids' => [['allocation_id','bigint(20) unsigned','NO',null,'auto_increment'],['object_id','bigint(20) unsigned','YES',null,'']],
+        'fm2_address_import_payload_chunks' => [['package_id','char(36)','NO',null,''],['generation_id','char(36)','NO',null,''],['kind','varchar(32)','NO',null,''],['ordinal','int(10) unsigned','NO',null,''],['item_count','smallint(5) unsigned','NO',null,''],['payload_json','longtext','NO',null,''],['payload_sha256','char(64)','NO',null,''],['created_at_utc','datetime(6)','NO',null,'']],
+    ];
+    private const INDEXES = [
+        'fm2_address_import_packages'=>['PRIMARY'=>[0,'package_id'],'package_target'=>[1,'target,status']],
+        'fm2_address_import_cache'=>['PRIMARY'=>[0,'entry_id'],'one_inflight'=>[0,'lock_key'],'request_time'=>[1,'request_hash,captured_at_utc']],
+        'fm2_address_import_attempts'=>['PRIMARY'=>[0,'attempt_id'],'package_attempt'=>[0,'package_id,attempt_no'],'request_attempt'=>[1,'request_hash,created_at_utc']],
+        'fm2_address_import_objects'=>['PRIMARY'=>[0,'source_identity_hash'],'import_object'=>[0,'object_id'],'import_reg'=>[1,'registration_number'],'import_unom'=>[1,'unom']],
+        'fm2_address_import_operations'=>['PRIMARY'=>[0,'operation_id'],'operation_package'=>[1,'package_id']],
+        'fm2_address_import_ids'=>['PRIMARY'=>[0,'allocation_id'],'allocated_object'=>[0,'object_id']],
+        'fm2_address_import_payload_chunks'=>['PRIMARY'=>[0,'package_id,generation_id,kind,ordinal']],
+    ];
+    private const CHECKS = ['fm2_address_import_packages'=>['json_validsource_json','json_validreport_json'],'fm2_address_import_cache'=>['json_validrequest_json','json_validresponse_json'],'fm2_address_import_objects'=>['json_validsource_json'],'fm2_address_import_operations'=>['json_validoutcome_json'],'fm2_address_import_payload_chunks'=>['json_validpayload_json','octet_lengthpayload_json<=4194304','payload_sha256=sha2payload_json,256',"json_typepayload_json='array'",'item_countbetween1and128','json_lengthpayload_json=item_count']];
+
+    public static function apply(\mysqli $db,string $prefix):array
+    {
+        self::validPrefix($prefix);
+        foreach(array_keys(self::DDL) as $name) if(self::exists($db,$prefix.$name)) self::assertTable($db,$prefix,$name);
+        $created=[];
+        foreach(self::DDL as $name=>$ddl){$table=$prefix.$name;if(self::exists($db,$table))continue;$args=$name==='fm2_address_import_payload_chunks'?[$table,'fk_ari_'.substr(hash('sha256',$table),0,24),$prefix.'fm2_address_import_packages']:(substr_count($ddl,'%s')===2?[$table,$prefix.'fm2_address_import_packages']:[$table]);$db->query(vsprintf($ddl,$args));$created[]=$name;}
+        $db->query("INSERT IGNORE INTO `{$prefix}fm2_address_import_ids`(allocation_id,object_id) SELECT id,id FROM `{$prefix}fm_maintable`");
+        self::assertCompatible($db,$prefix);
+        return ['applied'=>$created!==[],'schemaVersion'=>40,'tablesCreated'=>$created];
+    }
+    public static function assertCompatible(\mysqli $db,string $prefix):void{self::validPrefix($prefix);foreach(array_keys(self::DDL)as$name)self::assertTable($db,$prefix,$name);}
+    private static function assertTable(\mysqli$db,string$prefix,string$name):void
+    {
+        $table=$prefix.$name;$escaped=$db->real_escape_string($table);$properties=$db->query("SELECT ENGINE,TABLE_COLLATION FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='$escaped'")->fetch_assoc();
+        if(!$properties||$properties['ENGINE']!=='InnoDB'||$properties['TABLE_COLLATION']!=='utf8mb4_bin')throw new \RuntimeException('Incompatible address import table.');
+        $rows=$db->query("SELECT COLUMN_NAME,COLUMN_TYPE,IS_NULLABLE,COLUMN_DEFAULT,EXTRA,CHARACTER_SET_NAME,COLLATION_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='$escaped' ORDER BY ORDINAL_POSITION")->fetch_all(MYSQLI_ASSOC);$actual=[];
+        foreach($rows as$r){$default=in_array($r['COLUMN_DEFAULT'],[null,'NULL'],true)?null:(string)$r['COLUMN_DEFAULT'];$actual[]=[(string)$r['COLUMN_NAME'],(string)$r['COLUMN_TYPE'],(string)$r['IS_NULLABLE'],$default,(string)$r['EXTRA']];if($r['CHARACTER_SET_NAME']!==null&&$r['COLLATION_NAME']!=='utf8mb4_bin')throw new \RuntimeException('Incompatible address import collation.');}
+        if($actual!==self::COLUMNS[$name])throw new \RuntimeException('Incompatible address import columns.');
+        $indexRows=$db->query("SELECT INDEX_NAME,NON_UNIQUE,SEQ_IN_INDEX,COLUMN_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='$escaped' ORDER BY BINARY INDEX_NAME,SEQ_IN_INDEX")->fetch_all(MYSQLI_ASSOC);$indexes=[];
+        foreach($indexRows as$r){$n=(string)$r['INDEX_NAME'];$indexes[$n]??=[(int)$r['NON_UNIQUE'],''];$indexes[$n][1].=($indexes[$n][1]===''?'':',').$r['COLUMN_NAME'];}ksort($indexes,SORT_STRING);$expected=self::INDEXES[$name];ksort($expected,SORT_STRING);if($indexes!==$expected)throw new \RuntimeException('Incompatible address import indexes.');
+        $foreign=$db->query("SELECT k.COLUMN_NAME,k.REFERENCED_TABLE_NAME,k.REFERENCED_COLUMN_NAME,r.UPDATE_RULE,r.DELETE_RULE FROM information_schema.KEY_COLUMN_USAGE k JOIN information_schema.REFERENTIAL_CONSTRAINTS r ON r.CONSTRAINT_SCHEMA=k.CONSTRAINT_SCHEMA AND r.CONSTRAINT_NAME=k.CONSTRAINT_NAME AND r.TABLE_NAME=k.TABLE_NAME WHERE k.CONSTRAINT_SCHEMA=DATABASE() AND k.TABLE_NAME='$escaped' ORDER BY BINARY k.CONSTRAINT_NAME,k.ORDINAL_POSITION")->fetch_all(MYSQLI_ASSOC);$expectedForeign=in_array($name,['fm2_address_import_attempts','fm2_address_import_operations','fm2_address_import_payload_chunks'],true)?[['package_id',$prefix.'fm2_address_import_packages','package_id','RESTRICT','RESTRICT']]:[];$actualForeign=array_map(fn($r)=>array_values($r),$foreign);if($actualForeign!==$expectedForeign)throw new \RuntimeException('Incompatible address import foreign keys.');
+        $checkRows=$db->query("SELECT CHECK_CLAUSE FROM information_schema.CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME='$escaped'")->fetch_all(MYSQLI_ASSOC);$checks=array_map(static fn(array$r):string=>strtolower((string)preg_replace('/[\\s`()]/','',(string)$r['CHECK_CLAUSE'])),$checkRows);sort($checks,SORT_STRING);$expected=self::CHECKS[$name]??[];sort($expected,SORT_STRING);if($checks!==$expected)throw new \RuntimeException('Incompatible address import checks.');
+    }
+    private static function exists(\mysqli$db,string$table):bool{return(bool)$db->query("SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='".$db->real_escape_string($table)."'")->fetch_column();}
+    private static function validPrefix(string$p):void{if(strlen($p)>28||preg_match('/^[A-Za-z0-9_]*$/D',$p)!==1)throw new \InvalidArgumentException();}
+}

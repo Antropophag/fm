@@ -13,7 +13,18 @@ final class ObjectDetailsFieldRegistry
         'paired'=>['label'=>'Спаренный лифт','type'=>'boolean'],
         'comment'=>['label'=>'Комментарий','type'=>'comment'],
     ];
+    private const IMPORT_DEFINITIONS=[
+        'year'=>['label'=>'Год программы'],'unom'=>['label'=>'UNOM'],'sourceArea'=>['label'=>'Округ источника'],'sourceDistrict'=>['label'=>'Район источника'],
+        'existingFloors'=>['label'=>'Существующая этажность'],'existingWeight'=>['label'=>'Существующая грузоподъёмность'],
+        'existingPitType'=>['label'=>'Существующий тип шахты'],'existingPitMaterial'=>['label'=>'Существующий материал шахты'],
+        'existingCabinDoor'=>['label'=>'Существующие двери кабины'],'existingShaftDoor'=>['label'=>'Существующие двери шахты'],'existingSpeed'=>['label'=>'Существующая скорость'],
+        'cabinDoor'=>['label'=>'Двери кабины'],'shaftDoor'=>['label'=>'Двери шахты'],'frequencyDoor'=>['label'=>'Частотник дверей'],'frequencyMain'=>['label'=>'Частотник главного привода'],
+        'designPeriodRaw'=>['label'=>'Период проектирования'],'installationDays'=>['label'=>'Длительность монтажа'],'equipmentRequestDate'=>['label'=>'Дата заявки оборудования'],
+        'plannedStartDate'=>['label'=>'Плановое начало'],'plannedFinishDate'=>['label'=>'Плановое завершение'],'designCost'=>['label'=>'Стоимость проектирования'],
+        'replacementCost'=>['label'=>'Стоимость замены'],'discountedDesignCost'=>['label'=>'Стоимость проектирования после снижения'],'discountedReplacementCost'=>['label'=>'Стоимость замены после снижения'],
+    ];
     public function definitions():array{return self::DEFINITIONS;}
+    public function importDefinitions():array{return self::DEFINITIONS+self::IMPORT_DEFINITIONS;}
     public function normalizePatch(array $patch):array
     {
         if($patch===[])throw new \InvalidArgumentException('Empty patch.');$out=[];
@@ -48,4 +59,5 @@ final class ObjectDetailsFieldRegistry
         return$value;
     }
     public function snapshot(string$field,mixed$value,bool$validated=true):array{$d=self::DEFINITIONS[$field]??throw new \InvalidArgumentException();$display=$value===null?null:($d['type']==='reference'?($validated?ObjectDetailsReferenceCatalogue::display($field,(string)$value):(ObjectDetailsReferenceCatalogue::options($field)[(string)$value]??(string)$value)):(is_bool($value)?($value?'Да':'Нет'):(string)$value));return['value'=>$value,'raw'=>$value,'display'=>$display,'unit'=>$d['unit']??($field==='weight'?'кг':null),'referenceLabel'=>$d['type']==='reference'?$display:null];}
+    public function snapshotImport(string$field,mixed$value):array{$d=$this->importDefinitions()[$field]??throw new \InvalidArgumentException();if(isset(self::DEFINITIONS[$field]))return$this->snapshot($field,$value,false);return['value'=>$value,'raw'=>$value,'display'=>$value===null?null:(is_bool($value)?($value?'Да':'Нет'):(string)$value),'unit'=>in_array($field,['weight','existingWeight'],true)?'кг':null,'referenceLabel'=>null];}
 }

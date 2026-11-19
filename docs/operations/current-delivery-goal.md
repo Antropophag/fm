@@ -1,3 +1,71 @@
+# Адресный CLI-импортёр: final review пройден — 20.11.2026
+
+Выделенный worktree address-register-import: corrective Gate3v8/v10/v12/v13/v14
+и независимый final code/architecture reviewv2 APPROVED. Frozen sourcee8463fe:
+10/10 mappedGREEN,6/6 adjacentGREEN, полный2668/667 capacity/restore/replay и
+19994-object boundary при256MiB/16MiB. Prefix25/frontier113/60 проверены.
+Следующий шаг — corporate-identity commit/PR и полный exact-source GitHubCI;
+CI на момент этой записи pending. Source/PR/CI читать через harness/PR.
+Реальных clean/address0, разрешения на расходы нет, FIAS UNKNOWN. Merge/main
+push/deploy/dev-prod imports не выполнять. История ниже сохранена.
+
+---
+
+# Текущий этап адресного импорта — 19.11.2026
+
+В выделенном address-register-import worktree продолжается поручение владельца
+довести CLI до проверенного состояния. Streaming/chunks correction прошла Gate3v8
+и полный synthetic capacity/restore baseline; input-boundary delta — Gate3v10.
+Бесплатный аудит исходного файла выявил293 общие пары UNOM+подъезд с разными
+регномерами. Это604 самостоятельных лифта, а не дубли полного identity.
+Gate3v12 подтвердил отдельный identity regression без отмены конфликтных guards;
+отдельный executor исправил лишнюю location uniqueness. Gate3v13 и отдельная
+реализация согласовали parser/catalogue normalization. Реальный исходник прошёл
+локальный zero-budget preview до PAID_CALLS_NOT_ALLOWED без provider/apply.
+Gate3v14 подтвердил коррекцию canonical prefix25 и точные v40/frontier113
+oracles. Текущий шаг: separate schema fix,16 adjacent checks, затем основной
+полный verification-input, frozen checks, независимый final review и CI.
+История и actual authors — в [delivery record](address-register-import-delivery-20261118.md).
+Source/PR/CI читать через harness state. Реальных clean/address запросов0;
+разрешения на расходы нет. Merge/main push/deploy/dev-prod imports не выполнять.
+
+---
+
+# Коррекция текущей ветки — ёмкость адресного импорта, 19.11.2026
+
+В `fmonitor-2-address-register-import` final review v1 вернул CHANGES_REQUESTED:
+COMMIT_OUTCOME_UNKNOWN должен иметь CLI exit75; пакет2668/667 падает при256 MiB
+и затем превышает MariaDB packet16 MiB. Малые10 tests/architecture GREEN не
+означают готовность загрузки. Root уточнил contract/tests: ограниченные streams,
+неизменяемые payload chunks (седьмое семейство v40, frontier113/60), полный report,
+реальный размер/верхняя граница/restore и точный commit-loss CLI regression.
+Повышение лимитов и усечение отчётов не принимаются. Дополнительно failed apply
+должен показывать ноль опубликованных изменений. Исправление реализации — после
+независимого corrective Gate3, отдельными sol/low executors; следующий final/CI
+обязателен. Реальные ДаДата/dev/prod import/deploy по-прежнему запрещены до
+соответствующих отдельных разрешений. История предыдущего этапа ниже сохранена.
+
+---
+
+# Текущая задача этой ветки — повторяемый импорт адресного перечня, 18.11.2026
+
+Владелец поручил реализовать согласованный CLI-инструмент импорта XLSX в отдельном
+worktree `fmonitor-2-address-register-import`, branch `codex/address-register-import`,
+base `08ca8b18`. Контракт `ADDRESS-REGISTER-IMPORT-001`, lifecycle
+`openspec/changes/address-register-import/`. Root — спецификация и тесты;
+отдельные gpt-5.6-sol/low executors — реализация, независимые Gate 3 и final review.
+Gate 3 v3 APPROVED; дополнительные regression assertions после аудита реализации
+требуют независимого delta review. Реализация и focused проверки продолжаются.
+
+ДаДата clean/address выбрана для инструмента. Реальные запросы запрещены до
+отдельного подтверждения владельцем разрешения Ильи; пока только fake provider.
+Dev/prod import, merge/main push и deployment не выполнять. Локально только
+bounded checks на task-owned disposable DB; полный exact-source CI — GitHub.
+Исторические разрешения других поставок ниже на эту ветку не переносятся.
+Текущие source/PR/CI читать через harness state; private evidence вне Git.
+
+---
+
 # Текущая задача — GitLab Runner для обновления production, 18.11.2026
 
 Владелец передал настройку Ильяса: выделенный Runner `web-03` для FM,
