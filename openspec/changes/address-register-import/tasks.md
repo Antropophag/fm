@@ -92,3 +92,49 @@ Yii dependency correction: existing real package e2e GREEN; independent final
 delta reviewv3 APPROVED, production scope only deploy/yii2/Dockerfile. Corrective
 commit and new full exact-sourceCI follow; first run failure is retained, not
 relabelledGREEN. Importer code/tests and all prior acceptance proofs unchanged.
+
+## 7. CI-duration and refresh corrective slice
+
+- [x] 7.1 Root collect complete CI44632946488 failure inventory, isolate lookup
+  scaling with a short public probe, and write bounded-work/freshness/refresh regressions.
+- [x] 7.2 Independent Gate3 approve the complete correction before production edits.
+- [x] 7.3 Separate store/application executors implement requested-only fresh lookup
+  snapshots and explicit fresh-cache refresh, preserving apply/live semantics.
+- [ ] 7.4 Run focused full importer/capacity and adjacent checks, obtain final
+  independent approval, commit/push and complete exact-source full GitHubCI.
+
+Second CI: all categories except integration2 completed GREEN; integration2 hit
+45minute job cap after capacityGREEN1711.971s, leaving later integration tail
+incomplete. No REGRESSION_FAILURE. verify and synthetic Quality Graph summary
+failed downstream. Complete inventory inspected; no blind same-source retry.
+
+Gate3v16 requested same-clock cache proof. v17 candidate adds exact immutable
+entry_version metadata (no AI/frontier change), max-old-UUID same-clock payload
+checks, signed transfer ordering and late atomic import rollback. All production
+remains unchanged pending independent approval.
+
+Gate3v17 APPROVED with no findings. Store/application sol/low executors now own
+the reviewed implementation files; root owns all spec/test changes. Full frozen
+verification and independent final approval remain pending for this correction.
+
+Gate17 implementation focused closure: identity/concurrency/schema GREEN; economy
+required owned-inflight staleness guard correction, then GREEN. Additional bounded
+public probe exposed exhausted explicit retry budget erasing durable unknown; root
+adds paired uncached/fresh-cache regression before that correction. No paid calls.
+
+Gate3v18 requested direct durable-claim proof; v19 candidate preserves full claim
+bytes/version count through denials and completes the identical entry/version on
+valid retry, for both uncached and fresh-cache unknown outcomes.
+
+Gate3v19 APPROVED; separate application executor now returns transient exhausted
+retry rejection without deleting the unknown claim or replacing its durable report.
+Full paired economy test and tight public unknown-budget probe GREEN. Candidate
+now freezes for original10/capacity/adjacent checks and independent final review.
+
+Final corrective source7f1a9de9: original10/10 and adjacent6/6GREEN, full
+capacity/restore246.147s under unchanged256MiB/16MiB bounds. Independent final
+code/architecture reviewv4 APPROVED without findings, including lookup, causal
+cache versions, unknown-budget retention and SQL ownership correction. Only
+factual metadata added after evidence; code/tests remain byte-identical. Tasks
+4.4/6.4/7.4 await correction commit and full exact-sourceCI. Paid/live acceptance
+remains unperformed; no merge/main push/deployment/dev-prod import authorized.

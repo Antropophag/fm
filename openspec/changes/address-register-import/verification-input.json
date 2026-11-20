@@ -49,7 +49,8 @@
     "app/InstallationProcess/MariaDbAddressRegisterImportPayloads.php",
     "app/InstallationProcess/AddressRegisterPayloadWriter.php",
     "app/InstallationProcess/AddressRegisterEvidenceReader.php",
-    "app/InstallationProcess/AddressRegisterEvidenceSpool.php"
+    "app/InstallationProcess/AddressRegisterEvidenceSpool.php",
+    "app/InstallationProcess/AddressRegisterIdentityLookup.php"
   ],
   "acceptances": [
     {

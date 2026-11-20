@@ -1,3 +1,65 @@
+# Адресный импортёр: финальная коррекция одобрена — 20.11.2026
+
+Frozen source7f1a9de9: original10/10 и adjacent6/6 GREEN; полный capacity/restore
+246.147s при256MiB/16MiB против прежних1368.364s. Gate3v17/v19 и независимый
+final code/architecture reviewv4 APPROVED без findings. SQL остаётся в Store;
+lookup, causal cache versions и durable unknown recovery проверены. Следующий
+шаг — correction commit/push в PR307 и один полный exact-source GitHubCI.
+До его завершения общийCI не GREEN. Paid clean/address0, FIAS UNKNOWN;
+merge/main push/deploy/dev-prod imports запрещены. История ниже сохранена.
+
+---
+
+# Заключительная проверка после SQL ownership fix — 20.11.2026
+
+Candidatec64eafef прошёл10/10 с capacity/restore280.942s (прежде1368.364s),
+но architecture выявил SQL в helper. Separate executor перенёс тот же SQL/keyset
+в MariaDB Store; helper теперь pure spool/index, baseline не менялся. Новый
+source заморожен для architecture/adjacent, full10, independent final и fullCI.
+Gate3v17/v19 APPROVED; paid/live/merge/deploy запреты сохраняются. История ниже.
+
+---
+
+# Финальная проверка lookup/cache/recovery correction — 20.11.2026
+
+Gate3v17 иv19 APPROVED. Separate store/application executors завершили bounded
+identity lookup, causal cache entry_version и сохранение unknown claim при отказе
+retry budget. Focused schema/identity/concurrency/economy GREEN; последний budget
+probe не повторяет provider без retryUnknown. Candidate заморожен для original10
+с capacity/restore, architecture/adjacent, independent final review и нового CI.
+PR307/head99232d9c — опубликованная предыдущая версия; новый WIP ещё не опубликован.
+Реальных clean/address0; paid/live/merge/deploy запреты остаются. История ниже.
+
+---
+
+# Unknown outcome после отказа бюджета — 20.11.2026
+
+Gate3v17 реализован отдельными executors; lookup/concurrency/schema GREEN, economy
+GREEN после owned-inflight stale-guard correction. Cost probe устранён:0 fullscan
+reads вместо107040 для20/2674. Root подтвердил дополнительный budget edge:
+исчерпанный retry стирает unknown, следующий resume без retryUnknown может принять
+старый cache или повторить запрос. Парный regression uncached/fresh-cache и
+independent Gate3 до correction; затем full10/capacity/architecture/final/CI.
+PR307/head99232d9c остаётся последним опубликованным; новый WIP не опубликован.
+Paid/live/merge/deploy запрещены; история ниже сохранена.
+
+---
+
+# Коррекция стоимости lookup и refresh — 20.11.2026
+
+PR307/head99232d9c: второй CI44632946488 отменил integration2 по45минутному
+лимиту после capacityGREEN1711.971s; хвост integration не завершён. Остальные
+категории GREEN. Полный inventory разобран: regression failures0, aggregate
+verify/Quality Graph downstream failures. Root воспроизвёл O(source*catalog)
+identity scans коротким public preview probe и пишет cost/freshness regressions.
+Также подтверждён no-op explicit refresh при свежем кэше. Gate3v16 запросил
+same-clock proof; candidatev17 добавляет immutable entry_version в cache v40
+без изменения frontier113/60. Gate3v17 APPROVED; отдельные store/application
+executors реализуют согласованный delta, затем focused/final/новый exact CI.
+Лимиты/coverage не повышать/не сокращать. Paid/live/merge/deploy запреты сохраняются.
+
+---
+
 # CI-коррекция Yii image — 20.11.2026
 
 PR307 / commit06e73000: полный CI44626585565 завершён. Обе integration shards,

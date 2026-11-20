@@ -214,3 +214,21 @@ CLI SHALL выдавать русскую сводку и CSV/JSON с идент
 #### Scenario: Неопределённый commit в CLI
 - **WHEN** сервер зафиксировал транзакцию, но соединение утрачено до подтверждения и текущая сессия не может доказать результат
 - **THEN** CLI возвращает unknown/COMMIT_OUTCOME_UNKNOWN и exit75, не повторяет mutation; новый вызов с тем же operation ID читает durable outcome
+
+### Requirement: Ограниченная стоимость поиска identity и порядок версий кэша
+
+Подготовка SHALL выполнять read-only identity lookup с работой, аддитивной
+размеру каталога и источника, через ограниченные страницы и private spools.
+Предварительная и post-provider фазы SHALL иметь свежие независимые lookup views;
+apply SHALL перепроверять текущую identity и ревизии в своей транзакции.
+
+#### Scenario: Конкурентное изменение после preview
+- **WHEN** после preview появляется конфликтующая identity или ручное изменение
+- **THEN** apply отклоняет пакет без опубликованных изменений и без provider calls
+
+#### Scenario: Явный refresh при том же времени
+- **WHEN** разрешённый refresh получает новый ответ с тем же captured_at, что старый
+- **THEN** новая immutable entry_version определяет новую версию независимо от UUID
+- **AND** subsequent offline preview, competitor resume и signed transfer используют
+  новый payload без повторной оплаты; старые evidence rows сохраняются
+- **AND** positive version/unique per-request order/no-AI schema проверяется строго

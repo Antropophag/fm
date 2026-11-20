@@ -213,3 +213,97 @@ libzip-dev and PHPzip in deploy/yii2/Dockerfile; importer code/tests byte-identi
 First CI's complete failure inventory is resolved locally; the correction commit
 still requires a fresh full exact-source GitHub run. No local full suite, live
 provider call, merge or deployment occurred.
+
+## Second CI and measured performance correction — 20.11.2026
+
+Commit99232d9c/run44632946488: corrected e2e, unit, fast, governance, integration1
+GREEN. Integration2 canceled at45minute limit; importer capacity itself passed
+1711.971s, later runtime recovery tail interrupted. Complete failed-job inventory
+is integration2, downstream verify, and synthetic Quality Graph summary (zero
+steps/no log, output directs to job summaries). Full available logs3.28MB contain
+zero REGRESSION_FAILURE. This is incompleteCI, notGREEN.
+
+Root used diagnosing-bugs: public20-row preview with2674 existing unrelated
+objects produces107040 full-scan reads;1/2 rows produce5352/10704, empty-catalog20
+produces80. This isolates repeated identity catalog scans without backup/render.
+Root regressions preserve tombstones, same-owner freshness, post-provider manual
+changes and apply-time native collisions, then assert additive handler read work.
+They reach intendedRED1166/322041/644041 after all semantic assertions.
+
+Explicit refresh of fresh cache was independently found to discard its claim and
+reuse old evidence without spending. New economy and held-provider worker tests
+reproduce expectedRED; no actual paid requests. Corrective Gate3v16 precedes any
+production changes. Store owns bounded lookup/spools; application owns fresh phase
+usage and refresh entry-version distinction. Apply transaction/schema unchanged.
+
+Gate3v16 CHANGES_REQUESTED: same-clock cache ordering was not covered by +1second
+fixtures. Root rebuilt grouped matrix: same captured_at, maximum old UUID, changed
+provider payload, offline/resume/signed-transfer correctness; version schema/drift
+and late atomic import rollback. New immutable entry_version metadata keeps
+v40 frontier113/60 and true timestamps, no old-row mutation. Lookup correction
+remains read-only; only cache metadata schema changes for deterministic ordering.
+No production edits occurred before revised Gate3.
+
+Gate3v17 APPROVED without findings; exact package20261120T000612Z-46fb4571c9
+contains4 truthfulINTENDED_RED. Separate store executor owns Store/IdentityLookup/
+Schema; application executor owns Application only. Root retains spec/test authorship.
+No full local suite, paid calls or live mutations; final current-source checks pending.
+
+Joint Gate17 checks: identity/concurrency/schema GREEN; existing economy retry
+initially hit ADDRESS_EVIDENCE_STALE for a recovered inflight claim. Separate app
+executor excluded owned claims from completed-evidence staleness; economy then
+GREEN. SQL work probe now has0 full-scan reads and16188 total indexed reads for
+20/2674 versus321156 prior, while preserving ready/one fake call.
+
+A further tight public probe confirms exhausted explicit retry budget returned
+blocked then persisted that over unknown; a later budget-only resume could reuse
+old evidence (or retry an uncached unknown) without retryUnknown. Root authored
+paired regression requiring transient budget rejection and preserved durable
+unknown/report/claim. Correction waits for independent delta Gate3.
+
+Gate3v18 CHANGES_REQUESTED: report/no-call assertions did not independently prove
+claim retention. Root added full pending-row snapshots and per-request version
+counts across both denied resumes, then exact same entry_id/entry_version completion
+and cleared locks on valid retry for both uncached and fresh-cache paths.
+Budget production fix remains unimplemented until revised Gate3.
+
+Gate3v19 APPROVED; separate application executor implemented only the reviewed
+reservation-denial transition. Expanded economyGREEN, tight probe confirms
+unknown→transient budget block→unknown without retryUnknown, providercalls remain2.
+Same entry/version is retained and completed by later permitted recovery. All
+production corrections now freeze for full original mapped10/capacity and adjacent
+verification. No memory/packet/CI-timeout increase or coverage reduction.
+
+Frozen candidatec64eafef: original10/10GREEN, full capacity/restore280.942s versus
+1368.364s earlier under identical256MiB/16MiB bounds. Actual source zero-budget
+preflight2668/4666/errors0/667estimatedrequests/provider0/applyfalse unchanged.
+Adjacent5GREEN; architecture solefailure is SQL ownership in IdentityLookup helper.
+Corrective boundary refactor moves exact keyset SQL into existing MariaDB Store
+and keeps lookup helper a pure spool/index; no baseline exception or behavior
+change. All frozen runs completed before that correction. Fresh evidence follows.
+
+Separate store executor completed SQL ownership refactor in Store/IdentityLookup
+only; no schema/test/baseline changes. Pure helper consumes Store's bounded
+candidate iterable synchronously. Syntax/diff checks pass; new exact-source
+architecture/adjacent and full10 checks follow before final review.
+
+## Final corrective verification and independent review — 20.11.2026
+
+Final-v6 source7f1a9de93d203b9cbdb34851b7d681369f85b973a7de8a971b3f082cfe7314ff,
+executable62abb816f9e198c11b03834f6b007fe7e84e854fac08e878b41dd86b419a3758:
+original10/10GREEN and adjacent6/6GREEN. Gate5 package20261120T005944Z-1e8f2c8a13
+retains all exact records. Complete capacity/restore246.147s versus1368.364s,
+with unchanged256MiB/16MiB bounds,2668/667 flow and19994-object boundary.
+Independent final code/architecture reviewv4 APPROVED, no findings; F1/F2/R1
+remain closed and lookup/cache-version/unknown-budget/SQL ownership deltas approved.
+Root authored specifications/tests; separate sol/low application and store executors
+implemented production corrections; import_gate3_v8_review independently reviewed.
+Gate3v16/v18 returns exposed missing same-clock and direct claim-retention oracles;
+v17/v19 approved their complete replacements. Checks repeated only after concrete
+behavior/schema/ownership changes; no full local suite or blind same-source CI retry.
+
+Only this record, current goal, OpenSpec tasks and final review were updated after
+frozen evidence. Root retained all other file SHA-256 digests and verifies them
+before commit. New correction commit/push and full exact-source GitHubCI remain
+pending; both prior CI outcomes are retained and not relabelledGREEN. Real paid
+calls0, FIAS/live acceptanceUNKNOWN, no merge/deployment/dev-prod import.

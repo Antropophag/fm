@@ -33,6 +33,44 @@ try{
   foreach([false,true]as$overwrite)assertSameValue('rejected',$f->preview([$r1],$overwrite)['status'],'nonempty manual identity conflict blocks '.$field);
   $revision=(int)$f->db->query("SELECT revision FROM {$p}fm2_object_detail_edits WHERE object_id=$identityId")->fetch_column();$requestId='88888888-8888-4888-8888-'.str_pad((string)$request++,12,'0',STR_PAD_LEFT);assertSameValue('applied',$editor->edit(new FMonitor2\InstallationProcess\ObjectDetailsEditCommand($requestId,$identityId,18,$revision,[$field=>$original]))['status'],'restore identity through editor');
  }
+ // Requested-only lookup must preserve manual tombstones and source bindings.
+ $boundId=$f->id('REORDER-2');$revision=(int)$f->db->query("SELECT revision FROM {$p}fm2_object_detail_edits WHERE object_id=$boundId")->fetch_column();
+ assertSameValue('applied',$editor->edit(new FMonitor2\InstallationProcess\ObjectDetailsEditCommand('88888888-8888-4888-8888-000000000101',$boundId,18,$revision,['regnumber'=>'']))['status'],'clear bound registration through shared editor');
+ $calls=$f->provider->calls;$cleared=$f->preview([$r2]);assertSameValue(['ready',0],[$cleared['status'],$cleared['summary']['created']],'immutable source binding still resolves manual clear');
+ $regRows=array_values(array_filter(AddressRegisterWorkbookFixture::items($cleared['rows']),static fn($v)=>$v['field']==='regnumber'));assertSameValue([$boundId,'KEPT_EXISTING',null],[$regRows[0]['objectId'],$regRows[0]['action'],$regRows[0]['value']],'fill missing preserves manual registration tombstone');assertSameValue($calls,$f->provider->calls,'bound clear preview stays cached');
+ $revision=(int)$f->db->query("SELECT revision FROM {$p}fm2_object_detail_edits WHERE object_id=$boundId")->fetch_column();assertSameValue('applied',$editor->edit(new FMonitor2\InstallationProcess\ObjectDetailsEditCommand('88888888-8888-4888-8888-000000000102',$boundId,18,$revision,['regnumber'=>'REORDER-2']))['status'],'restore bound registration');
+ // Provider work separates the two read-only phases. A manual change made there
+ // must be seen by preparation, not hidden by the pre-paid validation snapshot.
+ $phaseProvider=new class($f,$editor) implements FMonitor2\InstallationProcess\AddressRegisterAddressProvider {
+  public int $calls=0;
+  public function __construct(private AddressRegisterImportFixture $fixture,private object $editor){}
+  public function clean(string $address):array{
+   $this->calls++;$f=$this->fixture;$revision=(int)$f->db->query("SELECT revision FROM {$f->p}fm2_object_detail_edits WHERE object_id=4512")->fetch_column();
+   assertSameValue('applied',$this->editor->edit(new FMonitor2\InstallationProcess\ObjectDetailsEditCommand('88888888-8888-4888-8888-000000000103',4512,18,$revision,['entrance'=>'9']))['status'],'manual identity changes between lookup phases');
+   return $f->provider->clean($address);
+  }
+ };
+ $phaseOwner=FMonitor2\InstallationProcess\ProductionAddressRegisterImportFactory::create($f->db,$p,$p,'dev',18,$phaseProvider,fn():string=>$f->now,['evidenceSecret'=>$f->secret]);
+ $phaseRow=$row;$phaseRow['G']='г Москва, улица Тестовая, дом 10';$f->write([$phaseRow]);$phase=$phaseOwner->preview($f->path,2027,'TEST-CONTRACT',false,'',['allowPaidCalls'=>true,'maxPaidRequests'=>1]);assertSameValue(1,$phaseProvider->calls,'provider phase actually reached');assertSameValue(['rejected','IDENTITY_CONFLICT'],[$phase['status'],$phase['reasonCode']],'preparation sees post-validation manual identity conflict');
+ $revision=(int)$f->db->query("SELECT revision FROM {$p}fm2_object_detail_edits WHERE object_id=4512")->fetch_column();assertSameValue('applied',$editor->edit(new FMonitor2\InstallationProcess\ObjectDetailsEditCommand('88888888-8888-4888-8888-000000000104',4512,18,$revision,['entrance'=>'1']))['status'],'restore manual entrance');
+ // Apply may never trust a preview lookup: two native identities appear later.
+ $late=AddressRegisterWorkbookFixture::row('LATE-APPLY','94');$late['H']='1';$latePreview=$f->preview([$late]);assertSameValue('ready',$latePreview['status'],'late collision preview ready');
+ $native=$f->db->prepare("INSERT INTO {$p}fm_maintable(id,regnumber,ordadr_address,entrance)VALUES(?,?,?,'1')");foreach([300000,300001]as$id)$native->execute([$id,'LATE-APPLY',$late['G']]);
+ $beforeLate=$f->business();$calls=$f->provider->calls;$lateApply=$f->apply($latePreview,'88888888-8888-4888-8888-000000000105');assertSameValue(['failed','PREVIEW_STALE',0,0,0,0],[$lateApply['status'],$lateApply['reasonCode'],$lateApply['summary']['created'],$lateApply['summary']['updated'],$lateApply['summary']['filled'],$lateApply['summary']['replaced']],'apply resolves current ambiguity and rolls back');assertSameValue($beforeLate,$f->business(),'late conflict preserves all business facts');assertSameValue($calls,$f->provider->calls,'apply performs no provider call');
+ // A deterministic SQL work budget catches per-input full catalog scans without
+ // a wall-clock threshold. The public seam and all normal output remain exercised.
+ $costRows=[];for($i=0;$i<40;$i++){$v=AddressRegisterWorkbookFixture::row('COST-'.$i,'92');$v['D']=(string)(900000+$i);$v['H']='1';$costRows[]=$v;}
+ $readWork=static function()use($f):int{$sum=0;foreach($f->db->query("SHOW SESSION STATUS LIKE 'Handler_read%'")->fetch_all(MYSQLI_NUM)as[$key,$value])if(in_array($key,['Handler_read_key','Handler_read_next','Handler_read_rnd','Handler_read_rnd_next'],true))$sum+=(int)$value;return$sum;};
+ $measure=static function(array $rows)use($f,$readWork):array{$f->write($rows);$before=$readWork();$result=$f->owner->preview($f->path,2027,'TEST-CONTRACT',false,'',$f->paid);return[$result,$readWork()-$before];};
+ [$small,$smallWork]=$measure(array_slice($costRows,0,20));assertSameValue(['ready',20,640],[$small['status'],$small['summary']['created'],count($small['rows'])],'small-catalog control completes');unset($small);
+ for($i=0;$i<2674;$i++)$native->execute([100000+$i,$i===0?'COST-0':($i===1?'cost-1':'UNRELATED-'.$i),$costRows[0]['G']]);
+ $catalogCount=(int)$f->db->query("SELECT COUNT(*) FROM {$p}fm_maintable")->fetch_column();$historyCount=(int)$f->db->query("SELECT COUNT(*) FROM {$p}fm2_object_detail_edit_events")->fetch_column();$calls=$f->provider->calls;$attemptCount=(int)$f->db->query("SELECT COUNT(*) FROM {$p}fm2_address_import_attempts")->fetch_column();
+ [$large,$largeWork]=$measure(array_slice($costRows,0,20));assertSameValue(['ready',19,1,640],[$large['status'],$large['summary']['created'],$large['summary']['updated'],count($large['rows'])],'same owner refreshes lookup after catalog change');
+ $costRegistrationRows=[];foreach($large['rows']as$v)if($v['field']==='regnumber')$costRegistrationRows[$v['registrationNumber']]=$v['objectId'];assertSameValue([100000,null],[$costRegistrationRows['COST-0'],$costRegistrationRows['COST-1']],'binary registration equality and new current match preserved');unset($large);
+ [$double,$doubleWork]=$measure($costRows);assertSameValue(['ready',39,1,1280],[$double['status'],$double['summary']['created'],$double['summary']['updated'],count($double['rows'])],'double source output remains complete');unset($double);
+ assertSameValue([$catalogCount,$historyCount,$calls,$attemptCount],[(int)$f->db->query("SELECT COUNT(*) FROM {$p}fm_maintable")->fetch_column(),(int)$f->db->query("SELECT COUNT(*) FROM {$p}fm2_object_detail_edit_events")->fetch_column(),$f->provider->calls,(int)$f->db->query("SELECT COUNT(*) FROM {$p}fm2_address_import_attempts")->fetch_column()],'lookup preparation changes no facts/history/calls/attempts');
  $f->db->query("UPDATE {$p}fm2_pilot_roles SET status=0 WHERE code='fkr_operator'");try{$calls=$f->provider->calls;assertSameValue('AUTHORIZATION_DENIED',$f->preview([$row])['reasonCode'],'disabled role denies');assertSameValue($calls,$f->provider->calls,'role gate before provider');}finally{$f->db->query("UPDATE {$p}fm2_pilot_roles SET status=1 WHERE code='fkr_operator'");}
+ assertSameValue(true,$largeWork<=$smallWork+24000,'INTENDED_RED A04 lookup work must be additive in catalog size, not source times catalog: '.$smallWork.'/'.$largeWork.'/'.$doubleWork);
+ assertSameValue(true,$doubleWork<=$largeWork+2500,'doubling input does not double catalog scan work');
  echo "PASS ADDRESS-REGISTER-IMPORT-001 A04 identity\n";
 }finally{if($f)$f->close();}

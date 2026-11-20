@@ -1,0 +1,35 @@
+{
+  "change": "address-register-import-lookup-refresh-correction",
+  "planned_paths": [
+    "app/InstallationProcess/AddressRegisterImportApplication.php",
+    "app/InstallationProcess/MariaDbAddressRegisterImportStore.php",
+    "app/InstallationProcess/AddressRegisterIdentityLookup.php",
+    "specs/ADDRESS-REGISTER-IMPORT-001.md",
+    "tests/Support/address_register_import_worker.php",
+    "tests/InstallationProcess/address_register_import_identity_001_test.php",
+    "tests/InstallationProcess/address_register_import_economy_001_test.php",
+    "tests/InstallationProcess/address_register_import_concurrency_001_test.php",
+    "app/InstallationProcess/AddressRegisterImportSchemaMigration.php",
+    "tests/InstallationProcess/address_register_import_schema_001_test.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A04-A12-lookup-refresh",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "public preview/apply/economy plus real concurrent workers, bounded SQLwork and freshness",
+      "tests": [
+        "tests/InstallationProcess/address_register_import_identity_001_test.php",
+        "tests/InstallationProcess/address_register_import_economy_001_test.php",
+        "tests/InstallationProcess/address_register_import_concurrency_001_test.php",
+        "tests/InstallationProcess/address_register_import_schema_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/address_register_import_identity_001_test.php": "INTENDED_RED",
+        "tests/InstallationProcess/address_register_import_economy_001_test.php": "INTENDED_RED",
+        "tests/InstallationProcess/address_register_import_concurrency_001_test.php": "INTENDED_RED",
+        "tests/InstallationProcess/address_register_import_schema_001_test.php": "INTENDED_RED"
+      }
+    }
+  ]
+}

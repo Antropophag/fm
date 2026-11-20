@@ -143,3 +143,86 @@ v39→v40 and a compatible six-table partial v40 family must reach all seven
 families without modifying existing table DDL. Multiple prefixes may coexist in
 one database. Constraint identifiers are implementation details; FK semantics
 remain exact RESTRICT. Repeat apply/assertCompatible perform no rename or repair.
+
+### A04: bounded read-only identity lookup work
+
+Supported package preparation must not rescan the full existing catalog for each
+source object. Each read-only identity phase performs catalog work additive in
+catalog and source size, with bounded pages and requested-match payloads spooled
+outside RAM. Retain only requested keys/offsets and at most two distinct identity
+witnesses per source row in memory; two witnesses mean an ambiguous identity and
+still block the whole package. Effective manual registration/entrance/UNOM, NULL
+tombstones, immutable source registration/hash, exact binary equality and object-ID
+deduplication across match routes retain their existing meaning.
+
+Pre-paid validation and post-provider preparation use separate fresh lookup views.
+Each new preview/resume builds its own view. A manual edit during provider work
+must be visible to preparation; a later native collision must block apply. No
+preview lookup survives into the apply transaction: current find/revision/locking
+and identity validation remain authoritative. No new domain uniqueness rule,
+durable shadow projection, schema change or importer DDL is introduced.
+
+The deterministic public-seam regression compares SQL handler read work for20
+source objects before/after2674 unrelated catalog rows and then40 source objects:
+added catalog work <=24000 handler reads, doubled-source added work <=2500.
+It also asserts complete32-field reports and unchanged business facts/provider
+calls/attempts for cached preparation. Full2668/667 and19994-object capacity,
+restore/replay,256MiB/16MiB and existing concurrency checks remain mandatory.
+
+### A12: explicit refresh of still-fresh evidence
+
+An explicit refresh applies even when an accepted cache entry is within90 days.
+Provider access requires paid permission and a positive remaining durable cap;
+absent a newly completed shared version, budget0 blocks without a provider attempt. One permitted refresh reserves one attempt and creates
+a new immutable evidence version, preserving older rows. Default subsequent
+preview and ready-package resume reuse the new evidence without payment.
+
+A concurrent refresh claim remains single-flight: a competing package pays0 while
+the claim is owned and may resume from the newly completed evidence. When a
+completion appears between initial observation and claim, its different immutable
+entry identity may satisfy that refresh; the same pre-existing entry may not.
+Unknown refresh outcome never silently falls back to older fresh evidence or
+retries; explicit retry permission/reason and cumulative budget remain required.
+
+Same-clock ordering is deterministic. The unpublished v40 cache table adds
+`entry_version BIGINT UNSIGNED NOT NULL` immediately after request_hash, with no
+default and no AUTO_INCREMENT, `CHECK(entry_version > 0)`, and ordered
+`UNIQUE KEY request_version(request_hash,entry_version)`. Existing columns,
+one_inflight unique key, request_time index and JSON checks remain exact. The
+frontier stays113 tables/60 AUTO_INCREMENT. Drift or missing version rejects
+both apply/assertCompatible before creating siblings; no DDL repair.
+
+Entry versions are immutable, monotonically increasing among retained entries
+for each request hash, allocated under a short database+prefix-scoped lock shared
+by provider claims and atomic signed evidence imports. Release the allocator lock
+before provider transport and on every failure; transport still uses one_inflight.
+Cache selection retains inflight priority and orders completed entries by actual
+captured_at then entry_version. No fictitious captured times or edits to old rows.
+Signed export preserves capture/version order for equal-time entries; target import
+assigns local versions in that authenticated order, with no source object IDs.
+A late import fault rolls back the entire version set and releases its lock.
+
+Explicit retry of an unknown refresh also must not reuse the unchanged original
+fresh cache as if the unknown request had been resolved. Same-clock regressions
+pin the old UUID to the largest valid v4 value, change the provider payload, and
+require the new payload in refresh/default/resume/signed-transfer results, one
+reserved refresh attempt, immutable history and zero calls by the competitor.
+
+The held-provider regression also completes a different request hash before the
+first provider is released, proving allocator coordination does not span transport;
+its version sequence starts independently and it reserves exactly one own attempt.
+
+An explicit retry of an unknown provider outcome with no remaining attempt budget
+returns transient blocked/REQUEST_BUDGET_EXCEEDED, retaining paidAttempts and the
+durable unknown package/report/claim. A budget denial is not a provider outcome
+and must not clear uncertainty. Subsequent report and resume without retryUnknown
+remain unknown/PROVIDER_OUTCOME_UNKNOWN even if the caller increases budget with
+a reason. They neither call the provider nor fall back to old fresh evidence.
+A later explicit retry with permission/reason/sufficient cap may recover normally.
+This applies both with and without an older completed cache entry.
+
+The retained unknown claim is the same row, not a reconstructed replacement:
+entry_id, entry_version, lock_owner, lock_key and other pending-row bytes remain
+unchanged across budget denial and budget-only resume; no extra cache version is
+created. A valid explicit retry completes that same entry/version and clears its
+locks. Completed older evidence remains immutable.

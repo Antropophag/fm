@@ -462,7 +462,12 @@ final class AddressRegisterImportApplication
                     );
                 }
             }
-            if ($cache && !$this->fresh($cache) && !$opt["refreshAddresses"]) {
+            if (
+                $cache &&
+                !$ownsClaim &&
+                !$this->fresh($cache) &&
+                !$opt["refreshAddresses"]
+            ) {
                 return $this->finish(
                     $p,
                     "blocked",
@@ -494,7 +499,8 @@ final class AddressRegisterImportApplication
                 if (
                     $completed &&
                     $completed["lock_owner"] === null &&
-                    $this->fresh($completed)
+                    $this->fresh($completed) &&
+                    $this->mayReuseCompletedCache($cache, $completed, $opt["refreshAddresses"])
                 ) {
                     if (
                         !(bool) $completed["accepted"] ||
@@ -526,7 +532,11 @@ final class AddressRegisterImportApplication
             }
             if (!$ownsClaim) {
                     $completed = $this->store->readCompletedCache($hash);
-                if ($completed && $this->fresh($completed)) {
+                if (
+                    $completed &&
+                    $this->fresh($completed) &&
+                    $this->mayReuseCompletedCache($cache, $completed, $opt["refreshAddresses"])
+                ) {
                     $this->store->discardClaim($hash, $id);
                     if (
                         !(bool) $completed["accepted"] ||
@@ -559,6 +569,24 @@ final class AddressRegisterImportApplication
                     $this->now()
                 );
                 if (!$reservation["reserved"]) {
+                    if (
+                        $ownsClaim &&
+                        ($reservation["reasonCode"] ?? null) ===
+                            "REQUEST_BUDGET_EXCEEDED"
+                    ) {
+                        $deniedPaid = (int) ($reservation["paidAttempts"] ?? $paid);
+                        return array_replace($p["report"], [
+                            "status" => "blocked",
+                            "reasonCode" => "REQUEST_BUDGET_EXCEEDED",
+                            "cost" => [
+                                "paidAttempts" => $deniedPaid,
+                                "remainingBudget" => max(
+                                    0,
+                                    (int) ($reservation["remainingBudget"] ?? 0)
+                                ),
+                            ],
+                        ]);
+                    }
                     $this->store->discardClaim($hash, $id);
                     return $this->finish(
                         $p,
@@ -604,7 +632,6 @@ final class AddressRegisterImportApplication
                         $attemptId,
                         $e->outcomeUnknown ? "unknown" : "failed"
                     );
-                    $this->store->discardClaim($hash, $id);
                     if ($e->outcomeUnknown) {
                         return $this->finish(
                             $p,
@@ -615,6 +642,7 @@ final class AddressRegisterImportApplication
                             []
                         );
                     }
+                    $this->store->discardClaim($hash, $id);
                     if (!$e->retryable || $attempts >= 3) {
                         return $this->finish(
                             $p,
@@ -633,7 +661,12 @@ final class AddressRegisterImportApplication
                         )
                     ) {
                         $completed = $this->store->cache($hash);
-                        if ($completed && $completed["lock_owner"] === null && $this->fresh($completed)) {
+                        if (
+                            $completed &&
+                            $completed["lock_owner"] === null &&
+                            $this->fresh($completed) &&
+                            $this->mayReuseCompletedCache($cache, $completed, $opt["refreshAddresses"])
+                        ) {
                             if (
                                 !(bool) $completed["accepted"] ||
                                 !AddressRegisterAddressValidation::validate(
@@ -666,12 +699,15 @@ final class AddressRegisterImportApplication
         $objectWriter = new AddressRegisterPayloadWriter();
         $rowWriter = new AddressRegisterPayloadWriter();
         $summary = $this->summary($parsed);
+        $identityLookup = $this->store->findMany($parsed["objects"]);
+        $ordinal = 0;
         foreach ($parsed["objects"] as $o) {
             $f = $o["fields"];
             $key = $this->sourceIdentityKey($f);
             if (isset($seen[$key])) {
                 $errorWriter->add($this->err($o, "DUPLICATE_SOURCE_OBJECT")); $errorCount++;
                 $errorReason ??= "DUPLICATE_SOURCE_OBJECT";
+                $ordinal++;
                 continue;
             }
             $seen[$key] = 1;
@@ -685,7 +721,8 @@ final class AddressRegisterImportApplication
             $clean = $evidence->get($hash)["response"];
             $f["address"] = $clean["result"];
             $o["fields"] = $f;
-            $matches = $this->store->find($f);
+            $matches = $identityLookup->find($ordinal, $f);
+            $ordinal++;
             if (count($matches) > 1) {
                 $errorWriter->add($this->err($o, "IDENTITY_CONFLICT")); $errorCount++;
                 $errorReason = "IDENTITY_CONFLICT";
@@ -980,21 +1017,26 @@ final class AddressRegisterImportApplication
         $seen = [];
         $seenRegistrationNumbers = [];
         $errors = [];
+        $identityLookup = $this->store->findMany($objects);
+        $ordinal = 0;
         foreach ($objects as $o) {
             $f = $o["fields"];
             $key = $this->sourceIdentityKey($f);
             if (isset($seen[$key])) {
                 $errors[] = $this->err($o, "DUPLICATE_SOURCE_OBJECT");
+                $ordinal++;
                 continue;
             }
             $registrationNumber = (string) $f["regnumber"];
             if (isset($seenRegistrationNumbers[$registrationNumber])) {
                 $errors[] = $this->err($o, "IDENTITY_CONFLICT");
+                $ordinal++;
                 continue;
             }
             $seen[$key] = true;
             $seenRegistrationNumbers[$registrationNumber] = true;
-            $matches = $this->store->find($f);
+            $matches = $identityLookup->find($ordinal, $f);
+            $ordinal++;
             if (count($matches) > 1) {
                 $errors[] = $this->err($o, "IDENTITY_CONFLICT");
                 continue;
@@ -1116,6 +1158,14 @@ final class AddressRegisterImportApplication
         $age = $this->date()->getTimestamp() - $at->getTimestamp();
         return $age >= 0 &&
             $age <= (int) $this->config["cacheTtlDays"] * 86400;
+    }
+    private function mayReuseCompletedCache(?array $initial, array $completed, bool $refresh): bool
+    {
+        if (!$refresh || $initial === null) {
+            return true;
+        }
+        return (int) ($completed["entry_version"] ?? 0) >
+            (int) ($initial["entry_version"] ?? 0);
     }
     private function evidenceTime(string $value): \DateTimeImmutable|false
     {

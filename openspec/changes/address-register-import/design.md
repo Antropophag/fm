@@ -165,3 +165,48 @@ accepted without rename/ALTER. Preflight still validates every existing family
 before creating a missing sibling; a compatible six-table interrupted migration
 can create chunks and complete. Root tests cover two prefixes in one database,
 exact schema, fresh/repeat/recovery and all adjacent current-frontier consumers.
+
+### Read-only identity lookup cost and fresh-cache refresh correction
+
+CI44632946488 exhausted the45minute integration job after capacity itself passed
+in1711.971s. A tight public preview probe isolated O(source*catalog) repeated scans:
+2674 unrelated rows give5352/10704/107040 full-scan reads for1/2/20 source rows.
+The larger regression observes1166/322041/644041 total handler reads for small
+catalog20, populated catalog20, populated catalog40. Backup/restore is not in this
+probe; repeated identity resolution is the measured cause. No limits/coverage rise
+or reduction is accepted as the correction.
+
+Store findMany(sourceObjects) returns a requested-only AddressRegisterIdentityLookup;
+find(ordinal,fields) preserves request identity even when caller skips duplicates.
+Requests and relevant full rows live in private temp spools; memory contains
+domain-separated digest indexes, offsets and <=2 distinct witnesses per input.
+Scan the same left-joined effective/manual/source projection using keyset pages
+<=256; first page must preserve the full existing ID range. Exact comparisons
+verify digest candidates. Prevalidate and preparation each create/discard their
+own lookup; preparation builds after provider work. Apply retains current find,
+locks and revision checks unchanged.
+
+A new freshness regression also exposed explicit refresh being discarded in favor
+of the initially observed fresh cache row. During refresh, completed-cache reuse
+must distinguish a newly completed immutable entry from that initial entry.
+Retain existing default reuse, cap reservation, held-claim single-flight, unknown
+outcome and explicit retry semantics. Root owns all regressions; separate store
+and application executors implement after Gate3v16; independent final review follows.
+
+Gate3v16 found same-clock ordering incomplete: random UUID tie-break can select
+old evidence even after a refresh. The complete v17 correction adds immutable
+per-request entry_version to the still-unpublished v40 cache table, positive CHECK
+and UNIQUE(request_hash,entry_version), no AI/table-count change. Allocation uses
+a short DB+prefix-scoped advisory lock shared by claimCache and the existing atomic
+importCache transaction; release before transport/in finally. Choose completed
+cache by captured_at/entry_version; export same-clock entries in that order so
+signed target import retains causal order with target-local versions. Old UUIDs
+remain opaque IDs, old evidence/timestamps immutable. Same-clock max-old-UUID
+tests and late import rollback prove this across refresh, default, resume and
+transfer. Explicit retryUnknown must force past unchanged old fresh evidence too.
+
+SQL ownership closure: MariaDbAddressRegisterImportStore owns the exact paged
+candidate SQL generator. AddressRegisterIdentityLookup receives source objects
+and an iterable of candidate rows, synchronously builds its immutable spools/index,
+and contains no database connection, prefix, table or SQL knowledge. Semantics,
+256-row bound and public findMany/ordinal lookup interface are unchanged.

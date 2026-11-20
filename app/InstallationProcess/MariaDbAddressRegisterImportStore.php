@@ -67,12 +67,9 @@ final class MariaDbAddressRegisterImportStore
  }
  public function claimCache(string $hash,string $owner,array $request=[]):bool
  {
-     try{
-         $statement=$this->db->prepare("INSERT INTO `{$this->p}fm2_address_import_cache`(entry_id,request_hash,provider,request_json,response_json,response_hash,captured_at_utc,accepted,rules_version,lock_owner,lock_key)VALUES(?,?,'dadata-clean-address',?,'{}',?,UTC_TIMESTAMP(6),0,'ADDRESS-REGISTER-IMPORT-001@2026-11-18',?,?)");
-         $statement->execute([$this->uuid(),$hash,$this->json($request),str_repeat('0',64),$owner,$hash]);return true;
-     }catch(\mysqli_sql_exception){
-         $statement=$this->db->prepare("SELECT lock_owner FROM `{$this->p}fm2_address_import_cache` WHERE lock_key=?");$statement->execute([$hash]);$existing=$statement->get_result()->fetch_column();return is_string($existing)&&hash_equals($existing,$owner);
-     }
+     $lock=$this->cacheAllocatorLock();if(!$this->acquireNamedLock($lock,10))return false;$inserted=false;
+     try{$this->db->begin_transaction();$version=$this->nextCacheVersion($hash);$statement=$this->db->prepare("INSERT INTO `{$this->p}fm2_address_import_cache`(entry_id,request_hash,entry_version,provider,request_json,response_json,response_hash,captured_at_utc,accepted,rules_version,lock_owner,lock_key)VALUES(?,?,?,'dadata-clean-address',?,'{}',?,UTC_TIMESTAMP(6),0,'ADDRESS-REGISTER-IMPORT-001@2026-11-18',?,?)");$statement->execute([$this->uuid(),$hash,$version,$this->json($request),str_repeat('0',64),$owner,$hash]);$this->db->commit();$inserted=true;}catch(\mysqli_sql_exception){try{$this->db->rollback();}catch(\Throwable){}}catch(\Throwable$error){try{$this->db->rollback();}catch(\Throwable){}throw$error;}finally{$this->releaseNamedLock($lock);}
+     if($inserted)return true;$statement=$this->db->prepare("SELECT lock_owner FROM `{$this->p}fm2_address_import_cache` WHERE lock_key=?");$statement->execute([$hash]);$existing=$statement->get_result()->fetch_column();return is_string($existing)&&hash_equals($existing,$owner);
  }
  public function storeCache(string $hash,array $response,bool $accepted,string $now,string $owner):void
  {
@@ -121,16 +118,26 @@ final class MariaDbAddressRegisterImportStore
  }
  public function caches():iterable
  {
-     $hash='';$captured='0000-00-00 00:00:00.000000';$entry='';
-     while(true){$statement=$this->db->prepare("SELECT * FROM `{$this->p}fm2_address_import_cache` WHERE lock_owner IS NULL AND (request_hash>? OR (request_hash=? AND captured_at_utc>?) OR (request_hash=? AND captured_at_utc=? AND entry_id>?)) ORDER BY request_hash,captured_at_utc,entry_id LIMIT 1");$statement->execute([$hash,$hash,$captured,$hash,$captured,$entry]);$row=$statement->get_result()->fetch_assoc();if(!$row)return;$hash=(string)$row['request_hash'];$captured=(string)$row['captured_at_utc'];$entry=(string)$row['entry_id'];$row['request']=json_decode($row['request_json'],true,flags:JSON_THROW_ON_ERROR);$row['response']=json_decode($row['response_json'],true,flags:JSON_THROW_ON_ERROR);yield$row;}
+     $hash='';$captured='0000-00-00 00:00:00.000000';$version='0';
+     while(true){$statement=$this->db->prepare("SELECT * FROM `{$this->p}fm2_address_import_cache` WHERE lock_owner IS NULL AND (request_hash>? OR (request_hash=? AND captured_at_utc>?) OR (request_hash=? AND captured_at_utc=? AND entry_version>?)) ORDER BY request_hash,captured_at_utc,entry_version LIMIT 1");$statement->execute([$hash,$hash,$captured,$hash,$captured,$version]);$row=$statement->get_result()->fetch_assoc();if(!$row)return;$hash=(string)$row['request_hash'];$captured=(string)$row['captured_at_utc'];$version=(string)$row['entry_version'];$row['request']=json_decode($row['request_json'],true,flags:JSON_THROW_ON_ERROR);$row['response']=json_decode($row['response_json'],true,flags:JSON_THROW_ON_ERROR);yield$row;}
  }
  public function importCache(iterable $entries):void
  {
-     $this->db->begin_transaction();
-     try{
-         foreach($entries as$entry){$json=$this->json($entry['response']);$statement=$this->db->prepare("INSERT INTO `{$this->p}fm2_address_import_cache`(entry_id,request_hash,provider,request_json,response_json,response_hash,captured_at_utc,accepted,rules_version,lock_owner,lock_key)VALUES(?,?,'dadata-clean-address',?,?,?,?,1,'ADDRESS-REGISTER-IMPORT-001@2026-11-18',NULL,NULL)");$statement->execute([$this->uuid(),$entry['requestHash'],$this->json($entry['request']),$json,hash('sha256',$json),$entry['capturedAt']]);}
-         $this->db->commit();
-     }catch(\Throwable$error){$this->db->rollback();throw$error;}
+     $lock=$this->cacheAllocatorLock();if(!$this->acquireNamedLock($lock,10))throw new \RuntimeException('CACHE_BUSY');
+     try{$this->db->begin_transaction();foreach($entries as$entry){$hash=(string)$entry['requestHash'];$version=$this->nextCacheVersion($hash);$json=$this->json($entry['response']);$statement=$this->db->prepare("INSERT INTO `{$this->p}fm2_address_import_cache`(entry_id,request_hash,entry_version,provider,request_json,response_json,response_hash,captured_at_utc,accepted,rules_version,lock_owner,lock_key)VALUES(?,?,?,'dadata-clean-address',?,?,?,?,1,'ADDRESS-REGISTER-IMPORT-001@2026-11-18',NULL,NULL)");$statement->execute([$this->uuid(),$hash,$version,$this->json($entry['request']),$json,hash('sha256',$json),$entry['capturedAt']]);}$this->db->commit();}catch(\Throwable$error){try{$this->db->rollback();}catch(\Throwable){}throw$error;}finally{$this->releaseNamedLock($lock);}
+ }
+ public function findMany(iterable $sourceObjects):AddressRegisterIdentityLookup
+ {
+     return AddressRegisterIdentityLookup::create($sourceObjects,$this->identityCandidateRows());
+ }
+ private function identityCandidateRows():iterable
+ {
+     $effectiveRegistration="CASE WHEN JSON_CONTAINS_PATH(e.values_json,'one','$.regnumber') THEN NULLIF(JSON_UNQUOTE(JSON_EXTRACT(e.values_json,'$.regnumber')),'null') ELSE m.regnumber END";
+     $effectiveEntrance="CASE WHEN JSON_CONTAINS_PATH(e.values_json,'one','$.entrance') THEN NULLIF(JSON_UNQUOTE(JSON_EXTRACT(e.values_json,'$.entrance')),'null') ELSE m.entrance END";
+     $effectiveUnom="CASE WHEN JSON_CONTAINS_PATH(e.values_json,'one','$.unom') THEN NULLIF(JSON_UNQUOTE(JSON_EXTRACT(e.values_json,'$.unom')),'null') ELSE o.unom END";
+     $select="SELECT m.id,$effectiveRegistration regnumber,m.ordadr_address,$effectiveEntrance entrance,$effectiveUnom unom,o.house_fias_id,o.registration_number source_registration,o.source_identity_hash FROM `{$this->legacy}fm_maintable` m LEFT JOIN `{$this->p}fm2_address_import_objects` o ON o.object_id=m.id LEFT JOIN `{$this->p}fm2_object_detail_edits` e ON e.object_id=m.id";
+     $last=null;
+     while(true){if($last===null){$statement=$this->db->prepare($select.' ORDER BY m.id LIMIT 256');$statement->execute();}else{$statement=$this->db->prepare($select.' WHERE m.id>? ORDER BY m.id LIMIT 256');$statement->execute([$last]);}$rows=$statement->get_result()->fetch_all(MYSQLI_ASSOC);if($rows===[])return;foreach($rows as$row){$last=(string)$row['id'];yield$row;}if(count($rows)<256)return;}
  }
  public function find(array$f):array
  {
@@ -312,7 +319,7 @@ final class MariaDbAddressRegisterImportStore
  }
  private function cacheRow(string $hash,bool $completedOnly):?array
  {
-     $condition=$completedOnly?' AND lock_owner IS NULL':'';$order=$completedOnly?'captured_at_utc DESC,entry_id DESC':'(lock_owner IS NOT NULL) DESC,captured_at_utc DESC,entry_id DESC';
+     $condition=$completedOnly?' AND lock_owner IS NULL':'';$order=$completedOnly?'captured_at_utc DESC,entry_version DESC':'(lock_owner IS NOT NULL) DESC,captured_at_utc DESC,entry_version DESC';
      $statement=$this->db->prepare("SELECT * FROM `{$this->p}fm2_address_import_cache` WHERE request_hash=?$condition ORDER BY $order LIMIT 1");$statement->execute([$hash]);$row=$statement->get_result()->fetch_assoc();
      if(!$row)return null;$row['request']=json_decode($row['request_json'],true,flags:JSON_THROW_ON_ERROR);$row['response']=json_decode($row['response_json'],true,flags:JSON_THROW_ON_ERROR);return$row;
  }
@@ -344,6 +351,18 @@ final class MariaDbAddressRegisterImportStore
  private function preparationLockName(string $package):string
  {
      return'fm2-prepare-'.substr(hash('sha256',$this->p.'|'.$package),0,48);
+ }
+ private function cacheAllocatorLock():string
+ {
+     $database=(string)$this->db->query('SELECT DATABASE()')->fetch_column();return'fm2-cache-version-'.substr(hash('sha256',$database.'|'.$this->p),0,45);
+ }
+ private function acquireNamedLock(string $name,int $timeout):bool
+ {
+     $statement=$this->db->prepare('SELECT GET_LOCK(?,?)');$statement->execute([$name,$timeout]);return(int)$statement->get_result()->fetch_column()===1;
+ }
+ private function nextCacheVersion(string $hash):string
+ {
+     $statement=$this->db->prepare("SELECT COALESCE(MAX(entry_version),0) FROM `{$this->p}fm2_address_import_cache` WHERE request_hash=?");$statement->execute([$hash]);$current=(string)$statement->get_result()->fetch_column();if(!preg_match('/^[0-9]+$/D',$current)||$current==='18446744073709551615')throw new \RuntimeException('CACHE_VERSION_EXHAUSTED');$digits=str_split($current);$carry=1;for($i=count($digits)-1;$i>=0&&$carry===1;$i--){$n=(ord($digits[$i])-48)+1;$digits[$i]=(string)($n%10);$carry=intdiv($n,10);}if($carry===1)array_unshift($digits,'1');$next=ltrim(implode('',$digits),'0');return$next===''?'1':$next;
  }
  private function releaseNamedLock(string $name):void
  {
