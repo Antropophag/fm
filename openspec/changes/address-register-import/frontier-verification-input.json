@@ -1,0 +1,67 @@
+{
+  "change": "address-register-import-prefix-frontier-delta",
+  "planned_paths": [
+    "app/InstallationProcess/AddressRegisterImportSchemaMigration.php",
+    "specs/ADDRESS-REGISTER-IMPORT-001.md",
+    "tests/InstallationProcess/classification_provenance_schema_001_test.php",
+    "tests/InstallationProcess/deadline_transfer_certificate_schema_001_test.php",
+    "tests/InstallationProcess/erp_equipment_facts_schema_001_test.php",
+    "tests/InstallationProcess/identity_access_schema_001_test.php",
+    "tests/InstallationProcess/inspection_evidence_schema_001_test.php",
+    "tests/InstallationProcess/inspection_photo_content_index_schema_001_test.php",
+    "tests/InstallationProcess/inspection_planning_schema_001_test.php",
+    "tests/InstallationProcess/installation_completion_schema_001_test.php",
+    "tests/InstallationProcess/object_detail_snapshot_schema_001_test.php",
+    "tests/InstallationProcess/otiz_settlement_schema_001_test.php",
+    "tests/InstallationProcess/production_migration_runner_001_test.php",
+    "tests/InstallationProcess/workforce_canonical_runner_001_test.php",
+    "tests/InstallationProcess/address_register_import_schema_001_test.php",
+    "tests/Otiz/settlement_v2_upgrade_001_test.php",
+    "tests/Otiz/settlement_v2_concurrency_001_test.php",
+    "tests/Runtime/runtime_readiness_load_001_test.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A11-prefix-frontier",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "canonical migration v40 exact frontier and prefix25 compatibility",
+      "tests": [
+        "tests/InstallationProcess/classification_provenance_schema_001_test.php",
+        "tests/InstallationProcess/deadline_transfer_certificate_schema_001_test.php",
+        "tests/InstallationProcess/erp_equipment_facts_schema_001_test.php",
+        "tests/InstallationProcess/identity_access_schema_001_test.php",
+        "tests/InstallationProcess/inspection_evidence_schema_001_test.php",
+        "tests/InstallationProcess/inspection_photo_content_index_schema_001_test.php",
+        "tests/InstallationProcess/inspection_planning_schema_001_test.php",
+        "tests/InstallationProcess/installation_completion_schema_001_test.php",
+        "tests/InstallationProcess/object_detail_snapshot_schema_001_test.php",
+        "tests/InstallationProcess/otiz_settlement_schema_001_test.php",
+        "tests/InstallationProcess/production_migration_runner_001_test.php",
+        "tests/InstallationProcess/workforce_canonical_runner_001_test.php",
+        "tests/InstallationProcess/address_register_import_schema_001_test.php",
+        "tests/Otiz/settlement_v2_upgrade_001_test.php",
+        "tests/Otiz/settlement_v2_concurrency_001_test.php",
+        "tests/Runtime/runtime_readiness_load_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/classification_provenance_schema_001_test.php": "INTENDED_RED",
+        "tests/InstallationProcess/deadline_transfer_certificate_schema_001_test.php": "INTENDED_RED",
+        "tests/InstallationProcess/erp_equipment_facts_schema_001_test.php": "GREEN",
+        "tests/InstallationProcess/identity_access_schema_001_test.php": "INTENDED_RED",
+        "tests/InstallationProcess/inspection_evidence_schema_001_test.php": "INTENDED_RED",
+        "tests/InstallationProcess/inspection_photo_content_index_schema_001_test.php": "GREEN",
+        "tests/InstallationProcess/inspection_planning_schema_001_test.php": "GREEN",
+        "tests/InstallationProcess/installation_completion_schema_001_test.php": "INTENDED_RED",
+        "tests/InstallationProcess/object_detail_snapshot_schema_001_test.php": "GREEN",
+        "tests/InstallationProcess/otiz_settlement_schema_001_test.php": "GREEN",
+        "tests/InstallationProcess/production_migration_runner_001_test.php": "GREEN",
+        "tests/InstallationProcess/workforce_canonical_runner_001_test.php": "INTENDED_RED",
+        "tests/InstallationProcess/address_register_import_schema_001_test.php": "INTENDED_RED",
+        "tests/Otiz/settlement_v2_upgrade_001_test.php": "GREEN",
+        "tests/Otiz/settlement_v2_concurrency_001_test.php": "GREEN",
+        "tests/Runtime/runtime_readiness_load_001_test.php": "GREEN"
+      }
+    }
+  ]
+}

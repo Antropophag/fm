@@ -1,0 +1,23 @@
+{
+  "change": "address-register-import-shared-entrance-delta",
+  "planned_paths": [
+    "app/InstallationProcess/AddressRegisterImportApplication.php",
+    "tests/InstallationProcess/address_register_import_identity_001_test.php",
+    "specs/ADDRESS-REGISTER-IMPORT-001.md",
+    "openspec/changes/address-register-import/specs/installation/address-register-import/spec.md"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A04-shared-entrance-identities",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "ProductionAddressRegisterImportFactory preview/apply/replay with distinct registrations sharing one entrance",
+      "tests": [
+        "tests/InstallationProcess/address_register_import_identity_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/address_register_import_identity_001_test.php": "INTENDED_RED"
+      }
+    }
+  ]
+}

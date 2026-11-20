@@ -1,0 +1,22 @@
+{
+  "change": "address-register-import-unknown-budget-correction",
+  "planned_paths": [
+    "app/InstallationProcess/AddressRegisterImportApplication.php",
+    "specs/ADDRESS-REGISTER-IMPORT-001.md",
+    "tests/InstallationProcess/address_register_import_economy_001_test.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A12-unknown-budget-preservation",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "public resume/report after unknown provider outcome and exhausted explicit retry budget",
+      "tests": [
+        "tests/InstallationProcess/address_register_import_economy_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/address_register_import_economy_001_test.php": "INTENDED_RED"
+      }
+    }
+  ]
+}

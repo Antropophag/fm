@@ -48,6 +48,12 @@ db	php	tests/AssignmentOrderComposition/selection_unknown_employment_manual_pilo
 db	php	tests/AssignmentOrderComposition/template_generation_001_test.php	integration
 db	php	tests/AssignmentOrderComposition/template_generation_boundaries_001_test.php	integration
 db	php	tests/IdentityAccess/legacy_identity_link_001_test.php	integration
+db	php	tests/InstallationProcess/address_register_import_concurrency_001_test.php	integration
+db	php	tests/InstallationProcess/address_register_import_economy_001_test.php	integration
+db	php	tests/InstallationProcess/address_register_import_identity_001_test.php	integration
+db	php	tests/InstallationProcess/address_register_import_integration_001_test.php	integration
+db	php	tests/InstallationProcess/address_register_import_reports_001_test.php	integration
+db	php	tests/InstallationProcess/address_register_import_schema_001_test.php	integration
 db	php	tests/InstallationProcess/artifact_store_001_test.php	integration
 db	php	tests/InstallationProcess/assignment_order_identity_registry_001_test.php	integration
 db	php	tests/InstallationProcess/assignment_order_identity_registry_concurrency_001_test.php	integration
@@ -202,6 +208,7 @@ db	php	tests/Otiz/settlement_v2_rights_flow_001_test.php	integration
 db	php	tests/Otiz/settlement_v2_upgrade_001_test.php	integration
 db	php	tests/Otiz/snapshot_publication_001_test.php	integration
 db	php	tests/Otiz/snapshot_publication_http_001_test.php	integration
+db	php	tests/Runtime/address_register_import_restore_001_test.php	integration
 db	php	tests/Runtime/deadline_transfer_certificate_recovery_001_test.php	integration
 db	php	tests/Runtime/erp_equipment_facts_readiness_001_test.php	integration
 db	php	tests/Runtime/initial_owner_provisioning_001_test.php	integration
@@ -439,6 +446,9 @@ unit	python3	tests/Deployment/yii2_local_integration_config_001_test.py	unit
 unit	python3	tests/Deployment/yii2_workforce_sync_package_001_test.py	unit
 unit	php	tests/InspectionEvidence/production_performance_thumbnail_001_test.php	unit
 unit	php	tests/InspectionEvidence/production_performance_thumbnail_orientation_001_test.php	unit
+unit	php	tests/InstallationProcess/address_register_import_cli_001_test.php	unit
+unit	php	tests/InstallationProcess/address_register_import_parser_001_test.php	unit
+unit	php	tests/InstallationProcess/address_register_import_provider_001_test.php	unit
 unit	php	tests/InstallationProcess/assignment_order_original_attempt_audit_001_test.php	unit
 unit	php	tests/InstallationProcess/assignment_order_original_command_lifecycle_001_test.php	unit
 unit	php	tests/InstallationProcess/assignment_order_original_command_shape_001_test.php	unit

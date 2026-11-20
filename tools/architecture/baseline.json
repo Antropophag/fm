@@ -403,6 +403,7 @@
     "app/InstallationProcess/InstallationProcess.php::openInstallation",
     "app/InstallationProcess/InstallationProcess.php::prepareAssignmentOrder",
     "app/InstallationProcess/MariaDbInstallationCompletion.php::record",
+    "app/InstallationProcess/MariaDbAddressRegisterImportStore.php::updatePackage",
     "app/InstallationProcess/MariaDbControlEngineerAssignment.php::assign",
     "app/InstallationProcess/MariaDbYiiInspectionPlanning.php::createRoot",
     "app/InstallationProcess/MariaDbYiiInspectionPlanning.php::scheduleById",

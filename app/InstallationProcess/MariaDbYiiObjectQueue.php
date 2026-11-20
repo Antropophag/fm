@@ -68,7 +68,7 @@ final readonly class MariaDbYiiObjectQueue
             throw new \RuntimeException('Page unavailable.');
         }
         $offset = ($page - 1) * $size;
-        $effective=static fn(string$field,string$column):string=>MariaDbEffectiveObjectDetails::sqlValue($field,'l.'.$column);$columns = "c.id case_id,c.legacy_installation_object_id,c.process_state,c.actual_start_date,c.opened_at,c.opened_by_user_id,".$effective('address','ordadr_address')." ordadr_address,".$effective('entrance','entrance')." entrance,".$effective('regnumber','regnumber')." regnumber,".$effective('zavnumber','zavnumber')." zavnumber,CASE WHEN JSON_TYPE(JSON_EXTRACT(e.values_json,'$.comment'))='STRING' THEN JSON_UNQUOTE(JSON_EXTRACT(e.values_json,'$.comment')) ELSE NULL END comment,l.workdatestart,l.workdateendadjusted,l.plan_finish_date,o.status order_status,a.application_id,s.assignment_order_id selection_order_id,v.revision_id original_revision_id";
+        $effective=static fn(string$field,string$column):string=>MariaDbEffectiveObjectDetails::sqlValue($field,'l.'.$column);$columns = "c.id case_id,c.legacy_installation_object_id,c.process_state,c.actual_start_date,c.opened_at,c.opened_by_user_id,".$effective('address','ordadr_address')." ordadr_address,".$effective('entrance','entrance')." entrance,".$effective('regnumber','regnumber')." regnumber,".$effective('zavnumber','zavnumber')." zavnumber,CASE WHEN JSON_TYPE(JSON_EXTRACT(e.values_json,'$.comment'))='STRING' THEN JSON_UNQUOTE(JSON_EXTRACT(e.values_json,'$.comment')) ELSE NULL END comment,l.workdatestart,l.workdateendadjusted,l.plan_finish_date,o.status order_status,a.application_id,s.assignment_order_id selection_order_id,v.revision_id original_revision_id,EXISTS(SELECT 1 FROM `{$this->prefix}fm2_address_import_objects` ai WHERE ai.object_id=c.legacy_installation_object_id) address_import_native";
         $rows = $this->db->createCommand("SELECT {$columns}{$from} ORDER BY l.workdatestart IS NULL,LEFT(l.workdatestart,10),c.legacy_installation_object_id LIMIT {$size} OFFSET {$offset}", $params)->queryAll();
         $objects = [];
         foreach ($rows as $row) {
@@ -124,7 +124,7 @@ final readonly class MariaDbYiiObjectQueue
                 );
             } else throw new \RuntimeException('Invalid chart filter.');
         }
-        $source = "(m.category='native_candidate' OR (m.output_id IS NULL AND d.object_id=c.legacy_installation_object_id AND d.content_sha256=SHA2(d.payload_json,256)))";
+        $source = "(m.category='native_candidate' OR EXISTS(SELECT 1 FROM `{$p}fm2_address_import_objects` ai WHERE ai.object_id=c.legacy_installation_object_id) OR (m.output_id IS NULL AND d.object_id=c.legacy_installation_object_id AND d.content_sha256=SHA2(d.payload_json,256)))";
         $where = "{$source} AND ({$filter})";
         if ($q !== '') {
             $value=static fn(string$field,string$column):string=>MariaDbEffectiveObjectDetails::sqlValue($field,'l.'.$column);$where .= " AND (CAST(c.legacy_installation_object_id AS CHAR) LIKE :q ESCAPE '\\\\' OR ".$value('regnumber','regnumber')." LIKE :q ESCAPE '\\\\' OR ".$value('zavnumber','zavnumber')." LIKE :q ESCAPE '\\\\' OR ".$value('address','ordadr_address')." LIKE :q ESCAPE '\\\\' OR ".$value('entrance','entrance')." LIKE :q ESCAPE '\\\\')";
@@ -218,8 +218,8 @@ final readonly class MariaDbYiiObjectQueue
             'comment'=>is_string($r['comment']??null)?$r['comment']:null,
             'plannedStartDate'=>$start ?? 'Не указано', 'plannedFinishDate'=>$finish ?? 'Не указано',
             'actualStartDate'=>self::date($r['actual_start_date']),
-            'planningDatesUnknownAtCutover'=>$start === null || $finish === null,
-            'dataOrigin'=>'migration_native', 'status'=>$label,
+            'planningDatesUnknownAtCutover'=>!((bool)($r['address_import_native']??false))&&($start === null || $finish === null),
+            'dataOrigin'=>(bool)($r['address_import_native']??false)?'address_register_import':'migration_native', 'status'=>$label,
             'nextStep'=>'Откройте карточку объекта монтажа',
             'controlEngineer'=>null,
             '_pagination'=>compact('page', 'pages', 'total'),

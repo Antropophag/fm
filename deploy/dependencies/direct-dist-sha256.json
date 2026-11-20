@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "composerJsonSha256": "0a7d5d9e89838fe0af243f4ce3d52d4b09451064a9991306d4101fcdd5a88934",
-  "composerLockSha256": "a750e3b033610f59076504df6156c64c3e8186b9fbf284b36e7c079e848c5482",
+  "composerJsonSha256": "c70ca5f72caf001776ec0910a047529717109f640ea0808f10dd487db6671499",
+  "composerLockSha256": "1211aa091f78703d191a22277fdb007cf2d93951a7fc29f40f3e8fb3080dddfd",
   "packages": [
     {"name":"bower-asset/inputmask","version":"5.0.10","reference":"325dde43365b7638393e5dc1a2b6463114ef14dd","type":"zip","url":"https://codeload.github.com/RobinHerbots/Inputmask/legacy.zip/325dde43365b7638393e5dc1a2b6463114ef14dd","sha256":"db58bc0816874e9dc70499e0c6d49234c3708492a5f9a0975c3d08a4cc88854a","byteSize":868104},
     {"name":"bower-asset/jquery","version":"3.7.1","reference":"fde1f76e2799dd877c176abde0ec836553246991","type":"zip","url":"https://codeload.github.com/jquery/jquery-dist/legacy.zip/fde1f76e2799dd877c176abde0ec836553246991","sha256":"5297f6c4e9f3b8960d1f6df7228a44145f9678c5438d12c4e59b6dc7eded169b","byteSize":452227},
