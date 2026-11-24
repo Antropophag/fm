@@ -1,0 +1,39 @@
+{
+  "change": "email-first-password-recovery-ci-lock-observation",
+  "planned_paths": [
+    "tests/InstallationProcess/assignment_order_original_database_setup_001_test.php",
+    "openspec/changes/email-first-password-recovery/delivery.md",
+    "openspec/changes/email-first-password-recovery/ci-lock-observation-input.json"
+  ],
+  "lifecycle": {
+    "intent": "COMPACT_MAINTENANCE",
+    "issue": "PR309 CI45411089443",
+    "change_kind": "BOUNDED_FIX",
+    "requirement_status": "CURRENT",
+    "semantic_change": "ESTABLISHED_BEHAVIOR_FIX",
+    "canonical_requirements": [
+      {
+        "path": "openspec/changes/email-first-password-recovery/delivery.md"
+      }
+    ],
+    "executable_regression": "tests/InstallationProcess/assignment_order_original_database_setup_001_test.php",
+    "sensitivity": {
+      "classification": "SENSITIVE",
+      "boundaries": [
+        "test-qualification"
+      ],
+      "rationale": "Planner identified the fixture qualification boundary as sensitive. Preserve every exact lock predicate, deadline, mutation sensitivity and data oracle; only controlled cache priming and observer cadence change."
+    }
+  },
+  "acceptances": [
+    {
+      "spec_id": "CI-LOCK-OBSERVATION-001",
+      "acceptance_id": "fresh-exact-lock-witness",
+      "spec_path": "openspec/changes/email-first-password-recovery/delivery.md",
+      "seam": "controlled real cleanup worker and independent MariaDB lock-wait observer after a pre-ENTER metadata snapshot",
+      "tests": [
+        "tests/InstallationProcess/assignment_order_original_database_setup_001_test.php"
+      ]
+    }
+  ]
+}

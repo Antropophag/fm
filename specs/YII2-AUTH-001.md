@@ -1,5 +1,7 @@
 # YII2-AUTH-001 — Yii login, session, logout и справочник ролей
 
+> Переход 2026-11-24: выбор шага входа, первое назначение и восстановление пароля определяет [EMAIL-FIRST-PASSWORD-RECOVERY-001](EMAIL-FIRST-PASSWORD-RECOVERY-001.md). Текст ниже сохраняет исходный контракт/историю; не возвращает приглашения в новый runtime. Фактическая готовность реализации и проверок — в [delivery record](../openspec/changes/email-first-password-recovery/delivery.md).
+
 - Статус: `DRAFT — intended RED и independent Gate 3 pending`
 - Дата: `2026-09-09`
 - Актор: локальный пользователь FMonitor

@@ -1,5 +1,7 @@
 # IDENTITY-ACCESS-SCHEMA-001 — canonical identity/access schema ownership
 
+> Переход 2026-11-24: последующий canonical frontier v40; исторический v6 остаётся базовым определяет [EMAIL-FIRST-PASSWORD-RECOVERY-001](EMAIL-FIRST-PASSWORD-RECOVERY-001.md). Текст ниже сохраняет исходный контракт/историю; не возвращает приглашения в новый runtime. Фактическая готовность реализации и проверок — в [delivery record](../openspec/changes/email-first-password-recovery/delivery.md).
+
 - Статус: `APPROVED / GATE 1 COMPLETE`
 - Версия: `0.1`
 - Дата: `2026-09-01`

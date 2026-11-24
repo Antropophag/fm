@@ -169,6 +169,8 @@
 .fm2-auth-heading h1 { margin: 0; font-size: 26px; font-weight: 500; line-height: 1.2; letter-spacing: -.025em; }
 .fm2-auth-heading p { margin: 8px 0 0; color: var(--fm2-muted); font-size: 13px; line-height: 1.5; }
 .fm2-auth-form { display: grid; gap: 16px; }
+.fm2-auth-form .shlz-field,.fm2-auth-form .shlz-field__control,.fm2-auth-form .shlz-input { box-sizing: border-box; inline-size: 100%; min-inline-size: 0; }
+.fm2-auth-help { margin: -4px 0 0; color: var(--fm2-muted); font-size: 12px; line-height: 1.45; }
 .fm2-auth-submit { inline-size: 100%; margin-block-start: 4px; }
 .fm2-auth-error { margin: 0; padding: 10px 12px; color: var(--shlz-source-color-aditional-red-100, #cc1f1f); background: var(--shlz-source-color-aditional-red-50, #fbd5d5); border-radius: var(--fm2-radius); font-size: 12px; }
 .fm2-auth-identity { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--fm2-filter); border-radius: var(--fm2-radius); }

@@ -16,6 +16,8 @@ use FMonitor2\Tests\Support\SelectionNativeFixture as S;
 $f=new F('ready_queue_');
 try {
     $native=$f->selection;$db=$native->db;$p=$native->prefix;
+    // Complete synthetic active identities before the current canonical frontier.
+    $hash=password_hash('Synthetic queue fixture 2026!',PASSWORD_ARGON2ID);$seed=$db->prepare("INSERT INTO `{$p}fm2_pilot_auth_credentials`(user_id,email_normalized,password_hash,password_set_at,updated_at) SELECT u.user_id,LOWER(TRIM(u.email)),?,u.source_updated_at,u.source_updated_at FROM `{$p}fm2_pilot_users` u LEFT JOIN `{$p}fm2_pilot_auth_credentials` c ON c.user_id=u.user_id WHERE u.activation_state='active' AND c.user_id IS NULL");$seed->execute([$hash]);$seed->close();
     foreach(I\ProductionPilotMigrationCatalogue::migrations() as $migration) {
         $result=is_string($migration)?$migration::apply($db,$p):$migration($db,$p);
         assertSameValue(false,isset($result['reason']),'canonical queue prerequisites');

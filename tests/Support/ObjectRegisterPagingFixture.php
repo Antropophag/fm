@@ -21,6 +21,9 @@ final class ObjectRegisterPagingFixture
     public static function seed(SelectedOriginalFixture $original,string $prefix,int $actorRole=3):void
     {
         $db=$original->selection->db;$p=$prefix;
+    // Synthetic active actors must be coherent before the current schema upgrade.
+    $fixtureHash=password_hash('Synthetic coherent fixture 2026!',PASSWORD_ARGON2ID);
+    $seed=$db->prepare("INSERT INTO `{$p}fm2_pilot_auth_credentials`(user_id,email_normalized,password_hash,password_set_at,updated_at) SELECT u.user_id,LOWER(TRIM(u.email)),?,u.source_updated_at,u.source_updated_at FROM `{$p}fm2_pilot_users` u LEFT JOIN `{$p}fm2_pilot_auth_credentials` c ON c.user_id=u.user_id WHERE u.activation_state='active' AND c.user_id IS NULL");$seed->execute([$fixtureHash]);$seed->close();
         $migration=CanonicalMigrationApplication::run($db,$p,ProductionPilotMigrationCatalogue::migrations());
         if(($migration['exitCode']??1)!==0)throw new \RuntimeException('SETUP_FAILURE canonical paging fixture migration');
         PilotOtizSchemaMigration::apply($db,$p);

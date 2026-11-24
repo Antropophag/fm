@@ -1,0 +1,36 @@
+## 1. Contract and verification planning
+
+- [x] 1.1 В выделенном worktree прочитать актуальную цель и выполнить `python3 tools/delivery/harness.py state`; зафиксировать новый scope/авторизацию отдельно от прежнего Docker binding и подготовить delivery record с фактическими авторами. Проверка: record различает root specs/tests, sol/low implementation и независимый review; нет наследованных approvals/CI.
+- [x] 1.2 Root создаёт `specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md` по полной delta-матрице, включая точные HTTP/application results, rate limits, миграцию, блокировку ожидающего пользователя и отсутствие auto-login. Проверка: каждый сценарий имеет публичный seam, oracle, expected facts и отказ без изменений; переход от старых контрактов указан явно.
+- [x] 1.3 Составить inventory active auth routes/aliases, identity writers/CLI/import, schema frontier, readiness/deploy, fixtures/backup/restore и проверок логов; сопоставить новым требованиям. Проверка: у каждого затронутого consumer есть тест/изменение либо обоснованное отсутствие влияния; не добавлены gates для retired runtime.
+- [x] 1.4 До Gate 2 создать `verification-input.json`, прочитать `tools/delivery/change-verification.md`, выполнить harness prepare для нового контракта и прочитать полный mandatory plan. Проверка: sensitive classification, planner-selected CI lane/reviews, закрытая acceptance mapping и отсутствие unresolved obligations; роль-пакеты относятся к текущему исходному коду.
+
+## 2. Root-authored executable specification and independent review
+
+- [x] 2.1 Root пишет characterization для сохранения обычного login/logout, RBAC, существующих hashes/ID, блокировок и weekly FKR delivery policy. Проверка: bounded focused baseline проходит на изолированных fixtures, без live писем.
+- [x] 2.2 Root пишет реальные HTTP/application тесты provision/email routing/first password, absent email→ИТСМ, unknown/blocked/invalid forms, CSRF, duplicate/race и session write failure. Проверка: intended RED наблюдает отсутствующее поведение на публичном seam, а не ошибку setup; логи вне checkout.
+- [x] 2.3 Root пишет recovery HTTP/worker tests: fake mail capture, trusted origin, 30-minute expiry boundary, GET scanner, replay/parallel reset, old session invalidation, block/email/generation races, request idempotency/rate limits, rollback/SMTP unknown и secret redaction. Проверка: полный нормативный набор выдаёт воспроизводимый intended RED, fake transport не контактирует с реальными адресатами.
+- [x] 2.4 Root пишет migration/restore и browser acceptance tests: existing/pending/blocked identities, legacy links/invitation disablement, fresh provisioning/replay, mail→reset→login, keyboard/narrow viewport. Проверка: expected facts заданы независимо от новой реализации; каждый заявленный boundary имеет достижимый fixture.
+- [x] 2.5 Передать полный spec/tests/RED и reconstructible source независимому gpt-5.6-sol/low reviewer по planner-required Gate 3; устранить весь список замечаний. Проверка: отдельный review record содержит источник, полный verdict и disposition каждого finding; до APPROVED implementation не начинается.
+
+## 3. Implementation by separate executor
+
+- [x] 3.1 Отдельный gpt-5.6-sol/low executor реализует canonical schema upgrade, pending_password, recovery grants/envelopes и persistence лимитов/аудита; обновляет fresh provisioning, inventories и restore/readiness. Проверка: focused migration/replay/restore tests проходят, hashes/ID/history неизменны, несовместимые данные не исправляются молча.
+- [x] 3.2 Executor реализует owner provision/initial password и корректные block/unblock для pending_password; переключает admin/CLI/import writers и закрывает старый invitation writer. Проверка: focused HTTP/application/race tests проходят, первый пароль устанавливается один раз, права не расширяются.
+- [x] 3.3 Executor реализует owner recovery request/reset, digest, generation binding, expiry, лимиты, audit и шифрованную delivery envelope с внешним ключом. Проверка: focused replay/concurrency/fault tests проходят, нет raw token в persistent data/logs, нет plaintext fallback.
+- [x] 3.4 Executor подключает recovery к post-commit Jobs/outbox и SMTP wire sender с отдельной recipient policy; сохраняет weekly FKR поведение. Проверка: fake transport/disposable SMTP tests подтверждают правильный адрес и письмо, readiness failures, suppression устаревших grants, retry того же запроса и UNKNOWN_DELIVERY без автоматического повтора.
+- [x] 3.5 Executor обновляет Yii routes/views/assets: добавить пользователя, первый пароль, forgot/reset, ИТСМ подсказка и уход от invitation UI. Проверка: реальный browser проходит оба сценария и обычный вход, показывает понятные ошибки, поддерживает клавиатуру/узкий экран; публичные shlz-ui exports используются без нового глобального оформления.
+- [x] 3.6 Executor подключает no-store/referrer policy и redaction в active HTTP/proxy/application logging. Проверка: synthetic token marker отсутствует в доступных журналах, diagnostics и сторонних запросах при success/failure; GET/HEAD сканера не расходует grant.
+- [x] 3.7 Согласовать superseding references в auth/user-access/schema contracts, PRODUCT и актуальных lifecycle docs без удаления старых ревью/истории. Проверка: поиск активных инструкций не предлагает приглашение как штатный вход; новые данные не объявлены развёрнутыми.
+
+## 4. Integrated verification and final review
+
+- [x] 4.1 Выполнить только planner-selected bounded local checks и `make architecture-check`; при затрагивании `app/PilotHttp/*.php` выполнить обязательный `php tests/InstallationProcess/pilot_http_auth_001_global_calls_test.php` до commit/push. Проверка: retained focused evidence подтверждает changed boundaries; полный локальный `make test`/`make verify` не запускался.
+- [x] 4.2 Обновить source binding/план при изменении scope, собрать полный candidate и передать независимому gpt-5.6-sol/low final reviewer; исправить findings с сохранением review independence. Проверка: APPROVED относится к exact source, а изменения spec/tests при необходимости прошли повторный Gate 3 по плану.
+- [x] 4.3 Для GitHub проверить account Antropophag и обе git identities с теми же scoped overrides, что у commit, затем подготовить commit/PR. Проверка: сохранены авторство/история, source соответствует review, merge/deploy не выполнялись.
+- [ ] 4.4 Найти или один раз запустить exact-source GitHub CI через существующий выбранный consumer. При сбое собрать полную failed-job/REGRESSION_FAILURE inventory до исправления. Проверка: обязательные checks GREEN для final source; UNKNOWN/пропуски не объявлены approval.
+
+## 5. Done and operational handoff
+
+- [ ] 5.1 Зафиксировать реализованное поведение, exact source/PR, focused/CI evidence, authors/reviews и оставшуюся live readiness отдельно. Проверка: пользовательские сценарии первого входа и email recovery доказаны; утверждение PR-ready требует независимого review и обязательного CI, а production readiness не выводится из fake SMTP tests.
+- [x] 5.2 Оставить инструкции для отдельного согласованного deployment: SMTP/origin/envelope key, log redaction, миграция и безопасный recovery shutdown без возврата invitation writer. Проверка: отсутствующие live adapters/секреты/проверки помечены UNKNOWN; никаких настоящих писем, production изменений или archive до выполнения Done.

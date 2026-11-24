@@ -1,0 +1,215 @@
+{
+  "change": "email-first-password-recovery",
+  "planned_paths": [
+    ".env.example",
+    ".quality-graph/verification-policy.json",
+    "PRODUCT.md",
+    "app/IdentityAccess/MariaDbPasswordAccess.php",
+    "app/IdentityAccess/MariaDbUserAccessDirectory.php",
+    "app/IdentityAccess/MariaDbUserAccessTransaction.php",
+    "app/IdentityAccess/MariaDbUserStatusChanges.php",
+    "app/IdentityAccess/MariaDbYiiLocalIdentityStore.php",
+    "app/IdentityAccess/PasswordPolicy.php",
+    "app/IdentityAccess/PasswordRecoveryConfig.php",
+    "app/IdentityAccess/YiiUserAccess.php",
+    "app/InstallationProcess/EmailFirstPasswordRecoverySchemaMigration.php",
+    "app/InstallationProcess/IdentityAccessDefinitionSchemaMigration.php",
+    "app/InstallationProcess/LegacyControlEngineerImportSchemaMigration.php",
+    "app/InstallationProcess/MariaDbLegacyImportApplication.php",
+    "app/InstallationProcess/ProductionPilotMigrationCatalogue.php",
+    "app/Jobs/JobHandlerRuntime.php",
+    "app/Jobs/SmtpTransport.php",
+    "app/Runtime/MariaDbRuntimeReadiness.php",
+    "app/RuntimeRestore/RuntimeRecovery.php",
+    "app/RuntimeRestore/RuntimeRecoverySchemaV40.php",
+    "app/YiiRuntime/Assets/pilot.css",
+    "app/YiiRuntime/Assets/users.js",
+    "app/YiiRuntime/Controllers/AuthController.php",
+    "app/YiiRuntime/Controllers/UserAccessController.php",
+    "app/YiiRuntime/Views/forgot-password.php",
+    "app/YiiRuntime/Views/login.php",
+    "app/YiiRuntime/Views/password-form.php",
+    "app/YiiRuntime/Views/user-editor.php",
+    "app/YiiRuntime/Views/users.php",
+    "config/yii/web.php",
+    "deploy/production/compose.yaml",
+    "deploy/production/env.example",
+    "deploy/production/manage",
+    "deploy/runtime/compose.yaml",
+    "deploy/runtime/nginx.conf",
+    "deploy/yii2/nginx.conf",
+    "docs/operations/current-delivery-goal.md",
+    "openspec/changes/email-first-password-recovery/.openspec.yaml",
+    "openspec/changes/email-first-password-recovery/delivery.md",
+    "openspec/changes/email-first-password-recovery/design.md",
+    "openspec/changes/email-first-password-recovery/inventory.md",
+    "openspec/changes/email-first-password-recovery/operations.md",
+    "openspec/changes/email-first-password-recovery/previous-delivery-goal.md",
+    "openspec/changes/email-first-password-recovery/proposal.md",
+    "openspec/changes/email-first-password-recovery/schema-rebuild.md",
+    "openspec/changes/email-first-password-recovery/schema-verification-input.json",
+    "openspec/changes/email-first-password-recovery/specs/identity/email-first-password-recovery/spec.md",
+    "openspec/changes/email-first-password-recovery/tasks.md",
+    "openspec/changes/email-first-password-recovery/verification-config-input.json",
+    "openspec/changes/email-first-password-recovery/verification-delivery-input.json",
+    "openspec/changes/email-first-password-recovery/verification-input.json",
+    "openspec/changes/email-first-password-recovery/verification-repair-input.json",
+    "public/help/index.html",
+    "public/help/user-guide.md",
+    "reviews/tests/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+    "reviews/tests/EMAIL-FIRST-PASSWORD-RECOVERY-INTEGRITY-001.md",
+    "reviews/tests/EMAIL-FIRST-PASSWORD-RECOVERY-SCHEMA-001.md",
+    "specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+    "specs/IDENTITY-ACCESS-SCHEMA-001.md",
+    "specs/YII2-AUTH-001.md",
+    "specs/YII2-USER-ACCESS-001.md",
+    "specs/YII2-USER-INVITATION-UX-001.md",
+    "tests/Deployment/erp_equipment_facts_runtime_001_test.py",
+    "tests/Deployment/password_recovery_configuration_001_test.py",
+    "tests/IdentityAccess/email_password_migration_001_test.php",
+    "tests/IdentityAccess/email_password_schema_001_test.php",
+    "tests/InstallationProcess/deadline_transfer_certificate_schema_001_test.php",
+    "tests/InstallationProcess/erp_equipment_facts_schema_001_test.php",
+    "tests/InstallationProcess/identity_access_schema_001_test.php",
+    "tests/InstallationProcess/inspection_evidence_schema_001_test.php",
+    "tests/InstallationProcess/inspection_item_complete_001_mariadb_test.php",
+    "tests/InstallationProcess/inspection_photo_content_index_schema_001_test.php",
+    "tests/InstallationProcess/inspection_planning_schema_001_test.php",
+    "tests/InstallationProcess/installation_completion_schema_001_test.php",
+    "tests/InstallationProcess/legacy_control_engineer_import_001_test.php",
+    "tests/InstallationProcess/otiz_settlement_schema_001_test.php",
+    "tests/InstallationProcess/production_migration_runner_001_test.php",
+    "tests/InstallationProcess/selection_canonical_registration_001_test.php",
+    "tests/Otiz/settlement_v2_upgrade_001_test.php",
+    "tests/Runtime/activation_proxy_log_001_test.py",
+    "tests/Runtime/deadline_transfer_certificate_recovery_001_test.php",
+    "tests/Runtime/object_details_editing_recovery_001_test.php",
+    "tests/Runtime/production_recovery_preflight_001_test.php",
+    "tests/Runtime/runtime_jobs_recovery_001_test.php",
+    "tests/Runtime/runtime_recovery_forward_update_001_test.php",
+    "tests/Support/CurrentProductionSchemaContract.php",
+    "tests/Support/ObjectRegisterPagingFixture.php",
+    "tests/Support/PasswordSchemaContract.php",
+    "tests/Support/ProductionMigrationRunnerCatalogContract.php",
+    "tests/Support/password_access_worker.php",
+    "tests/Yii2/PasswordAccessFixture.php",
+    "tests/Yii2/PreopeningFixture.php",
+    "tests/Yii2/email_first_password_001_test.php",
+    "tests/Yii2/email_password_browser.mjs",
+    "tests/Yii2/email_password_browser_001_test.php",
+    "tests/Yii2/feedback_schema_matrix.php",
+    "tests/Yii2/password_recovery_001_test.php",
+    "tests/Yii2/password_recovery_delivery_safety_001_test.php",
+    "tests/Yii2/password_recovery_edges_001_test.php",
+    "tests/Yii2/password_recovery_integrity_001_test.php",
+    "tests/Yii2/provision_authorization_race_001_test.php",
+    "tests/Yii2/user_access_browser.mjs",
+    "tests/Yii2/yii2_activation_password_20261029_test.php",
+    "tests/Yii2/yii2_address_register_001_test.php",
+    "tests/Yii2/yii2_legacy_identity_link_001_test.php",
+    "tests/Yii2/yii2_object_queue_lineage_001_test.php",
+    "tests/Yii2/yii2_user_access_001_test.php",
+    "tests/Yii2/yii2_user_access_browser_001_test.php",
+    "tests/Yii2/yii2_user_access_concurrency_001_test.php",
+    "tests/Yii2/yii2_user_access_edges_001_test.php",
+    "tools/delivery/compose.runtime.yaml.in",
+    "tools/delivery/local-runtime-env",
+    "tools/verification/suites.tsv"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "EMAIL-FIRST-PASSWORD-RECOVERY-001",
+      "acceptance_id": "http-provision-initial-rbac-session",
+      "spec_path": "specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+      "seam": "Yii HTTP /pilot/login first-password forgot-password reset-password admin/users/create; IdentityAccess public commands and Jobs delivery; canonical migration",
+      "tests": [
+        "tests/Yii2/email_first_password_001_test.php",
+        "tests/Yii2/provision_authorization_race_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Yii2/email_first_password_001_test.php": "INTENDED_RED",
+        "tests/Yii2/provision_authorization_race_001_test.php": "INTENDED_RED"
+      }
+    },
+    {
+      "spec_id": "EMAIL-FIRST-PASSWORD-RECOVERY-001",
+      "acceptance_id": "recovery-delivery-expiry-races-quotas-secrets",
+      "spec_path": "specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+      "seam": "Yii HTTP /pilot/login first-password forgot-password reset-password admin/users/create; IdentityAccess public commands and Jobs delivery; canonical migration",
+      "tests": [
+        "tests/Yii2/password_recovery_001_test.php",
+        "tests/Yii2/password_recovery_edges_001_test.php",
+        "tests/Yii2/password_recovery_integrity_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Yii2/password_recovery_001_test.php": "INTENDED_RED",
+        "tests/Yii2/password_recovery_edges_001_test.php": "INTENDED_RED",
+        "tests/Yii2/password_recovery_integrity_001_test.php": "INTENDED_RED"
+      }
+    },
+    {
+      "spec_id": "EMAIL-FIRST-PASSWORD-RECOVERY-001",
+      "acceptance_id": "migration-replay-history-restore-frontier",
+      "spec_path": "specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+      "seam": "Yii HTTP /pilot/login first-password forgot-password reset-password admin/users/create; IdentityAccess public commands and Jobs delivery; canonical migration",
+      "tests": [
+        "tests/IdentityAccess/email_password_migration_001_test.php",
+        "tests/Runtime/runtime_jobs_recovery_001_test.php",
+        "tests/IdentityAccess/email_password_schema_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/IdentityAccess/email_password_migration_001_test.php": "INTENDED_RED",
+        "tests/Runtime/runtime_jobs_recovery_001_test.php": "INTENDED_RED",
+        "tests/IdentityAccess/email_password_schema_001_test.php": "INTENDED_RED"
+      }
+    },
+    {
+      "spec_id": "EMAIL-FIRST-PASSWORD-RECOVERY-001",
+      "acceptance_id": "browser-initial-recovery-keyboard-narrow",
+      "spec_path": "specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+      "seam": "Yii HTTP /pilot/login first-password forgot-password reset-password admin/users/create; IdentityAccess public commands and Jobs delivery; canonical migration",
+      "tests": [
+        "tests/Yii2/email_password_browser_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Yii2/email_password_browser_001_test.php": "INTENDED_RED"
+      }
+    },
+    {
+      "spec_id": "EMAIL-FIRST-PASSWORD-RECOVERY-001",
+      "acceptance_id": "production-recovery-config-wiring",
+      "spec_path": "specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+      "seam": "production manage env-init/check-config and docker compose config; recovery-only HTTP503 in recovery edges",
+      "tests": [
+        "tests/Deployment/password_recovery_configuration_001_test.py"
+      ],
+      "gate3_expected": {
+        "tests/Deployment/password_recovery_configuration_001_test.py": "INTENDED_RED"
+      }
+    },
+    {
+      "spec_id": "EMAIL-FIRST-PASSWORD-RECOVERY-001",
+      "acceptance_id": "delivery-uncertainty-new-form-and-public-copy",
+      "spec_path": "specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+      "seam": "real HTTP and overlapping owner DB connections at sender; settlement fault and replay",
+      "tests": [
+        "tests/Yii2/password_recovery_delivery_safety_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Yii2/password_recovery_delivery_safety_001_test.php": "INTENDED_RED"
+      }
+    },
+    {
+      "spec_id": "EMAIL-FIRST-PASSWORD-RECOVERY-001",
+      "acceptance_id": "accepted-unicode-normal-login",
+      "spec_path": "specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+      "seam": "normal HTTP login with accepted Unicode200-character password",
+      "tests": [
+        "tests/Yii2/yii2_activation_password_20261029_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Yii2/yii2_activation_password_20261029_test.php": "INTENDED_RED"
+      }
+    }
+  ]
+}

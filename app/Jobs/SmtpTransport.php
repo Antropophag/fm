@@ -40,6 +40,16 @@ final class SmtpTransport
         return$safe;
     }
 
+    public function sendTo(array $wire):array
+    {
+        if(!isset($wire['to'])||!is_string($wire['to'])||filter_var($wire['to'],FILTER_VALIDATE_EMAIL)===false)return['status'=>'permanent','failureCode'=>'RECIPIENT_INELIGIBLE'];
+        $bytes=strlen((string)($wire['subject']??'').(string)($wire['html']??'').(string)($wire['text']??''));if($bytes>SmtpConfiguration::MAX_MESSAGE_BYTES)return['status'=>'permanent','failureCode'=>'REPORT_TOO_LARGE'];
+        $message=['to'=>$this->config->testRecipient??$wire['to'],'from'=>$this->config->fromAddress,'fromName'=>$this->config->fromName,'subject'=>(string)($wire['subject']??''),'html'=>(string)($wire['html']??''),'text'=>(string)($wire['text']??'')];
+        try{$result=($this->sender)($message);}catch(\Throwable){return['status'=>'unknown','failureCode'=>'UNKNOWN_DELIVERY'];}
+        if(!is_array($result)||!in_array($result['status']??null,['delivered','transient','permanent','unknown'],true))return['status'=>'unknown','failureCode'=>'UNKNOWN_DELIVERY'];
+        return array_intersect_key($result,array_flip(['status','failureCode','providerReference']));
+    }
+
     private function sendSmtp(array $wire): array
     {
         $context=stream_context_create(['ssl'=>[

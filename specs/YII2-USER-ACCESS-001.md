@@ -1,5 +1,7 @@
 # YII2-USER-ACCESS-001 — управление доступом через Yii2
 
+> Переход 2026-11-24: создание пользователей, invitation/reissue/activation и блокировка ожидающих первого пароля определяет [EMAIL-FIRST-PASSWORD-RECOVERY-001](EMAIL-FIRST-PASSWORD-RECOVERY-001.md). Текст ниже сохраняет исходный контракт/историю; не возвращает приглашения в новый runtime. Фактическая готовность реализации и проверок — в [delivery record](../openspec/changes/email-first-password-recovery/delivery.md).
+
 ## Простыми словами
 
 Администратор приглашает пользователя, выдаёт новую ссылку, назначает роли и
