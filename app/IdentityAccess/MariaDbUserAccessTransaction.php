@@ -31,7 +31,7 @@ final class MariaDbUserAccessTransaction
 
     public function authorized(int $actorId, string $permission): bool
     {
-        return $this->db->createCommand('SELECT 1 FROM '.$this->table('fm2_pilot_users').' u JOIN '.$this->table('fm2_pilot_user_roles').' ur ON ur.user_id=u.user_id JOIN '.$this->table('fm2_pilot_roles').' r ON r.role_id=ur.role_id JOIN '.$this->table('fm2_pilot_role_permissions')." rp ON rp.role_id=r.role_id WHERE u.user_id=:actor AND u.status=1 AND BINARY u.activation_state=BINARY 'active' AND r.status=1 AND BINARY rp.permission=BINARY :permission LIMIT 1", [':actor'=>$actorId, ':permission'=>$permission])->queryScalar() !== false;
+        return $this->db->createCommand('SELECT rp.permission FROM '.$this->table('fm2_pilot_users').' u JOIN '.$this->table('fm2_pilot_user_roles').' ur ON ur.user_id=u.user_id JOIN '.$this->table('fm2_pilot_roles').' r ON r.role_id=ur.role_id JOIN '.$this->table('fm2_pilot_role_permissions')." rp ON rp.role_id=r.role_id WHERE u.user_id=:actor AND u.status=1 AND BINARY u.activation_state=BINARY 'active' AND r.status=1 AND BINARY rp.permission=BINARY :permission LIMIT 1 FOR UPDATE", [':actor'=>$actorId, ':permission'=>$permission])->queryScalar() !== false;
     }
 
     public function isSuper(int $userId): bool
@@ -48,6 +48,12 @@ final class MariaDbUserAccessTransaction
     {
         if ($this->time === null) throw new \LogicException('Mutation clock unavailable.');
         return $this->time;
+    }
+
+    public function utcNow(): \DateTimeImmutable
+    {
+        $raw=(string)$this->db->createCommand('SELECT UTC_TIMESTAMP(6)')->queryScalar();
+        return new \DateTimeImmutable($raw,new \DateTimeZone('UTC'));
     }
 
     public function raw(string $name): string { return $this->prefix.$name; }

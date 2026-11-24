@@ -1,3 +1,15 @@
+# Текущая цель — email first password and recovery
+
+Новое поручение владельца 2026-11-24: реализовать `email-first-password-recovery` по согласованному плану и довести до проверенного candidate/PR. Первый пароль — на портале по заранее внесённому email; восстановление — самостоятельное письмо. Контракт: `specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md`; lifecycle и авторизация — `openspec/changes/email-first-password-recovery/`.
+
+Root пишет specs/tests; отдельный gpt-5.6-sol/low executor — код; независимые gpt-5.6-sol/low reviewers — planner-required Gate3/final. Только bounded local checks и один exact-source CI; full local make test/verify запрещён. Merge/deploy/live email не входят.
+
+Предыдущая цель сохранена в `openspec/changes/email-first-password-recovery/previous-delivery-goal.md` и Git history, не возобновляется этой задачей. State/source/PR/CI читаются через harness.py state. UNKNOWN не approval.
+
+---
+
+## Приостановленная очередь и история
+
 # Текущая задача — GitLab Runner для обновления production, 18.11.2026
 
 Владелец передал настройку Ильяса: выделенный Runner `web-03` для FM,

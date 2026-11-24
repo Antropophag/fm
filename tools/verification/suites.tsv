@@ -47,6 +47,8 @@ db	php	tests/AssignmentOrderComposition/selection_picker_view_manual_test.php	in
 db	php	tests/AssignmentOrderComposition/selection_unknown_employment_manual_pilot_test.php	integration
 db	php	tests/AssignmentOrderComposition/template_generation_001_test.php	integration
 db	php	tests/AssignmentOrderComposition/template_generation_boundaries_001_test.php	integration
+db	php	tests/IdentityAccess/email_password_migration_001_test.php	integration
+db	php	tests/IdentityAccess/email_password_schema_001_test.php	integration
 db	php	tests/IdentityAccess/legacy_identity_link_001_test.php	integration
 db	php	tests/InstallationProcess/artifact_store_001_test.php	integration
 db	php	tests/InstallationProcess/assignment_order_identity_registry_001_test.php	integration
@@ -230,10 +232,16 @@ db	php	tests/Verification/batched_schema_snapshot_001_test.php	integration
 db	php	tests/Workforce/installer_utilization_forecast_001_test.php	integration
 db	php	tests/Workforce/installer_utilization_observations_001_test.php	integration
 db	php	tests/Yii2/deadline_transfer_certificate_http_001_test.php	integration
+db	php	tests/Yii2/email_first_password_001_test.php	integration
 db	php	tests/Yii2/legacy_control_engineer_reads_001_test.php	integration
+db	php	tests/Yii2/password_recovery_001_test.php	integration
+db	php	tests/Yii2/password_recovery_delivery_safety_001_test.php	integration
+db	php	tests/Yii2/password_recovery_edges_001_test.php	integration
+db	php	tests/Yii2/password_recovery_integrity_001_test.php	integration
 db	php	tests/Yii2/production_performance_assets_001_test.php	integration
 db	php	tests/Yii2/production_performance_concurrency_001_test.php	integration
 db	php	tests/Yii2/production_performance_reads_001_test.php	integration
+db	php	tests/Yii2/provision_authorization_race_001_test.php	integration
 db	php	tests/Yii2/yii2_activation_password_20261029_test.php	integration
 db	php	tests/Yii2/yii2_address_register_001_test.php	integration
 db	php	tests/Yii2/yii2_authentication_001_test.php	integration
@@ -370,6 +378,7 @@ e2e	php	tests/Runtime/production_runtime_browser_001_test.php	e2e
 e2e	php	tests/Runtime/production_runtime_compose_001_test.php	e2e
 e2e	php	tests/Runtime/runtime_settlement_compatibility_001_test.php	e2e
 e2e	php	tests/Support/ObjectRegisterPagingBrowserFixture.php	e2e
+e2e	php	tests/Yii2/email_password_browser_001_test.php	e2e
 e2e	php	tests/Yii2/excel_publication_browser_001_test.php	e2e
 e2e	php	tests/Yii2/production_performance_browser_001_test.php	e2e
 e2e	php	tests/Yii2/yii2_address_register_browser_001_test.php	e2e
@@ -424,6 +433,7 @@ unit	python3	tests/Deployment/erp_equipment_facts_runtime_001_test.py	unit
 unit	python3	tests/Deployment/gitlab_production_deploy_001_test.py	unit
 unit	python3	tests/Deployment/local_integration_env_001_test.py	unit
 unit	python3	tests/Deployment/local_integration_env_security_001_test.py	unit
+unit	python3	tests/Deployment/password_recovery_configuration_001_test.py	governance
 unit	python3	tests/Deployment/pecl_direct_fallback_001_test.py	unit
 unit	python3	tests/Deployment/production_dependencies_001_test.py	unit
 unit	python3	tests/Deployment/production_handoff_001_test.py	unit

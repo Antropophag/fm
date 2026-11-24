@@ -1,0 +1,60 @@
+{
+  "change": "email-first-password-recovery-qualified-corrections",
+  "planned_paths": [
+    "specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+    "app/InstallationProcess/EmailFirstPasswordRecoverySchemaMigration.php",
+    "app/InstallationProcess/IdentityAccessDefinitionSchemaMigration.php",
+    "app/InstallationProcess/LegacyControlEngineerImportSchemaMigration.php",
+    "tests/IdentityAccess/email_password_schema_001_test.php",
+    "tests/InstallationProcess/identity_access_schema_001_test.php",
+    "tests/InstallationProcess/production_migration_runner_001_test.php",
+    "tests/Support/PasswordSchemaContract.php",
+    "tests/Yii2/password_recovery_edges_001_test.php",
+    "tests/Yii2/provision_authorization_race_001_test.php",
+    "app/IdentityAccess/YiiUserAccess.php",
+    "app/IdentityAccess/MariaDbPasswordAccess.php",
+    "app/IdentityAccess/PasswordRecoveryConfig.php",
+    "app/Jobs/JobHandlerRuntime.php",
+    "tests/Yii2/password_recovery_integrity_001_test.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "EMAIL-FIRST-PASSWORD-RECOVERY-001",
+      "acceptance_id": "strict-schema-fingerprint-interrupted-upgrade",
+      "spec_path": "specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+      "seam": "canonical migration apply and readiness against semantic mutations/interrupted predecessor",
+      "tests": [
+        "tests/IdentityAccess/email_password_schema_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/IdentityAccess/email_password_schema_001_test.php": "INTENDED_RED"
+      }
+    },
+    {
+      "spec_id": "EMAIL-FIRST-PASSWORD-RECOVERY-001",
+      "acceptance_id": "preserved-queue-admission-and-revoke-observation-fixtures",
+      "spec_path": "specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+      "seam": "explicit outbox job registry and actual InnoDB wait then authority denial",
+      "tests": [
+        "tests/Yii2/password_recovery_edges_001_test.php",
+        "tests/Yii2/provision_authorization_race_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Yii2/password_recovery_edges_001_test.php": "GREEN",
+        "tests/Yii2/provision_authorization_race_001_test.php": "GREEN"
+      }
+    },
+    {
+      "spec_id": "EMAIL-FIRST-PASSWORD-RECOVERY-001",
+      "acceptance_id": "retired-facade-envelope-binding-db-clock-smtp-version",
+      "spec_path": "specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+      "seam": "public active owner retirement; sender not called on ciphertext/metadata substitution; authoritative DB session clock; real production dispatch and HTTP readiness",
+      "tests": [
+        "tests/Yii2/password_recovery_integrity_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Yii2/password_recovery_integrity_001_test.php": "INTENDED_RED"
+      }
+    }
+  ]
+}

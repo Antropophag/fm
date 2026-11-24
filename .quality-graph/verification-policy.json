@@ -939,6 +939,45 @@
         "tests/Yii2/yii2_month_session_001_test.php"
       ],
       "consumers": []
+    },
+    {
+      "name": "email-first-password-recovery",
+      "patterns": [
+        "tools/delivery/local-runtime-env",
+        "tools/delivery/compose.runtime.yaml.in",
+        "app/IdentityAccess/MariaDbPasswordAccess.php",
+        "app/IdentityAccess/MariaDbUserAccessTransaction.php",
+        "app/IdentityAccess/MariaDbUserStatusChanges.php",
+        "app/IdentityAccess/MariaDbYiiLocalIdentityStore.php",
+        "app/IdentityAccess/PasswordPolicy.php",
+        "app/IdentityAccess/PasswordRecoveryConfig.php",
+        "app/IdentityAccess/YiiUserAccess.php",
+        "app/InstallationProcess/EmailFirstPasswordRecoverySchemaMigration.php",
+        "app/RuntimeRestore/RuntimeRecoverySchemaV40.php",
+        "app/YiiRuntime/Assets/users.js",
+        "app/YiiRuntime/Controllers/AuthController.php",
+        "app/YiiRuntime/Controllers/UserAccessController.php",
+        "app/YiiRuntime/Views/forgot-password.php",
+        "app/YiiRuntime/Views/login.php",
+        "app/YiiRuntime/Views/password-form.php",
+        "app/YiiRuntime/Views/user-editor.php",
+        "app/YiiRuntime/Views/users.php"
+      ],
+      "verifiers": [
+        "tests/IdentityAccess/email_password_migration_001_test.php",
+        "tests/IdentityAccess/email_password_schema_001_test.php",
+        "tests/Runtime/production_schema_frontier_001_test.php",
+        "tests/Yii2/email_first_password_001_test.php",
+        "tests/Yii2/email_password_browser_001_test.php",
+        "tests/Yii2/password_recovery_001_test.php",
+        "tests/Yii2/password_recovery_edges_001_test.php",
+        "tests/Yii2/password_recovery_integrity_001_test.php",
+        "tests/Yii2/password_recovery_delivery_safety_001_test.php",
+        "tests/Yii2/provision_authorization_race_001_test.php",
+        "tests/Yii2/yii2_authentication_001_test.php",
+        "tests/Yii2/yii2_user_access_001_test.php"
+      ],
+      "consumers": []
     }
   ],
   "full_argv": [

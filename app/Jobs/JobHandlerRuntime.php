@@ -8,7 +8,7 @@ use FMonitor2\YiiRuntime\Commands\BitrixOrderDocumentLinksSyncController;
 
 final class JobHandlerRuntime
 {
-    public static function handle(array $job, ?JobsRuntimeConfiguration $config, ?callable $documentSync=null): array
+    public static function handle(array $job, ?JobsRuntimeConfiguration $config, ?callable $documentSync=null,?callable $emailSender=null): array
     {
         if($job['jobType']==='installer-utilization.capture')return InstallerUtilizationCaptureJobHandler::handle($job,$config,$documentSync);
         if ($job['jobType'] === 'erp.equipment-facts.sync') {
@@ -18,7 +18,7 @@ final class JobHandlerRuntime
             if (($result['status']??null)==='failed' && is_string($result['runId']??null) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D',$result['runId'])===1 && in_array($result['reason']??null,['SOURCE_UNAVAILABLE','SOURCE_INVALID'],true)) return ['status'=>'retryable','failureCode'=>'ERP_EQUIPMENT_FACTS_SYNC_FAILED','result'=>['runId'=>$result['runId'],'reason'=>$result['reason']]];
             return ['status'=>'retryable','failureCode'=>'ERP_EQUIPMENT_FACTS_SYNC_FAILED'];
         }
-        if ($job['jobType'] === 'outbox.dispatch') return self::deliverOutbox($job, $config);
+        if ($job['jobType'] === 'outbox.dispatch') return self::deliverOutbox($job, $config,$emailSender);
         if ($job['jobType'] === 'weekly-fkr-report.generate') return self::generateWeekly($job, $config);
         if ($job['jobType'] === 'bitrix.order-document-links.sync') {
             try { $result=$documentSync===null?BitrixOrderDocumentLinksSyncController::runJob($config):$documentSync(); }
@@ -69,15 +69,20 @@ final class JobHandlerRuntime
         finally { $db->close(); }
     }
 
-    private static function deliverOutbox(array $job,JobsRuntimeConfiguration $config): array
+    private static function deliverOutbox(array $job,JobsRuntimeConfiguration $config,?callable $emailSender): array
     {
         try { $smtp=SmtpConfiguration::fromEnvironment(getenv()); }
         catch (\RuntimeException) { return ['status'=>'permanent','failureCode'=>'OUTBOX_TRANSPORT_UNCONFIGURED']; }
         $db=MariaDbJobsConnection::open($config);
         try {
             $directory=new MariaDbWeeklyFkrRecipientDirectory($db,$config->prefix());
-            $transport=new SmtpTransport($smtp,$directory->recipient(...));
-            $handler=new OutboxDeliveryHandler(new MariaDbOutbox($db,$config->prefix()),static function(array $intent) use ($transport): array {
+            $transport=new SmtpTransport($smtp,$directory->recipient(...),$emailSender);
+            $handler=new OutboxDeliveryHandler(new MariaDbOutbox($db,$config->prefix()),static function(array $intent) use ($transport,$config): array {
+                if($intent['channel']==='email'&&$intent['template']==='password-recovery'&&$intent['version']===1&&isset($intent['data']['requestId'])){
+                    $connection=new \yii\db\Connection(['dsn'=>'mysql:host='.$config->value('FMONITOR_DB_HOST').';port='.$config->port().';dbname='.$config->value('FMONITOR_DB_NAME'),'username'=>$config->value('FMONITOR_DB_USER'),'password'=>$config->value('FMONITOR_DB_PASSWORD'),'charset'=>'utf8mb4']);
+                    $owner=new \FMonitor2\IdentityAccess\YiiUserAccess(['db'=>$connection,'tablePrefix'=>$config->prefix()]);
+                    return self::mapEmailTransportOutcome($owner->deliverPasswordReset((string)$intent['data']['requestId'],$transport->sendTo(...)));
+                }
                 if ($intent['channel']!=='email'||$intent['template']!=='weekly-fkr-report') return ['status'=>'permanent','failureCode'=>'TRANSPORT_REJECTED'];
                 return self::mapEmailTransportOutcome($transport->send($intent['data']));
             },(new MariaDbJobsSession($db,$config->prefix()))->now(...));

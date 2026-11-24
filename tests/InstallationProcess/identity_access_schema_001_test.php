@@ -152,7 +152,7 @@ function iaSemanticManifest(mysqli $db, string $prefix): array
 }
 
 /** Test-owned semantic tuples transcribed literally from spec section 4. */
-function iaExpectedManifest(string $prefix, string $collation): array
+function iaExpectedManifest(string $prefix, string $collation, bool $current = false): array
 {
     $c = static fn (string $name, string $type, string $null, mixed $default, string $extra = '', ?string $charset = null): array => [$name,$type,$null,$default,$extra,$charset,$charset === null ? null : $collation];
     $i = static fn (int $nonUnique, string $name, int $seq, string $column): array => [$nonUnique,$name,$seq,$column,'BTREE'];
@@ -162,7 +162,7 @@ function iaExpectedManifest(string $prefix, string $collation): array
     $table = static fn (array $columns, array $indexes, array $fks = []): array => ['table'=>[['InnoDB',$collation]], 'columns'=>$columns, 'indexes'=>$indexes, 'fks'=>$fks];
     return [
         $prefix.'fm2_pilot_users'=>$table([
-            $c('user_id','bigint(20) unsigned','NO',null,'auto_increment'),$c('full_name','varchar(300)','NO',null,'',$cset),$c('email','varchar(254)','NO',null,'',$cset),$c('phone','varchar(100)','NO',"''",'',$cset),$c('status','tinyint(1)','NO','1'),$c('activation_state',"enum('pending_invitation','invited','active','blocked')",'NO',null,'',$cset),$c('session_version','int(10) unsigned','NO','1'),$c('source_updated_at','varchar(40)','NO',null,'',$cset),
+            $c('user_id','bigint(20) unsigned','NO',null,'auto_increment'),$c('full_name','varchar(300)','NO',null,'',$cset),$c('email','varchar(254)','NO',null,'',$cset),$c('phone','varchar(100)','NO',"''",'',$cset),$c('status','tinyint(1)','NO','1'),$c('activation_state',$current?"enum('pending_invitation','invited','pending_password','active','blocked')":"enum('pending_invitation','invited','active','blocked')",'NO',null,'',$cset),$c('session_version','int(10) unsigned','NO','1'),$c('source_updated_at','varchar(40)','NO',null,'',$cset),
         ],[$i(1,'ix_ia_users_status_name',1,'status'),$i(1,'ix_ia_users_status_name',2,'full_name'),$i(0,'PRIMARY',1,'user_id'),$i(0,'uq_ia_users_email',1,'email')]),
         $prefix.'fm2_pilot_roles'=>$table([
             $c('role_id','bigint(20) unsigned','NO',null,'auto_increment'),$c('code','varchar(64)','NO',null,'',$cset),$c('name','varchar(300)','NO',null,'',$cset),$c('description','varchar(500)','NO',null,'',$cset),$c('status','tinyint(1)','NO',null),$c('source_updated_at','varchar(40)','NO',null,'',$cset),
@@ -229,10 +229,10 @@ function iaState(mysqli $db, string $prefix): array
     return $state;
 }
 
-function iaAfterV30(array $state, string $prefix): array
+function iaAfterV40(array $state, string $prefix): array
 {
     $table=$prefix.'fm2_pilot_users';
-    if(isset($state[$table][1][1]))$state[$table][1][1]=str_replace("enum('invited','active','blocked')","enum('pending_invitation','invited','active','blocked')",$state[$table][1][1]);
+    if(isset($state[$table][1][1]))$state[$table][1][1]=str_replace("enum('invited','active','blocked')","enum('pending_invitation','invited','pending_password','active','blocked')",$state[$table][1][1]);
     return $state;
 }
 
@@ -243,7 +243,7 @@ function iaPopulateLiteralFamily(mysqli $db, string $prefix, bool $generatedName
     $db->query("INSERT INTO `{$prefix}fm2_pilot_roles` VALUES(51,'synthetic-role','Синтетическая роль','Только тестовые данные',1,'2026-09-01T10:00:00+03:00')");
     $db->query("INSERT INTO `{$prefix}fm2_pilot_role_permissions` VALUES(51,'objects.read')");
     $db->query("INSERT INTO `{$prefix}fm2_pilot_user_roles` VALUES(41,51,'synthetic','2026-09-01T10:00:00+03:00',NULL)");
-    $db->query("INSERT INTO `{$prefix}fm2_pilot_auth_credentials` VALUES(41,'synthetic@example.test',NULL,NULL,'2026-09-01T10:00:00+03:00')");
+    $fixtureHash=$db->real_escape_string(password_hash('Synthetic fixture password 2026!',PASSWORD_ARGON2ID));$db->query("INSERT INTO `{$prefix}fm2_pilot_auth_credentials` VALUES(41,'synthetic@example.test','{$fixtureHash}',NULL,'2026-09-01T10:00:00+03:00')");
     $db->query("INSERT INTO `{$prefix}fm2_pilot_invitations` VALUES(61,41,UNHEX(REPEAT('11',32)),'2026-09-02 10:00:00.000001',NULL,NULL,NULL,'2026-09-01 10:00:00.000001')");
     $db->query("INSERT INTO `{$prefix}fm2_pilot_user_role_events` VALUES(71,41,51,'attached','2026-09-01T10:00:00+03:00',NULL)");
     $db->query("INSERT INTO `{$prefix}fm2_pilot_auth_attempts`(email_normalized,succeeded,attempted_at) VALUES('synthetic@shlz.ru',0,'2026-09-01 07:00:00.000001')");
@@ -288,7 +288,7 @@ try {
         assertSameValue(0, (int) $db->query("SELECT COUNT(*) n FROM `{$table}`")->fetch_assoc()['n'], "{$table} must not be seeded.");
     }
     $cleanManifest = iaSemanticManifest($db, 'clean_');
-    assertSameValue(iaExpectedManifest('clean_', iaDatabaseCollation($db)), iaComparableManifest($cleanManifest), 'All nine clean semantic manifests and deterministic symbols are test-owned literals.');
+    assertSameValue(iaExpectedManifest('clean_', iaDatabaseCollation($db), true), iaComparableManifest($cleanManifest), 'All nine clean semantic manifests and deterministic symbols are test-owned literals.');
     $repeatBefore = iaState($db, 'clean_');
     $repeat = iaRun($database, 'clean_');
     assertSameValue(CurrentProductionSchemaContract::replayResult(), iaJson($repeat), 'Complete composed repeat result.');
@@ -314,8 +314,8 @@ try {
     assertSameValue(true, array_diff($generatedFks, $canonicalFks) !== [], 'MariaDB generated at least one non-canonical FK symbol before runner.');
     }
     $populatedBefore = iaState($db, 'pop_');
-    assertSameValue(['ok' => true, 'schemaVersion'=>39, 'appliedVersions' => [7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39]], iaJson(iaRun($database, 'pop_')), 'Populated identity family receives all current successors.');
-    $populatedBefore=iaAfterV30($populatedBefore,'pop_');
+    assertSameValue(['ok' => true, 'schemaVersion'=>40, 'appliedVersions' => [7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]], iaJson(iaRun($database, 'pop_')), 'Populated identity family receives all current successors.');
+    $populatedBefore=iaAfterV40($populatedBefore,'pop_');
     assertSameValue($populatedBefore, array_intersect_key(iaState($db, 'pop_'),$populatedBefore), 'Populated compatible identity family is preserved exactly while v7-v22 successors are added empty.');
     iaReleaseTerminalV10($db,'pop_');
 
@@ -347,8 +347,8 @@ try {
     // Restartable 8/9 partial: only absent status-events is created, then repeat is a no-op.
     iaPopulateLiteralFamily($db, 'partial_');
     $db->query('DROP TABLE `partial_fm2_pilot_user_status_events`');
-    $partialBefore = iaAfterV30(iaState($db, 'partial_'),'partial_');
-    assertSameValue(['ok' => true, 'schemaVersion'=>39, 'appliedVersions' => [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39]], iaJson(iaRun($database, 'partial_')), 'Identity partial recovery composes with all current successors.');
+    $partialBefore = iaAfterV40(iaState($db, 'partial_'),'partial_');
+    assertSameValue(['ok' => true, 'schemaVersion'=>40, 'appliedVersions' => [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]], iaJson(iaRun($database, 'partial_')), 'Identity partial recovery composes with all current successors.');
     assertSameValue($partialBefore, array_intersect_key(iaState($db, 'partial_'), $partialBefore), 'Existing partial members are unchanged.');
     assertSameValue(CurrentProductionSchemaContract::replayResult(), iaJson(iaRun($database, 'partial_')), 'Interrupted recovery repeat is a no-op.');
     iaReleaseTerminalV10($db,'partial_');
@@ -356,8 +356,8 @@ try {
     // Dependency-safe recovery: roles and every dependent member are absent.
     iaCreateLiteralFamily($db, 'deps_');
     foreach (['fm2_pilot_invitations','fm2_pilot_auth_credentials','fm2_pilot_user_roles','fm2_pilot_role_permissions','fm2_pilot_roles'] as $base) $db->query("DROP TABLE `deps_{$base}`");
-    $depsBefore = iaAfterV30(iaState($db, 'deps_'),'deps_');
-    assertSameValue(['ok'=>true,'schemaVersion'=>39,'appliedVersions'=>[6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39]], iaJson(iaRun($database, 'deps_')), 'Identity dependency recovery within current catalogue.');
+    $depsBefore = iaAfterV40(iaState($db, 'deps_'),'deps_');
+    assertSameValue(['ok'=>true,'schemaVersion'=>40,'appliedVersions'=>[6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]], iaJson(iaRun($database, 'deps_')), 'Identity dependency recovery within current catalogue.');
     assertSameValue($depsBefore, array_intersect_key(iaState($db, 'deps_'), $depsBefore), 'Dependency recovery preserves existing members.');
     foreach (iaNames('deps_') as $table) assertSameValue(1, (int)$db->query("SELECT COUNT(*) n FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='{$table}'")->fetch_assoc()['n'], 'Dependency recovery creates every missing member in FK-safe order.');
     assertSameValue(CurrentProductionSchemaContract::replayResult(), iaJson(iaRun($database, 'deps_')), 'Dependency recovery is restartable within composed v27 catalogue.');
