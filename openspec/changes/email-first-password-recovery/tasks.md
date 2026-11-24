@@ -27,7 +27,7 @@
 
 - [x] 4.1 Выполнить только planner-selected bounded local checks и `make architecture-check`; при затрагивании `app/PilotHttp/*.php` выполнить обязательный `php tests/InstallationProcess/pilot_http_auth_001_global_calls_test.php` до commit/push. Проверка: retained focused evidence подтверждает changed boundaries; полный локальный `make test`/`make verify` не запускался.
 - [x] 4.2 Обновить source binding/план при изменении scope, собрать полный candidate и передать независимому gpt-5.6-sol/low final reviewer; исправить findings с сохранением review independence. Проверка: APPROVED относится к exact source, а изменения spec/tests при необходимости прошли повторный Gate 3 по плану.
-- [ ] 4.3 Для GitHub проверить account Antropophag и обе git identities с теми же scoped overrides, что у commit, затем подготовить commit/PR. Проверка: сохранены авторство/история, source соответствует review, merge/deploy не выполнялись.
+- [x] 4.3 Для GitHub проверить account Antropophag и обе git identities с теми же scoped overrides, что у commit, затем подготовить commit/PR. Проверка: сохранены авторство/история, source соответствует review, merge/deploy не выполнялись.
 - [ ] 4.4 Найти или один раз запустить exact-source GitHub CI через существующий выбранный consumer. При сбое собрать полную failed-job/REGRESSION_FAILURE inventory до исправления. Проверка: обязательные checks GREEN для final source; UNKNOWN/пропуски не объявлены approval.
 
 ## 5. Done and operational handoff

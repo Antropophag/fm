@@ -91,6 +91,7 @@ foreach(['name','literal'] as $drift)A::case('capability-v5-'.$drift.'-drift',fu
  $before=$f->facts();assertSameValue('SCHEMA_MIGRATION_CONFLICT',I\ProcessCommandCapabilitiesSchemaMigration::apply($f->db,$f->prefix)['reason']??null,'only exact v5 successor allowed');assertSameValue($before,$f->facts(),'drift fail closed');
 });
 A::case('canonical-original-family13-repeat',function($f){
+ $hash=password_hash('Synthetic original fixture 2026!',PASSWORD_ARGON2ID);$seed=$f->db->prepare("INSERT INTO `{$f->prefix}fm2_pilot_auth_credentials`(user_id,email_normalized,password_hash,password_set_at,updated_at) SELECT u.user_id,LOWER(TRIM(u.email)),?,u.source_updated_at,u.source_updated_at FROM `{$f->prefix}fm2_pilot_users` u LEFT JOIN `{$f->prefix}fm2_pilot_auth_credentials` c ON c.user_id=u.user_id WHERE u.activation_state='active' AND c.user_id IS NULL");$seed->execute([$hash]);$seed->close();
  [$exit,$result]=A::runCanonical($f);assertSameValue(0,$exit,'canonical applies original family');assertSameValue([true,CurrentProductionSchemaContract::CURRENT_VERSION],[$result['ok']??null,$result['schemaVersion']??null],'canonical current version, original remains step13');assertSameValue(true,in_array(13,$result['appliedVersions']??[],true),'original v3 actually applied');
  $facts=$f->facts();assertSameValue(CurrentProductionSchemaContract::replayNestedResult(),A::runCanonical($f),'entire canonical runner repeats through current successors');assertSameValue($facts,$f->facts(),'repeat preserves original facts');
 });

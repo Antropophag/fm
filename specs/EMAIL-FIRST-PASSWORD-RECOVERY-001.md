@@ -4,7 +4,7 @@
 
 Администратор заранее добавляет рабочий email. Первый пароль пользователь задаёт на портале; восстановление забытого пароля выполняется письмом без участия администратора. Существующие пароли, роли и история сохраняются.
 
-Статус: контракт root; RED и независимый Gate 3 ещё не выполнены. Источник требований — диалог владельца, включая явное поручение реализации. Этот контракт заменяет invitation/activation части YII2-USER-ACCESS-001 и YII2-USER-INVITATION-UX-001, а также выбор шага входа YII2-AUTH-001. Прочие RBAC/session guarantees наследуются.
+Статус: контракт root реализован; RED и независимые ревью сохранены в lifecycle/review records, итоговый CI отслеживается в PR309. Источник требований — диалог владельца, включая явное поручение реализации. Этот контракт заменяет invitation/activation части YII2-USER-ACCESS-001 и YII2-USER-INVITATION-UX-001, а также выбор шага входа YII2-AUTH-001. Прочие RBAC/session guarantees наследуются.
 
 ## Purpose
 
@@ -184,3 +184,5 @@ Encrypted envelope SHALL использовать libsodium authenticated encryp
 Перед network send recovery owner SHALL durable-claim попытку: конкурентная доставка и сбой/неизвестный результат после вызова транспорта SHALL NOT автоматически отправлять письмо повторно. Неопределённый исход хранится как unknown без envelope; заведомо transient outcome может сохранить прежнюю envelope для retry с прежним token/expiry. Повтор одного HTTP POST остаётся нейтральным/idempotent, а новая форма в той же сессии получает новую identity команды. Forgot GET/POST имеют no-store и no-referrer. Pending directory не показывает устаревшую invitation validity.
 
 Oversized/непригодные email и client identity на public recovery command SHALL возвращать нейтральный ответ с ограниченным представлением quota attempt без storage error; email, не представимый в canonical254-character поле, не допускает grant. Recovery config принимает только HTTPS origin (host и optional port; завершающий slash нормализуется), без userinfo/path/query/fragment. Recovery key/keyId передаются только PHP и jobs-worker. SMTP tuple передаётся PHP, jobs-worker и jobs-scheduler: scheduler проверяет SMTP для включения outbox/weekly scheduling. Prepare/migrate/startup-check/local-integration/web/db этих секретов не получают. Оба published Compose и canonical local-runtime template/env parser поддерживают recovery configuration.
+
+Сохранённая гарантия YII2-AUTH-001: очищать failed password attempts и считать вход успешным разрешено только после durable session close. Ошибка записи сессии сохраняет прежние failed attempts. Safe return URL захватывается и сбрасывается до close, после close session повторно не открывается.

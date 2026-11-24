@@ -76,8 +76,8 @@ function prbOk(array $result,string $label):void
 function prbSeed(SelectedOriginalFixture $fixture,string $password):void
 {
     $native=$fixture->selection;$db=$native->db;$p=$native->prefix;
-    $migration=CanonicalMigrationApplication::run($db,$p,ProductionPilotMigrationCatalogue::migrations());
-    $expectedCurrent=CurrentProductionSchemaContract::cleanApplicationResult();assertSameValue([$expectedCurrent[0],$expectedCurrent[1],$expectedCurrent[2],true],[$migration['exitCode'],$migration['result']['ok']??null,$migration['result']['schemaVersion']??null,InspectionPhotoContentIndexSchemaMigration::isCompleteCompatible($db,$p)],'fixture canonical current schema');
+    $migration=CanonicalMigrationApplication::run($db,$p,array_slice(ProductionPilotMigrationCatalogue::migrations(),0,39,true));
+    $expectedCurrent=CurrentProductionSchemaContract::cleanApplicationResult();assertSameValue([0,true,39,true],[$migration['exitCode'],$migration['result']['ok']??null,$migration['result']['schemaVersion']??null,InspectionPhotoContentIndexSchemaMigration::isCompleteCompatible($db,$p)],'fixture canonical current schema');
     $db->query("UPDATE `{$p}fm_maintable` SET ordadr_address='Москва, Тестовая улица, 1',entrance='2',regnumber='77-000123',workdatestart='2026-09-05',plan_finish_date='2026-12-20' WHERE id=4512");
     $db->query("UPDATE `{$p}fm2_workforce_catalog` SET reconciliation_state='delivered'");
     foreach(range(7003,7027)as$tab)$native->schema->insert($p.'fm2_workforce_catalog',['installer_tab_id'=>$tab,'fio'=>'Монтажник '.$tab,'position'=>'Монтажник','employment_status'=>'employed','reconciliation_state'=>'delivered','employed_from'=>'2020-01-01','employed_to'=>null,'workforce_source'=>'synthetic-hr','workforce_source_updated_at'=>'2026-09-01T06:00:00Z']);
@@ -105,6 +105,7 @@ function prbSeed(SelectedOriginalFixture $fixture,string $password):void
     $native->schema->insert($p.'fm2_pilot_roles',['role_id'=>5,'code'=>'system_admin','name'=>'Администратор','description'=>'synthetic','status'=>1,'source_updated_at'=>'2026-09-01T06:00:00Z']);
     $native->schema->insert($p.'fm2_pilot_user_roles',['user_id'=>99,'role_id'=>5,'origin'=>'fixture','assigned_at'=>'2026-09-01T06:00:00Z']);$native->schema->insert($p.'fm2_pilot_role_permissions',['role_id'=>5,'permission'=>'access.administer']);
     $native->schema->insert($p.'fm2_pilot_auth_credentials',['user_id'=>99,'email_normalized'=>'admin99@shlz.ru','password_hash'=>$hash,'updated_at'=>'2026-09-01T06:00:00Z']);
+    $current=CanonicalMigrationApplication::run($db,$p,ProductionPilotMigrationCatalogue::migrations());assertSameValue([$expectedCurrent[0],$expectedCurrent[1],$expectedCurrent[2]],[$current['exitCode'],$current['result']['ok']??null,$current['result']['schemaVersion']??null],'coherent credentials then current schema');
     require_once dirname(__DIR__,2).'/app/PilotHttp/ChecklistView.php';$sections=(new ReflectionClass(ProductionChecklistRenderer::class))->getConstant('SECTIONS');$parts=[];$definitions=[];$sum=0;
     foreach($sections as$section){$parts[]=['id'=>$section['id'],'name'=>$section['name'],'rang'=>$section['id']];foreach($section['items']as[$id,$label,$weight]){$definitions[]=['id'=>$id,'part_id'=>$section['id'],'name'=>$label,'share'=>$weight,'rang'=>count($definitions)+1,'needphoto'=>1];if($id!==42)$sum+=$weight;}}
     assertSameValue(85,$sum,'approved protected work weight');$payload=json_encode(['snapshotVersion'=>'protected-current-v1','capturedAt'=>'2026-09-01 00:00:00','validFrom'=>'2026-09-01 00:00:00','validity'=>'synthetic','source'=>'synthetic','parts'=>$parts,'definitions'=>$definitions],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);
