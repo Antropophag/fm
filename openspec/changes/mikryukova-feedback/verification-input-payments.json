@@ -1,0 +1,59 @@
+{
+  "change": "mikryukova-feedback",
+  "planned_paths": [
+    "app/Workforce/MariaDbInstallerUtilization.php",
+    "app/YiiRuntime/Views/installers.php",
+    "app/InstallationProcess/ObjectDetailsFieldRegistry.php",
+    "app/InstallationProcess/MariaDbEffectiveObjectDetails.php",
+    "app/YiiRuntime/Controllers/ObjectCardController.php",
+    "app/YiiRuntime/Views/object-card.php",
+    "app/Otiz/ContractualReplacementPeriod.php",
+    "app/Otiz/MariaDbNativePremiumInputs.php",
+    "app/Otiz/MariaDbNativePremiumInputsValues.php",
+    "app/Otiz/MariaDbOtizSettlementV2.php",
+    "app/Otiz/OtizSettlementV2Workbook.php",
+    "app/Otiz/MariaDbOtizPortfolioEconomy.php",
+    "app/Otiz/MariaDbObjectRegisterQuery.php",
+    "app/Otiz/ObjectEconomy.php",
+    "app/InstallationProcess/OtizPaymentControlSchemaMigration.php",
+    "app/InstallationProcess/ProductionPilotMigrationCatalogue.php",
+    "app/RuntimeRestore/RuntimeRecoverySchemaV41.php",
+    "app/RuntimeRestore/RuntimeRecovery.php",
+    "app/YiiRuntime/Controllers/OtizSettlementV2Controller.php",
+    "app/YiiRuntime/Views/otiz-calculation-v2.php",
+    "config/yii/web.php",
+    "tools/verification/suites.tsv",
+    "specs/MIKRYUKOVA-FEEDBACK-001.md",
+    ".quality-graph/verification-policy.json",
+    "tests/Otiz/object_payment_hold_001_test.php",
+    "tests/Otiz/object_payment_hold_concurrency_001_test.php",
+    "tests/Otiz/remaining_crew_reserve_001_test.php",
+    "tests/Yii2/object_payment_hold_http_001_test.php",
+    "tests/Support/PaymentHoldFixture.php",
+    "tests/Support/object_payment_hold_worker.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "MIKRYUKOVA-FEEDBACK-001",
+      "acceptance_id": "payment-control",
+      "spec_path": "specs/MIKRYUKOVA-FEEDBACK-001.md",
+      "seam": "OtizSettlementV2 public hold/resume/partial pay/reversal/default reserve release, real Yii HTTP and payment XLSX",
+      "tests": [
+        "tests/Otiz/object_payment_hold_001_test.php",
+        "tests/Otiz/object_payment_hold_concurrency_001_test.php",
+        "tests/Otiz/remaining_crew_reserve_001_test.php",
+        "tests/Yii2/object_payment_hold_http_001_test.php",
+        "tests/Otiz/reserved_shares_concurrency_20261029_test.php",
+        "tests/Otiz/settlement_v2_db_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Otiz/object_payment_hold_001_test.php": "INTENDED_RED",
+        "tests/Otiz/object_payment_hold_concurrency_001_test.php": "INTENDED_RED",
+        "tests/Otiz/remaining_crew_reserve_001_test.php": "INTENDED_RED",
+        "tests/Yii2/object_payment_hold_http_001_test.php": "INTENDED_RED",
+        "tests/Otiz/reserved_shares_concurrency_20261029_test.php": "GREEN",
+        "tests/Otiz/settlement_v2_db_001_test.php": "GREEN"
+      }
+    }
+  ]
+}

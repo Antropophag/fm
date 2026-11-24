@@ -7,7 +7,7 @@ final class MariaDbOtizCalculationRegister
  public function read(string$filter,string$year,int$page,int$size=25):array
  {
   $obligations="(SELECT COALESCE(SUM(o.amount_cents),0) FROM `{$this->p}fm2_otiz_recipient_obligations` o WHERE o.calculation_id=c.id)";
-  $activePaid="(SELECT COALESCE(SUM(p.amount_cents),0) FROM `{$this->p}fm2_otiz_payment_facts` p WHERE p.calculation_id=c.id AND NOT EXISTS(SELECT 1 FROM `{$this->p}fm2_otiz_payment_reversals` r WHERE r.payment_id=p.id))";
+  $activePaid="(SELECT COALESCE(SUM(a.amount_cents),0) FROM `{$this->p}fm2_otiz_payment_allocations` a JOIN `{$this->p}fm2_otiz_payment_facts` p ON p.id=a.payment_id WHERE p.calculation_id=c.id AND NOT EXISTS(SELECT 1 FROM `{$this->p}fm2_otiz_payment_reversals` r WHERE r.payment_id=p.id))";
   $where=["c.status<>'deleted'"];$params=[];
   if($filter==='drafts')$where[]="c.status='draft'";
   elseif($filter==='waiting')$where[]="c.status='accepted' AND {$obligations}>0 AND {$activePaid}<{$obligations}";

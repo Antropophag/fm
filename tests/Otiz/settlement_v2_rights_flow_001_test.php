@@ -57,7 +57,7 @@ $check = static function (string $label, callable $assertion) use (&$failures): 
 };
 try {
     $fixture = new InspectionFixture(dirname(__DIR__, 2));
-    $fixture->open();
+    $fixture->open();\FMonitor2\Tests\Support\OtizContractFixture::seed($fixture->http);
     $http = $fixture->http;
     $db = $http->db;
     $p = $http->p;
@@ -210,7 +210,7 @@ try {
         assertSameValue(0,array_sum(array_map(static fn($o)=>array_sum(array_column($o['entitlements'],'grossCents')),$next['objects'])),'committed replacement leaves no duplicate new rights');
     });
     foreach([[15,84500000,[7001=>6760000],10985000],[2,52000000,[7001=>4160000],6760000]]as[$floors,$fund,$amounts,$reserved]){
-        $payload['fields']['floors']=['raw'=>(string)$floors,'display'=>(string)$floors];
+        $payload['fields']['floors']=['raw'=>(string)$floors,'display'=>(string)$floors];$payload['fields']['stops']=$payload['fields']['floors'];
         $encoded=json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
         $db->prepare("UPDATE {$p}fm2_pilot_object_details SET payload_json=?,content_sha256=? WHERE object_id=4512")->execute([$encoded,hash('sha256',$encoded)]);
         $check('T05 explicit normative correction '.$floors.' floors',static function()use($builder,$owner,$op,&$activeOriginalId,$neighbor,$fund,$amounts,$reserved):void{
@@ -227,7 +227,7 @@ try {
             }finally{if($candidate!==null&&$candidate['status']==='draft')$owner->deleteDraft(73,$candidate['calculationId'],$candidate['revision'],'Окончание неуспешного опыта',$op());}
         });
     }
-    $payload['fields']['floors']=['raw'=>'15','display'=>'15'];$payload['fields']['pitmaterial']=['raw'=>'86','display'=>'86'];
+    $payload['fields']['floors']=['raw'=>'15','display'=>'15'];$payload['fields']['stops']=$payload['fields']['floors'];$payload['fields']['pitmaterial']=['raw'=>'86','display'=>'86'];
     $encoded=json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
     $db->prepare("UPDATE {$p}fm2_pilot_object_details SET payload_json=?,content_sha256=? WHERE object_id=4512")->execute([$encoded,hash('sha256',$encoded)]);
     $db->query("UPDATE {$p}fm_maintable SET plan_finish_date='2026-09-04' WHERE id=4512");
@@ -293,7 +293,7 @@ $check('three real recipients retain canonical contribution weights',static func
         $h=$f->http;$db=$h->db;$p=$h->p;
         $third=$db->query("SELECT * FROM {$p}fm2_workforce_catalog WHERE installer_tab_id=7001")->fetch_assoc();$third['installer_tab_id']=800;$third['fio']='Третий монтажник';$h->insert($p.'fm2_workforce_catalog',$third);
         $payload=json_decode($db->query("SELECT payload_json FROM {$p}fm2_pilot_object_details WHERE object_id=4512")->fetch_column(),true,flags:JSON_THROW_ON_ERROR);$payload['fields']['pitmaterial']=['raw'=>'41','display'=>'41'];$payload['fields']['lift_type']=['raw'=>'1','display'=>'пассажирский'];$json=json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);$db->prepare("UPDATE {$p}fm2_pilot_object_details SET payload_json=?,content_sha256=? WHERE object_id=4512")->execute([$json,hash('sha256',$json)]);
-        $f->open([7001,7002,800]);$operation=InspectionFixture::operation();$operation['deviceTime']='2026-09-03T10:00:00+03:00';$operation['installerTabIds']=[800,7002,7001];InspectionFixture::result($f->send($operation,InspectionFixture::csrf($f->page())),200,'accepted');$f->http->db->prepare("UPDATE {$f->http->p}fm2_checklist_operations SET server_received_at='2026-09-28T10:00:00+03:00' WHERE client_operation_id=?")->execute([$operation['clientOperationId']]);
+        $f->open([7001,7002,800]);\FMonitor2\Tests\Support\OtizContractFixture::seed($f->http);$operation=InspectionFixture::operation();$operation['deviceTime']='2026-09-03T10:00:00+03:00';$operation['installerTabIds']=[800,7002,7001];InspectionFixture::result($f->send($operation,InspectionFixture::csrf($f->page())),200,'accepted');$f->http->db->prepare("UPDATE {$f->http->p}fm2_checklist_operations SET server_received_at='2026-09-28T10:00:00+03:00' WHERE client_operation_id=?")->execute([$operation['clientOperationId']]);
         $env=$h->environment();$connection=new yii\db\Connection(['dsn'=>'mysql:host='.$env['FMONITOR_DB_HOST'].';port='.$env['FMONITOR_DB_PORT'].';dbname='.$h->database,'username'=>$env['FMONITOR_DB_USER'],'password'=>$env['FMONITOR_DB_PASSWORD'],'charset'=>'utf8mb4']);$connection->open();$clock=static fn()=>'2026-09-28T12:00:00+03:00';$builder=new OtizSettlementV2DraftBuilder($connection,$p,$p,$clock);$owner=new OtizSettlementV2($connection,$p,$clock,static fn()=>'allow');$input=$builder->build(96,'2026-09-03');
         assertSameValue([7001=>67,7002=>67,800=>66],$input['objects'][0]['sourceEvidence']['progress']['contributions'],'canonical native per-item contribution split is independently observed');
         $draft=$owner->createDraft(96,$input,'cccccccc-aaaa-4ccc-8ccc-000000000001');
@@ -310,7 +310,7 @@ $check('U02 documentary allocation basis participates in existing freshness',sta
         foreach(['otiz.manage','installation.completion.pto.record']as$permission)$h->insert($p.'fm2_pilot_role_permissions',['role_id'=>7,'permission'=>$permission]);
         $payload=json_decode($db->query("SELECT payload_json FROM {$p}fm2_pilot_object_details WHERE object_id=4512")->fetch_column(),true,flags:JSON_THROW_ON_ERROR);$payload['fields']['pitmaterial']=['raw'=>'41','display'=>'41'];$payload['fields']['lift_type']=['raw'=>'1','display'=>'пассажирский'];$json=json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);$db->prepare("UPDATE {$p}fm2_pilot_object_details SET payload_json=?,content_sha256=? WHERE object_id=4512")->execute([$json,hash('sha256',$json)]);$db->query("UPDATE {$p}fm_maintable SET plan_finish_date='2026-10-01' WHERE id=4512");
         $foreign=$db->query("SELECT * FROM {$p}fm_maintable WHERE id=4512")->fetch_assoc();$foreign['id']=4513;$foreign['regnumber']='U02-FOREIGN';$h->insert($p.'fm_maintable',$foreign);
-        $f->open();$csrf=InspectionFixture::csrf($f->page());$revision=0;$sequence=1;
+        $f->open();\FMonitor2\Tests\Support\OtizContractFixture::seed($f->http);$csrf=InspectionFixture::csrf($f->page());$revision=0;$sequence=1;
         $sections=[[28,29,30,31,32,33,34,35,36],[37,38,39,40,41],[1,2,3,4,5,6],[7,8,9,10],[11,12,13,14,15],[16,17,18,19,20,21],[22,23,24,25,26,27]];$sectionByItem=[];foreach($sections as$s=>$items)foreach($items as$item)$sectionByItem[$item]=$s+1;
         $moved=[8,16,17,37,38,39,40,11,18,19]; // 34 of the canonical85 checklist percent
         $retained=[20,22,12,13,21,23,28,32]; //17; A51/B34 =60/40

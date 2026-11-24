@@ -177,6 +177,7 @@ return ArrayHelper::merge(require __DIR__ . '/common.php', [
                 'POST pilot/otiz/calculations/<id:\\d+>/deductions/<deductionId:\\d+>/remove' => 'otiz-settlement-v2/deduction-remove',
                 'POST pilot/otiz/calculations/<id:\\d+>/accept' => 'otiz-settlement-v2/accept',
                 'POST pilot/otiz/calculations/<id:\\d+>/payments' => 'otiz-settlement-v2/payment',
+                'POST pilot/otiz/objects/<objectId:\\d+>/payment-hold' => 'otiz-settlement-v2/payment-hold',
                 'POST pilot/otiz/payments/<id:\\d+>/reverse' => 'otiz-settlement-v2/reverse',
                 'GET pilot/otiz/calculations/<id:\\d+>/export.xlsx' => 'otiz-settlement-v2/export',
                 'GET pilot/otiz/reconciliation' => 'otiz-evidence/reconciliation',

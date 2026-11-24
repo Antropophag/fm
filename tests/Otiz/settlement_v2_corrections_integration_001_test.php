@@ -86,7 +86,7 @@ $fixture = null;
 $yii = null;
 try {
     $fixture = new InspectionFixture(dirname(__DIR__, 2));
-    $fixture->open();
+    $fixture->open(actualStartDate:'2026-05-01');\FMonitor2\Tests\Support\OtizContractFixture::seed($fixture->http);
     $http = $fixture->http;
     $db = $http->db;
     $prefix = $http->p;

@@ -48,6 +48,7 @@ final class ProductionPilotMigrationCatalogue
             38=>OtizPaymentDecisionObjectScopeSchemaMigration::class,
             39=>AssignmentOrderOriginalStartSchemaMigration::class,
             40=>EmailFirstPasswordRecoverySchemaMigration::class,
+            41=>OtizPaymentControlSchemaMigration::class,
         ];
     }
 }

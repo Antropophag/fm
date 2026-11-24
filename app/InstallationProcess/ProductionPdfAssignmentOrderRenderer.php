@@ -91,6 +91,7 @@ final class ProductionPdfAssignmentOrderRenderer
         $pdf->SetFont('dejavusanscondensed','B',8.5);
         $pdf->Cell(0,5,'Перечень монтажников лифтового оборудования, объектов и производителей работ',0,1,'C');
         $pdf->Ln(2);
+        if(isset($object['contractStartDate'],$object['contractFinishDate'],$object['normativePeriodDays'])){$pdf->SetFont('dejavusanscondensed','B',7.4);$pdf->Cell(0,4,'Нормативный период замены',0,1,'L');$pdf->SetFont('dejavusanscondensed','',7);$actual=($object['actualStartDate']??null)===null?'Начало работ не подтверждено':$this->displayDate($object['actualStartDate']);$pdf->MultiCell(0,4,'Начало по договору: '.$this->displayDate($object['contractStartDate']).' · Окончание по договору: '.$this->displayDate($object['contractFinishDate']).' · '.(int)$object['normativePeriodDays'].' календарных дней · Фактическое начало: '.$actual.' · Основание срока: Договорный норматив,',0,'L',false,1);$pdf->Ln(1);}
         $this->renderAppendixTable($pdf,$input,$object,$engineer);
         $pdf->Ln(5);
         $pdf->SetFont('dejavusanscondensed','',7);
@@ -191,7 +192,7 @@ final class ProductionPdfAssignmentOrderRenderer
         $object=$input['installationObjectSnapshot']??null;$installers=$input['installers']??null;$documentInstallers=$input['documentInstallers']??$installers;$engineer=$input['controlEngineer']??null;
         $valid=isset($input['assignmentOrderVersion'])&&is_int($input['assignmentOrderVersion'])&&$input['assignmentOrderVersion']>0
             &&$this->isDate($input['assignmentOrderDate']??null)&&in_array($input['organizationType']??null,['individual','brigade'],true)
-            &&is_array($object)&&$this->nonblank($object['address']??null)&&$this->nonblank($object['entrance']??null)&&$this->nonblank($object['objectRegistrationNumber']??null)&&(array_key_exists('plannedStartDate',$object)&&($object['plannedStartDate']===null||$this->isDate($object['plannedStartDate'])))&&(array_key_exists('plannedFinishDate',$object)&&($object['plannedFinishDate']===null||$this->isDate($object['plannedFinishDate'])))
+            &&is_array($object)&&$this->nonblank($object['address']??null)&&$this->nonblank($object['entrance']??null)&&$this->nonblank($object['objectRegistrationNumber']??null)&&(array_key_exists('plannedStartDate',$object)&&($object['plannedStartDate']===null||$this->isDate($object['plannedStartDate'])))&&(array_key_exists('plannedFinishDate',$object)&&($object['plannedFinishDate']===null||$this->isDate($object['plannedFinishDate'])))&&(!array_key_exists('contractStartDate',$object)||($this->isDate($object['contractStartDate']??null)&&$this->isDate($object['contractFinishDate']??null)&&is_int($object['normativePeriodDays']??null)&&$object['normativePeriodDays']>0&&array_key_exists('actualStartDate',$object)&&($object['actualStartDate']===null||$this->isDate($object['actualStartDate']))))
             &&is_array($installers)&&array_is_list($installers)&&$installers!==[]&&$this->validInstallers($installers)
             &&is_array($documentInstallers)&&array_is_list($documentInstallers)&&$documentInstallers!==[]&&$this->validDocumentInstallers($documentInstallers)
             &&is_array($engineer)&&isset($engineer['userId'])&&is_int($engineer['userId'])&&$engineer['userId']>0&&$this->nonblank($engineer['fullName']??null)&&$this->nonblank($engineer['position']??null);

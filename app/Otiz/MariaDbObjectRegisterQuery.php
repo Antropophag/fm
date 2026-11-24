@@ -41,11 +41,11 @@ final readonly class MariaDbObjectRegisterQuery
     {
         $p=$this->prefix;$l=$this->legacyPrefix;$norms=new NativePremiumNorms();
         $bands=[];foreach($norms->premiumBands() as $r){
-            $bands[]='SELECT '.$this->literal($r['type'])." lift_type,{$r['floors']} floors,{$r['from']} capacity_from,{$r['to']} capacity_to,{$r['premiumCents']} premium_cents";
+            $bands[]='SELECT '.$this->literal($r['type'])." lift_type,{$r['stops']} stops,{$r['from']} capacity_from,{$r['to']} capacity_to,{$r['premiumCents']} premium_cents";
         }
         $shafts=[];foreach($norms->shaftRules() as $name=>$amount)$shafts[]='SELECT '.$this->literal((string)$name)." material,{$amount} shaft_bp";
         $bandSql=implode(' UNION ALL ',$bands);$shaftSql=implode(' UNION ALL ',$shafts);
-        $floors=$this->integer('floor_json');$capacity=$this->integer('capacity_json');
+        $stops=$this->integer('stops_json');$capacity=$this->integer('capacity_json');
         $trimPattern=$this->literal('^[\\x00\\x09\\x0a\\x0b\\x0d\\x20]+|[\\x00\\x09\\x0a\\x0b\\x0d\\x20]+$');
         $plusPattern=$this->literal('\\s*\\+\\s*');$spacePattern=$this->literal('\\s+');
         return "WITH
@@ -63,7 +63,7 @@ final readonly class MariaDbObjectRegisterQuery
             FROM `{$p}fm2_pilot_otiz_payment_closures` GROUP BY snapshot_id,object_id
         ), raw_objects AS (
             SELECT l.id object_id,l.regnumber,l.ordadr_address address,d.captured_at,
-                JSON_EXTRACT(IF(JSON_VALID(d.payload_json),d.payload_json,'{}'),'$.fields.floors.raw') floor_json,
+                JSON_EXTRACT(IF(JSON_VALID(d.payload_json),d.payload_json,'{}'),'$.fields.stops.raw') stops_json,
                 JSON_EXTRACT(IF(JSON_VALID(d.payload_json),d.payload_json,'{}'),'$.fields.weight.raw') capacity_json,
                 JSON_VALUE(IF(JSON_VALID(d.payload_json),d.payload_json,'{}'),'$.fields.lift_type.display') type_text,
                 JSON_VALUE(IF(JSON_VALID(d.payload_json),d.payload_json,'{}'),'$.fields.pitmaterial.display') material_text,
@@ -84,7 +84,7 @@ final readonly class MariaDbObjectRegisterQuery
         ), operands AS (
             SELECT object_id,regnumber,address,captured_at,snapshot_id,report_date,current_progress_bp,progress_fact_date,
                 accrued_cents,pool_cents,kss_bp,calculation_state,has_calculation,trace_progress_cents,
-                paid_cents,discipline_cents,deadline_cents,snapshot_closed_cents,{$floors} floors,{$capacity} capacity,
+                paid_cents,discipline_cents,deadline_cents,snapshot_closed_cents,{$stops} stops,{$capacity} capacity,
                 CASE WHEN LOCATE('груз',LOWER(COALESCE(type_text,'')))>0 THEN 'cargo' ELSE 'passenger' END lift_type,
                 CAST(REGEXP_REPLACE(REGEXP_REPLACE(LOWER(REGEXP_REPLACE(COALESCE(material_text,''),{$trimPattern},'')),{$plusPattern},' + '),{$spacePattern},' ') AS CHAR(160)) material
             FROM raw_objects
@@ -98,7 +98,7 @@ final readonly class MariaDbObjectRegisterQuery
                     WHEN o.calculation_state='ready' AND o.pool_cents>0 AND o.snapshot_closed_cents>=o.pool_cents THEN 'completed'
                     ELSE o.calculation_state END state
             FROM operands o
-            LEFT JOIN premium_bands n ON n.lift_type=o.lift_type AND n.floors=o.floors AND o.capacity BETWEEN n.capacity_from AND n.capacity_to
+            LEFT JOIN premium_bands n ON n.lift_type=o.lift_type AND n.stops=o.stops AND o.capacity BETWEEN n.capacity_from AND n.capacity_to
             LEFT JOIN shaft_rules s ON BINARY s.material=BINARY o.material
         )";
     }

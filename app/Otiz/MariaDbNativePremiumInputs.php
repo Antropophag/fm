@@ -40,7 +40,7 @@ final class MariaDbNativePremiumInputs
         $p = $this->prefix;
         $l = $this->legacyPrefix;
         $q = $this->db->prepare(
-            "SELECT c.id case_id,c.legacy_installation_object_id object_id,l.regnumber,l.ordadr_address address,l.plan_finish_date FROM `{$p}fm2_installation_cases`c LEFT JOIN `{$p}fm2_migration_classification_provenance`m ON m.output_kind='operational_case' AND m.output_id=c.id AND m.legacy_object_id=c.legacy_installation_object_id JOIN `{$l}fm_maintable`l ON l.id=c.legacy_installation_object_id WHERE c.process_state IN('working','completed') AND c.actual_start_date<=? AND (m.category='native_candidate' OR m.category IS NULL) ORDER BY c.legacy_installation_object_id",
+            "SELECT c.id case_id,c.legacy_installation_object_id object_id,c.actual_start_date,l.regnumber,l.ordadr_address address,l.workdatestart,l.plan_finish_date FROM `{$p}fm2_installation_cases`c LEFT JOIN `{$p}fm2_migration_classification_provenance`m ON m.output_kind='operational_case' AND m.output_id=c.id AND m.legacy_object_id=c.legacy_installation_object_id JOIN `{$l}fm_maintable`l ON l.id=c.legacy_installation_object_id WHERE c.process_state IN('working','completed') AND c.actual_start_date<=? AND (m.category='native_candidate' OR m.category IS NULL) ORDER BY c.legacy_installation_object_id",
         );
         $q->execute([$date]);
         return array_map(fn($r) => $this->row($r, $date, $at), $q->get_result()->fetch_all(MYSQLI_ASSOC));
@@ -50,20 +50,16 @@ final class MariaDbNativePremiumInputs
         $case = (int) $b["case_id"];
         $object = (int) $b["object_id"];
         $issues = [];
-        $plan = (string) ($b["plan_finish_date"] ?? "");
+        $contractStart=(string)($b['workdatestart']??'');$contractFinish=(string)($b['plan_finish_date']??'');$actualStart=(string)($b['actual_start_date']??'');$period=null;
         $original = null;
-        if ($this->date($plan)) {
-            $c = [
-                "objectId" => $object,
-                "planFinishDate" => $plan,
-                "capturedAt" => $at,
-            ];
+        try{$norm=ContractualReplacementPeriod::fromContractDates($contractStart,$contractFinish);$allowance=ContractualReplacementPeriod::allowanceFinish($actualStart,$norm);$period=['contractStartDate'=>$contractStart,'contractFinishDate'=>$contractFinish,'normDays'=>$norm,'actualStartDate'=>$actualStart,'allowanceFinishDate'=>$allowance];
+            $c = ['objectId'=>$object,'contractStartDate'=>$contractStart,'contractFinishDate'=>$contractFinish,'normDays'=>$norm,'actualStartDate'=>$actualStart,'allowanceFinishDate'=>$allowance];
             $original = [
-                "value" => $plan,
+                "value" => $allowance,
                 "capturedAt" => $at,
-                "source" => $this->source("Исходный плановый срок", "fm_maintable/$object/plan_finish_date", $c),
+                "source" => $this->source("Договорный норматив от фактического начала", "fm_maintable/$object/workdatestart+plan_finish_date;fm2_installation_cases/$case/actual_start_date", $c),
             ];
-        } else {
+        }catch(\InvalidArgumentException|\DomainException){
             $this->issue($issues, "DEADLINE_EVIDENCE_ABSENT");
         }
         $certificate = $this->certificate($case, $issues);
@@ -119,6 +115,7 @@ final class MariaDbNativePremiumInputs
             "sourceEvidence" => [
                 "capturedAt" => $at,
                 "originalDeadline" => $original,
+                "contractualPeriod" => $period,
                 "certificate" => $certificate,
                 "completion" => $completion["evidence"],
                 "composition" => $composition,

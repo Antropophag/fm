@@ -5,7 +5,7 @@ require dirname(__DIR__).'/Yii2/InspectionFixture.php';
 use FMonitor2\Otiz\{OtizSettlementV2,OtizSettlementV2DraftBuilder,MariaDbOtizSettlementV2Access};
 $fixture=null;$yii=null;
 try {
-    $fixture=new InspectionFixture(dirname(__DIR__,2));$fixture->open();$http=$fixture->http;$db=$http->db;$p=$http->p;
+    $fixture=new InspectionFixture(dirname(__DIR__,2));$fixture->open();\FMonitor2\Tests\Support\OtizContractFixture::seed($fixture->http);$http=$fixture->http;$db=$http->db;$p=$http->p;
     $db->query("INSERT INTO {$p}fm2_pilot_role_permissions(role_id,permission)VALUES(7,'otiz.manage')");
     $card=json_decode($db->query("SELECT payload_json FROM {$p}fm2_pilot_object_details WHERE object_id=4512")->fetch_column(),true,flags:JSON_THROW_ON_ERROR);
     $card['fields']=array_replace($card['fields'],['floors'=>['raw'=>'9'],'weight'=>['raw'=>'630'],'lift_type'=>['raw'=>'1','display'=>'Пассажирский'],'pitmaterial'=>['raw'=>'41','display'=>'41']]);
