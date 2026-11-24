@@ -163,7 +163,10 @@ def inspect_family(image_id, family, evidence):
             status, response_body = request(port, method, '/pilot/activate?token=' + tokens['A'], sent_headers, body)
             check(status == 502, family + ': activation upstream failure stays 502')
             check(all(token.encode() not in response_body for token in tokens.values()), family + ': failure body safe')
-        status, _ = request(port, 'GET', '/health/live')
+        status, _ = request(port, 'GET', '/health/live', {
+            'Referer': 'https://example.invalid/ib-log-probe',
+            'User-Agent': 'IB-LOG-PROBE',
+        })
         check(status == 502, family + ': ordinary upstream failure stays 502')
         deadline = time.monotonic() + 3
         while True:
@@ -179,6 +182,15 @@ def inspect_family(image_id, family, evidence):
                 check(token not in contents, family + ': INTENDED_RED token ' + letter + ' leaked in ' + stream)
         check('/pilot/activate' not in logs.stderr, family + ': activation request-associated error suppressed')
         check('/health/live' in logs.stderr and 'upstream' in logs.stderr, family + ': ordinary upstream diagnostics retained')
+        access_lines = [line for line in logs.stdout.splitlines() if line.strip()]
+        combined = [line for line in access_lines if re.fullmatch(
+            r'\S+ - \S+ \[[^\]]+\] "GET /health/live HTTP/1\.1" 502 \d+ '
+            r'"https://example\.invalid/ib-log-probe" "IB-LOG-PROBE"', line)]
+        expected_combined = 1 if family == 'runtime' else 0
+        check(len(combined) == expected_combined,
+              family + ': ordinary combined access record for security collection')
+        check(len(access_lines) == 3 + expected_combined,
+              family + ': exact access count without activation duplicates')
         records = []
         for line in logs.stdout.splitlines():
             try:
