@@ -22,12 +22,12 @@ final class InspectionFixture
         $f->db->query("INSERT INTO {$f->p}fm2_bitrix_order_document_links(source_folder_id,source_folder_name,order_number,url) VALUES(94512,'Рабочие чертежи','CONTROL-4512','https://bitrix24public.com/control-4512')");
         $f->db->query("INSERT INTO {$f->p}fm2_bitrix_order_document_links(source_folder_id,source_folder_name,order_number,url) VALUES(94513,'Соседний заказ',' CONTROL-4512 ','https://bitrix24public.com/control-neighbor')");
     }
-    public function open(array $installers=[7001,7002]):void
+    public function open(array $installers=[7001,7002], string $actualStartDate='2026-09-02'):void
     {
         $f=$this->http;$f->start();$fk=[];assertSameValue(303,$f->login($fk)['status'],'fixture real FKR login');
         assertSameValue(303,$f->selection($fk,ids:$installers)['status'],'fixture selected crew');
-        $receipt=$f->upload($fk,$f->metadata($fk));assertSameValue(201,$receipt['status'],'fixture original');$r=json_decode($receipt['body'],true,flags:JSON_THROW_ON_ERROR);
-        assertSameValue(['working','2026-09-02','18'],array_map(static fn($key)=>$f->rows('fm2_installation_cases')[0][$key],['process_state','actual_start_date','opened_by_user_id']),'fixture upload opens from signed appendix');
+        $metadata=$f->metadata($fk);$metadata['appendixStartDate']=$actualStartDate;$receipt=$f->upload($fk,$metadata);assertSameValue(201,$receipt['status'],'fixture original');$r=json_decode($receipt['body'],true,flags:JSON_THROW_ON_ERROR);
+        assertSameValue(['working',$actualStartDate,'18'],array_map(static fn($key)=>$f->rows('fm2_installation_cases')[0][$key],['process_state','actual_start_date','opened_by_user_id']),'fixture upload opens from signed appendix');
         assertSameValue(303,$f->login($this->cookies,73)['status'],'fixture real engineer login');
     }
     public function page(string $path='/pilot/objects/4512/checklist'):array{return$this->http->request('GET',$path,[],$this->cookies);}

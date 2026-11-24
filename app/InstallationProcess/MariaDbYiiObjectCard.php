@@ -70,7 +70,7 @@ final readonly class MariaDbYiiObjectCard
                 }
             }
             $edits=$row['edit_values']===null?[]:json_decode((string)$row['edit_values'],true,512,JSON_THROW_ON_ERROR);if($edits!==[]&&!is_array($detail)){$detail=['schemaVersion'=>'technical-object-detail-v1','objectId'=>$objectId,'fields'=>[]];$detailValid=true;}
-            foreach(['floors','weight','speed','pittype','pitmaterial','lift_type','paired']as$field)if(array_key_exists($field,$edits)){$value=$edits[$field];$display=in_array($field,['pittype','pitmaterial','lift_type'],true)&&$value!==null?ObjectDetailsReferenceCatalogue::display($field,(string)$value):(is_bool($value)?($value?'Да':'Нет'):$value);$detail['fields'][$field]=['raw'=>$value,'display'=>$display,'source'=>'manual'];}
+            foreach(['floors','stops','weight','speed','pittype','pitmaterial','lift_type','paired']as$field)if(array_key_exists($field,$edits)){$value=$edits[$field];$display=in_array($field,['pittype','pitmaterial','lift_type'],true)&&$value!==null?ObjectDetailsReferenceCatalogue::display($field,(string)$value):(is_bool($value)?($value?'Да':'Нет'):$value);$detail['fields'][$field]=['raw'=>$value,'display'=>$display,'source'=>'manual'];}
             foreach(['address'=>'ordadr_address','entrance'=>'entrance','regnumber'=>'regnumber','zavnumber'=>'zavnumber']as$field=>$column)if(array_key_exists($field,$edits))$row[$column]=$edits[$field];
             $card = [
                 'id' => $objectId,
@@ -80,7 +80,7 @@ final readonly class MariaDbYiiObjectCard
                 'registrationNumber' => trim((string) $row['regnumber']),
                 'factoryNumber' => trim((string) ($row['zavnumber'] ?? '')),
                 'plannedStartDate' => YiiObjectCardValues::date($row['workdatestart']),
-                'plannedFinishDate' => YiiObjectCardValues::date($row['workdateendadjusted']) ?? YiiObjectCardValues::date($row['plan_finish_date']),
+                'plannedFinishDate' => YiiObjectCardValues::date($row['plan_finish_date']),
                 'opened' => $present === 3,
                 'actualStartDate' => $row['actual_start_date'],
                 'openedAt' => $row['opened_at'],

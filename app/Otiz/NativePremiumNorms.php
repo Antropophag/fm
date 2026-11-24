@@ -43,31 +43,31 @@ final class NativePremiumNorms
         $rows=[];
         foreach (self::PASSENGER as $floors=>$amounts) foreach ($amounts as $index=>$amount) {
             [$from,$to]=self::PASSENGER_BANDS[$index];
-            $rows[]=['type'=>'passenger','floors'=>$floors,'from'=>$from,'to'=>$to,'premiumCents'=>$amount*100000];
+            $rows[]=['type'=>'passenger','stops'=>$floors,'from'=>$from,'to'=>$to,'premiumCents'=>$amount*100000];
         }
         foreach (self::CARGO as $floors=>$amounts) foreach ($amounts as $index=>$amount) {
             $capacity=self::CARGO_CAPACITIES[$index];
-            $rows[]=['type'=>'cargo','floors'=>$floors,'from'=>$capacity,'to'=>$capacity,'premiumCents'=>$amount*100000];
+            $rows[]=['type'=>'cargo','stops'=>$floors,'from'=>$capacity,'to'=>$capacity,'premiumCents'=>$amount*100000];
         }
         return $rows;
     }
 
     public function shaftRules(): array { return self::SHAFT; }
 
-    public function premiumCents(?string $type, int $floors, int $capacity): ?int
+    public function premiumCents(?string $type, int $stops, int $capacity): ?int
     {
         if ($type === null && $capacity >= 240 && $capacity <= 1600) $type = 'passenger';
         if ($type === 'passenger') {
-            if (!isset(self::PASSENGER[$floors])) return null;
+            if (!isset(self::PASSENGER[$stops])) return null;
             foreach (self::PASSENGER_BANDS as $index => [$from,$to]) {
-                if ($capacity >= $from && $capacity <= $to) return self::PASSENGER[$floors][$index] * 100000;
+                if ($capacity >= $from && $capacity <= $to) return self::PASSENGER[$stops][$index] * 100000;
             }
             return null;
         }
         if ($type === 'cargo') {
-            if (!isset(self::CARGO[$floors])) return null;
+            if (!isset(self::CARGO[$stops])) return null;
             $index = array_search($capacity, self::CARGO_CAPACITIES, true);
-            return $index === false ? null : self::CARGO[$floors][$index] * 100000;
+            return $index === false ? null : self::CARGO[$stops][$index] * 100000;
         }
         return null;
     }

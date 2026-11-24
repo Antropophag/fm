@@ -38,7 +38,7 @@ final class ObjectRegisterPagingFixture
         for($id=1;$id<=125;$id++){
             $address=$id===125?'Уникальная цель за третьей страницей':'Вымышленный адрес '.str_pad((string)$id,3,'0',STR_PAD_LEFT);
             $legacy->bind_param('is',$id,$address);$legacy->execute();
-            $fields=['floors'=>['raw'=>'5'],'weight'=>['raw'=>'320'],'pitmaterial'=>['display'=>'Железобетон'],'lift_type'=>['display'=>'Пассажирский']];
+            $fields=['floors'=>['raw'=>'5'],'stops'=>['raw'=>'5'],'weight'=>['raw'=>'320'],'pitmaterial'=>['display'=>'Железобетон'],'lift_type'=>['display'=>'Пассажирский']];
             if($id===5)$fields['weight']['raw']='501';
             $payload=json_encode(['schemaVersion'=>'technical-object-detail-v1','objectId'=>$id,'fields'=>$fields],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
             $hash=hash('sha256',$payload);$detail->bind_param('iss',$id,$hash,$payload);$detail->execute();
@@ -75,7 +75,7 @@ final class ObjectRegisterPagingFixture
     }
 
     public static function replaceCard(\mysqli$db,string $prefix,int $id,mixed $floors,mixed $weight,string $material,string $type):void
-    {$fields=['floors'=>['raw'=>$floors],'weight'=>['raw'=>$weight],'pitmaterial'=>['display'=>$material],'lift_type'=>['display'=>$type]];$payload=json_encode(['schemaVersion'=>'technical-object-detail-v1','objectId'=>$id,'fields'=>$fields],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);$hash=hash('sha256',$payload);$s=$db->prepare("UPDATE `{$prefix}fm2_pilot_object_details` SET content_sha256=?,payload_json=? WHERE object_id=?");$s->bind_param('ssi',$hash,$payload,$id);$s->execute();$s->close();}
+    {$fields=['floors'=>['raw'=>$floors],'stops'=>['raw'=>$floors],'weight'=>['raw'=>$weight],'pitmaterial'=>['display'=>$material],'lift_type'=>['display'=>$type]];$payload=json_encode(['schemaVersion'=>'technical-object-detail-v1','objectId'=>$id,'fields'=>$fields],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);$hash=hash('sha256',$payload);$s=$db->prepare("UPDATE `{$prefix}fm2_pilot_object_details` SET content_sha256=?,payload_json=? WHERE object_id=?");$s->bind_param('ssi',$hash,$payload,$id);$s->execute();$s->close();}
 
     public function close():void{$this->original->close();}
 }

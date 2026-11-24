@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 namespace FMonitor2\InstallationProcess;
+use FMonitor2\Otiz\ContractualReplacementPeriod;
 
 final class MariaDbLegacyInstallationObject
 {
@@ -16,9 +17,12 @@ final class MariaDbLegacyInstallationObject
     /** @return array{address: string, entrance: string, objectRegistrationNumber: string, plannedStartDate: ?string, plannedFinishDate: ?string, ptoActDate: ?string} */
     public function getInstallationObjectSnapshot(int $installationObjectId): array
     {
+        $actualStart=MariaDbSchemaInspector::tableExists($this->connection,$this->tablePrefix.'fm2_installation_cases')
+            ?",(SELECT c.actual_start_date FROM `{$this->tablePrefix}fm2_installation_cases` c WHERE c.legacy_installation_object_id=m.id ORDER BY c.id DESC LIMIT 1) actual_start_date"
+            :",NULL actual_start_date";
         $statement = $this->connection->prepare(
-            'SELECT id,ordadr_address,entrance,regnumber,workdatestart,workdateendadjusted,plan_finish_date,ptoactdate '
-            . "FROM `{$this->tablePrefix}fm_maintable` WHERE id=? LIMIT 1",
+            'SELECT m.id,m.ordadr_address,m.entrance,m.regnumber,m.workdatestart,m.workdateendadjusted,m.plan_finish_date,m.ptoactdate '.$actualStart
+            . " FROM `{$this->tablePrefix}fm_maintable` m WHERE m.id=? LIMIT 1",
         );
         $statement->bind_param('i', $installationObjectId);
         $statement->execute();
@@ -27,16 +31,16 @@ final class MariaDbLegacyInstallationObject
             throw new \RuntimeException('Legacy installation object not found.');
         }
 
-        $adjustedFinishDate = self::plannedDate($row['workdateendadjusted']);
-
+        $contractStart=self::plannedDate($row['workdatestart']);$contractFinish=self::plannedDate($row['plan_finish_date']);$actualStartDate=self::plannedDate($row['actual_start_date']);$normativePeriodDays=null;
+        if($contractStart!==null&&$contractFinish!==null){try{$normativePeriodDays=ContractualReplacementPeriod::fromContractDates($contractStart,$contractFinish);}catch(\InvalidArgumentException|\DomainException){}}
         return [
             'address' => trim((string) $row['ordadr_address']),
             'entrance' => trim((string) $row['entrance']),
             'objectRegistrationNumber' => trim((string) $row['regnumber']),
             'plannedStartDate' => self::plannedDate($row['workdatestart']),
-            'plannedFinishDate' => $adjustedFinishDate ?? self::plannedDate($row['plan_finish_date']),
+            'plannedFinishDate' => self::plannedDate($row['workdateendadjusted'])??self::plannedDate($row['plan_finish_date']),
             'ptoActDate' => self::optionalDate($row['ptoactdate']),
-        ];
+        ]+($normativePeriodDays===null?[]:['contractStartDate'=>$contractStart,'contractFinishDate'=>$contractFinish,'normativePeriodDays'=>$normativePeriodDays,'actualStartDate'=>$actualStartDate]);
     }
 
     private static function plannedDate(mixed $value): ?string

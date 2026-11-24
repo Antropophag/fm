@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use FMonitor2\YiiRuntime\ViewSupport;
 use FMonitor2\InstallationProcess\ObjectDetailsReferenceCatalogue;
+use FMonitor2\Otiz\ContractualReplacementPeriod;
 use yii\helpers\Html;
 
 $date = static function (?string $value, bool $withTime = false): string {
@@ -16,6 +17,8 @@ $date = static function (?string $value, bool $withTime = false): string {
         return 'Неизвестно';
     }
 };
+$contractualPeriod=null;
+try{$normDays=ContractualReplacementPeriod::fromContractDates((string)$plannedStartDate,(string)$plannedFinishDate);$contractualPeriod=['normDays'=>$normDays,'allowanceFinish'=>$opened?ContractualReplacementPeriod::allowanceFinish((string)$actualStartDate,$normDays):null];}catch(Throwable){}
 $statusClasses = [
     'Требуется распоряжение' => 'shlz-status--orange',
     'Готов к открытию' => 'shlz-status--source-blue',
@@ -26,7 +29,7 @@ $statusClasses = [
     'Требуется изменение' => 'shlz-status--pink',
 ];
 $detailLabels = [
-    'floors' => 'Этажность', 'weight' => 'Грузоподъёмность, кг', 'speed' => 'Скорость, м/с',
+    'floors' => 'Этажность', 'stops' => 'Количество остановок', 'weight' => 'Грузоподъёмность, кг', 'speed' => 'Скорость, м/с',
     'pittype' => 'Тип шахты', 'pitmaterial' => 'Материал шахты', 'lift_type' => 'Тип лифта',
 ];
 $technicalDisplay = static function (string $name, array $field): string {
@@ -37,7 +40,7 @@ $technicalDisplay = static function (string $name, array $field): string {
     $value = trim((string) ($field['display'] ?? $field['raw'] ?? ''));
     if ($value === '') return 'Не указано';
     if ($name === 'speed' && $value === '44') return '1,0';
-    if (in_array($name, ['floors', 'weight', 'speed'], true)) return $value;
+    if (in_array($name, ['floors', 'stops', 'weight', 'speed'], true)) return $value;
     if (preg_match('/^-?\d+(?:[.,]\d+)?$/D', $value) !== 1) return $value;
     return $codeLabels[$name][$value] ?? 'Не указано';
 };
@@ -143,14 +146,14 @@ ViewSupport::begin($this, $registrationIdentity, $identity, null, '', $csrf);
     </header>
     <?php if (($detailEditor['allowed'] ?? false) === true): $persistedEditorValues=[
         'address'=>$address,'entrance'=>$entrance,'regnumber'=>$registrationNumber,'zavnumber'=>$factoryNumber,
-        'floors'=>$objectDetails['fields']['floors']['raw']??'','weight'=>$objectDetails['fields']['weight']['raw']??'','speed'=>$objectDetails['fields']['speed']['raw']??'',
+        'floors'=>$objectDetails['fields']['floors']['raw']??'','stops'=>$objectDetails['fields']['stops']['raw']??'','weight'=>$objectDetails['fields']['weight']['raw']??'','speed'=>$objectDetails['fields']['speed']['raw']??'',
         'pittype'=>$objectDetails['fields']['pittype']['raw']??'','pitmaterial'=>$objectDetails['fields']['pitmaterial']['raw']??'','lift_type'=>$objectDetails['fields']['lift_type']['raw']??'','paired'=>$objectDetails['fields']['paired']['raw']??'',
     ];$persistedWireValues=array_map(static fn($value):string=>(string)($value??''),$persistedEditorValues);$editorValues=array_replace($persistedEditorValues,$detailEditor['values']??[]);$editorErrors=$detailEditor['errors']??[]; ?>
     <dialog class="shlz-modal fm2-object-details-modal" data-object-details-dialog <?= ($detailEditor['open']??false)?'data-object-details-invalid':'' ?> aria-labelledby="object-details-title"><form class="shlz-modal__surface" method="post" action="/pilot/objects/<?= (int)$id ?>/details" data-object-details-baseline="<?= Html::encode(json_encode($persistedWireValues,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR)) ?>"><header class="shlz-modal__header"><h2 class="shlz-modal__title" id="object-details-title">Редактировать данные объекта</h2><button class="shlz-modal__close" type="button" data-object-details-close aria-label="Закрыть"><span aria-hidden="true">×</span></button></header><div class="shlz-modal__body">
         <?= Html::hiddenInput('_csrf',$csrf) ?><?= Html::hiddenInput('requestId',ViewSupport::uuid()) ?><?= Html::hiddenInput('expectedRevision',(int)$detailEditor['revision']) ?>
         <?php if(isset($editorErrors['_form'])): ?><p class="fm2-problem" role="alert"><?= Html::encode($editorErrors['_form']) ?></p><?php endif ?>
         <fieldset><legend>Идентификация и размещение</legend><?php foreach(['address'=>'Адрес','entrance'=>'Подъезд','regnumber'=>'Регистрационный номер','zavnumber'=>'Заводской номер']as$name=>$label): $error=$editorErrors[$name]??null; ?><label class="fm2-details-field"><span><?= $label ?></span><input class="shlz-input" name="<?= $name ?>" value="<?= Html::encode((string)($editorValues[$name]??'')) ?>" <?= in_array($name,['address','entrance'],true)?'required':'' ?> <?= $name==='zavnumber'?'maxlength="120"':'' ?> <?= $error!==null?'aria-invalid="true" aria-describedby="details-error-'.$name.'"':'' ?>><?php if($error!==null): ?><span id="details-error-<?= $name ?>" role="alert"><?= Html::encode($error) ?></span><?php endif ?></label><?php endforeach ?></fieldset>
-        <fieldset><legend>Классификация оборудования</legend><?php foreach(['floors'=>'Этажность','weight'=>'Грузоподъёмность','speed'=>'Скорость']as$name=>$label): $error=$editorErrors[$name]??null; ?><label class="fm2-details-field"><span><?= $label ?></span><input class="shlz-input" inputmode="decimal" name="<?= $name ?>" value="<?= Html::encode((string)($editorValues[$name]??'')) ?>" <?= $error!==null?'aria-invalid="true" aria-describedby="details-error-'.$name.'"':'' ?>><?php if($error!==null): ?><span id="details-error-<?= $name ?>" role="alert"><?= Html::encode($error) ?></span><?php endif ?></label><?php endforeach ?><?php foreach(['pittype'=>'Тип шахты','pitmaterial'=>'Материал шахты','lift_type'=>'Тип лифта']as$name=>$label): $error=$editorErrors[$name]??null;$selected=(string)($editorValues[$name]??'');$persistedSelected=(string)($persistedEditorValues[$name]??'');$options=[''=>'Не изменять']+ObjectDetailsReferenceCatalogue::options($name);foreach([$selected,$persistedSelected]as$available)if($available!==''&&!array_key_exists($available,$options))$options=[$available=>'Недопустимое значение: '.$available]+$options;$attributes=[];if($error!==null){$attributes['aria-invalid']='true';$attributes['aria-describedby']='details-error-'.$name;} ?><div class="fm2-details-field"><?= ViewSupport::choice($name,$selected,$options,$label,$attributes) ?><?php if($error!==null): ?><span id="details-error-<?= $name ?>" role="alert"><?= Html::encode($error) ?></span><?php endif ?></div><?php endforeach ?><div class="fm2-details-field"><?= ViewSupport::choice('paired',(string)($editorValues['paired']??''),[''=>'Не изменять','1'=>'Да','0'=>'Нет'],'Спаренность лифта') ?></div></fieldset>
+        <fieldset><legend>Классификация оборудования</legend><?php foreach(['floors'=>'Этажность','stops'=>'Количество остановок','weight'=>'Грузоподъёмность','speed'=>'Скорость']as$name=>$label): $error=$editorErrors[$name]??null; ?><label class="fm2-details-field"><span><?= $label ?></span><input class="shlz-input" inputmode="decimal" name="<?= $name ?>" value="<?= Html::encode((string)($editorValues[$name]??'')) ?>" <?= $error!==null?'aria-invalid="true" aria-describedby="details-error-'.$name.'"':'' ?>><?php if($error!==null): ?><span id="details-error-<?= $name ?>" role="alert"><?= Html::encode($error) ?></span><?php endif ?></label><?php endforeach ?><?php foreach(['pittype'=>'Тип шахты','pitmaterial'=>'Материал шахты','lift_type'=>'Тип лифта']as$name=>$label): $error=$editorErrors[$name]??null;$selected=(string)($editorValues[$name]??'');$persistedSelected=(string)($persistedEditorValues[$name]??'');$options=[''=>'Не изменять']+ObjectDetailsReferenceCatalogue::options($name);foreach([$selected,$persistedSelected]as$available)if($available!==''&&!array_key_exists($available,$options))$options=[$available=>'Недопустимое значение: '.$available]+$options;$attributes=[];if($error!==null){$attributes['aria-invalid']='true';$attributes['aria-describedby']='details-error-'.$name;} ?><div class="fm2-details-field"><?= ViewSupport::choice($name,$selected,$options,$label,$attributes) ?><?php if($error!==null): ?><span id="details-error-<?= $name ?>" role="alert"><?= Html::encode($error) ?></span><?php endif ?></div><?php endforeach ?><div class="fm2-details-field"><?= ViewSupport::choice('paired',(string)($editorValues['paired']??''),[''=>'Не изменять','1'=>'Да','0'=>'Нет'],'Спаренность лифта') ?></div></fieldset>
     </div><footer class="shlz-modal__footer"><button class="shlz-button" type="button" data-object-details-cancel>Отмена</button><button class="shlz-button shlz-button--primary" type="submit">Сохранить</button></footer></form></dialog>
     <?php endif ?>
     <div class="fm2-object-layout">
@@ -235,6 +238,7 @@ ViewSupport::begin($this, $registrationIdentity, $identity, null, '', $csrf);
             <section class="shlz-tabs__panel fm2-object-tab-panel" id="object-panel-readiness" role="tabpanel" aria-labelledby="object-tab-readiness"<?= $initialTab === 'readiness' ? '' : ' hidden' ?>>
                 <div class="fm2-tab-section">
                     <h2>Сроки монтажа</h2>
+                    <section class="fm2-fact" data-contractual-period><h3>Нормативный период</h3><?php if($contractualPeriod===null):?><p>Договорный норматив не определён</p><?php else:?><p><strong><?=(int)$contractualPeriod['normDays']?> календарных дней</strong></p><p>Начало по договору: <?=$date($plannedStartDate)?> · окончание по договору: <?=$date($plannedFinishDate)?></p><p>Основание срока: Договорный норматив</p><p><?=$opened?'Фактическое начало: '.$date($actualStartDate).' · срок по нормативу: '.$date($contractualPeriod['allowanceFinish']):'Начало работ не подтверждено'?></p><?php endif?></section>
                     <dl class="fm2-fact-grid">
                         <div class="fm2-fact"><dt>Плановое начало</dt><dd><?= $plannedStartDate ? '<time datetime="' . Html::encode($plannedStartDate) . '">' . $date($plannedStartDate) . '</time>' : 'Неизвестно' ?></dd></div>
                         <div class="fm2-fact"><dt>Плановое завершение</dt><dd><?= $plannedFinishDate ? '<time datetime="' . Html::encode($plannedFinishDate) . '">' . $date($plannedFinishDate) . '</time>' : 'Неизвестно' ?><?php if ($canReadDeadlineCertificate): ?><div class="fm2-finish-certificate"><span>Срок для расчёта ОТИЗ по справке</span><div><?php if ($deadlineCertificate !== null): ?><time datetime="<?= Html::encode($deadlineCertificate['newDeadline']) ?>"><?= $date($deadlineCertificate['newDeadline']) ?></time> · <a class="shlz-link" href="/pilot/objects/<?= (int) $id ?>/deadline-certificates/<?= (int) $deadlineCertificate['id'] ?>/pdf">Справка, редакция <?= (int) $deadlineCertificate['revisionNumber'] ?></a><?php else: ?>Справка отсутствует<?php endif ?></div></div><div class="fm2-workspace-actions shlz-cluster"><a class="shlz-button shlz-button--secondary" href="/pilot/objects/<?= (int) $id ?>/deadline-certificates">Справки о переносе срока</a></div><?php endif ?></dd></div>

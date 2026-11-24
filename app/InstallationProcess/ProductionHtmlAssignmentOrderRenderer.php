@@ -18,6 +18,7 @@ final class ProductionHtmlAssignmentOrderRenderer
         $registrationNumber = $this->escape((string) $object['objectRegistrationNumber']);
         $plannedStart = $this->escape($this->displayDate((string) $object['plannedStartDate']));
         $plannedFinish = $this->escape($this->displayDate((string) $object['plannedFinishDate']));
+        $period='';if(isset($object['contractStartDate'],$object['contractFinishDate'],$object['normativePeriodDays'])){$actual=($object['actualStartDate']??null)===null?'Начало работ не подтверждено':$this->displayDate((string)$object['actualStartDate']);$period='<section><h2>Нормативный период замены</h2><p>'.$this->displayDate((string)$object['contractStartDate']).' — '.$this->displayDate((string)$object['contractFinishDate']).'; '.(int)$object['normativePeriodDays'].' календарных дней. Фактическое начало: '.$this->escape($actual).'. Основание срока: Договорный норматив.</p></section>'."\n";}
         $organizationType = $this->escape($this->organizationLabel((string) $input['organizationType']));
         $engineer = $input['controlEngineer'];
         $engineerName = $this->escape((string) $engineer['fullName']);
@@ -53,7 +54,7 @@ final class ProductionHtmlAssignmentOrderRenderer
 <dt>Форма организации труда</dt><dd>{$organizationType}</dd>
 <dt>Инженер строительного контроля</dt><dd>{$engineerName} — {$engineerPosition}</dd>
 </dl>
-</main>
+{$period}</main>
 </body>
 </html>
 HTML;
@@ -70,7 +71,7 @@ HTML;
 <body>
 <main>
 <h1>Приложение к проекту распоряжения</h1>
-<table>
+{$period}<table>
 <thead><tr><th>Объект</th><th>Плановые даты</th><th>Монтажник</th><th>Кадровый факт</th><th>Инженер строительного контроля</th></tr></thead>
 <tbody>{$appendixRows}</tbody>
 </table>

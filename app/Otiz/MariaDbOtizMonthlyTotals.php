@@ -66,39 +66,15 @@ final readonly class MariaDbOtizMonthlyTotals
     {
         [$in, $params] = $this->in($ids, 'paidObject');
         $payments = $this->db->createCommand(
-            "SELECT p.id,p.calculation_id,p.amount_cents,p.payment_date FROM `{$this->prefix}fm2_otiz_payment_facts` p "
+            "SELECT p.id,o.object_id,o.employee_id,o.tab_number,o.full_name,a.amount_cents FROM `{$this->prefix}fm2_otiz_payment_facts` p "
             . "JOIN `{$this->prefix}fm2_otiz_calculation_revisions` c ON c.id=p.calculation_id AND c.status='accepted' "
+            . "JOIN `{$this->prefix}fm2_otiz_payment_allocations` a ON a.payment_id=p.id JOIN `{$this->prefix}fm2_otiz_recipient_obligations` o ON o.id=a.obligation_id "
             . "WHERE p.payment_date>=:paidFrom AND p.payment_date<:paidTo "
             . "AND NOT EXISTS(SELECT 1 FROM `{$this->prefix}fm2_otiz_payment_reversals` r WHERE r.payment_id=p.id) "
-            . "AND EXISTS(SELECT 1 FROM `{$this->prefix}fm2_otiz_recipient_obligations` o WHERE o.calculation_id=p.calculation_id AND o.object_id IN({$in})) "
-            . 'ORDER BY p.calculation_id,p.id',
+            . "AND o.object_id IN({$in}) ORDER BY p.id,o.id",
             $params + [':paidFrom'=>$from, ':paidTo'=>$to],
         )->queryAll();
-        $byCalculation = [];
-        foreach ($payments as $payment) $byCalculation[(int) $payment['calculation_id']][] = $payment;
-        foreach ($byCalculation as $calculation => $calculationPayments) {
-            if (count($calculationPayments) !== 1) {
-                $issues[] = "Расчёт {$calculation}: несколько действующих отметок оплаты.";
-                continue;
-            }
-            $payment = $calculationPayments[0];
-            $obligations = $this->db->createCommand(
-                "SELECT object_id,employee_id,tab_number,full_name,amount_cents FROM `{$this->prefix}fm2_otiz_recipient_obligations` WHERE calculation_id=:calculation ORDER BY object_id,BINARY employee_id",
-                [':calculation'=>$calculation],
-            )->queryAll();
-            $saved = array_sum(array_map(static fn(array $row): int => (int) $row['amount_cents'], $obligations));
-            if ($saved <= 0 || $saved !== (int) $payment['amount_cents']) {
-                $issues[] = "Расчёт {$calculation}: сумма оплаты не подтверждена сохранёнными обязательствами.";
-                continue;
-            }
-            foreach ($obligations as $obligation) {
-                $objectId = (int) $obligation['object_id'];
-                if (!isset($ids[$objectId])) continue;
-                $row =& $this->recipient($totals, $objectId, (string) $obligation['employee_id'], (string) $obligation['tab_number'], (string) $obligation['full_name'], $issues);
-                $row['paidCents'] += (int) $obligation['amount_cents'];
-                unset($row);
-            }
-        }
+        foreach($payments as$payment){$objectId=(int)$payment['object_id'];$row=&$this->recipient($totals,$objectId,(string)$payment['employee_id'],(string)$payment['tab_number'],(string)$payment['full_name'],$issues);$row['paidCents']+=(int)$payment['amount_cents'];unset($row);}
     }
 
     private function deductions(array $ids, string $from, string $to, array &$totals, array &$issues): void
