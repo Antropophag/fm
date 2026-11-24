@@ -291,7 +291,7 @@ try {
     assertSameValue(
         [
             'result' => ['exitCode' => 0, 'stdout' => "{\"ok\":true,\"schemaVersion\":41,\"appliedVersions\":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41]}\n", 'stderr' => ''],
-            'tables' => array_map(static fn (string $table): string => $prefix25 . $table, ['fm2_otiz_object_payment_hold_events','fm2_otiz_payment_allocations',
+            'tables' => array_map(static fn (string $table): string => $prefix25 . $table, [
                 'fm2_assignment_application_attempts',
                 'fm2_assignment_order_applications',
                 'fm2_assignment_order_id_receipts',
@@ -344,6 +344,8 @@ try {
                 'fm2_otiz_deductions',
                 'fm2_otiz_entitlement_claims',
                 'fm2_otiz_entitlement_frontiers',
+                'fm2_otiz_object_payment_hold_events',
+                'fm2_otiz_payment_allocations',
                 'fm2_otiz_payment_decisions',
                 'fm2_otiz_payment_facts',
                 'fm2_otiz_payment_reversals',
@@ -393,7 +395,7 @@ try {
             ]),
         ],
         ['result' => $cleanResult, 'tables' => $cleanTables],
-        'A clean exact 25-byte composed prefix must reach ordered canonical v40 and create the full literal catalogue.',
+        'A clean exact 25-byte composed prefix must reach ordered canonical v41 and create the full literal catalogue.',
     );
     wcrAssertExactV5($connection, $prefix25);
     wcrAssertFreshV5Rows($connection, $prefix25);

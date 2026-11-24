@@ -86,7 +86,7 @@ return [
     ],
     'assets' => [
         'shlz.css'=>['bb5e00fba0a3b6804571fdc0a90caaa5ae62a03000d01501a63cd77d234fe99e','text/css; charset=UTF-8','public, max-age=3600'],
-        'pilot.css'=>['38dc77bb67f525c7a5a696a4c8e62e12792e80d37363c0869ba9ba1ebd311795','text/css; charset=UTF-8','public, max-age=3600'],
+        'pilot.css'=>['d7898c4544173dbe9ce9ef9d090052cfb7bad24e78b91fbea1b62f49b5acc0b2','text/css; charset=UTF-8','public, max-age=3600'],
         'preopening.css'=>['5d915b7651dea76dd5f1516c10e3cad2b3fa068d0a6761f15f8356dde67ecbb4','text/css; charset=UTF-8','public, max-age=3600'],
         'favicon.svg'=>['24b621ad3437c7ebec28fa5f2fe11c345b182a7ceb61e60acd99de163a3ea5b2','image/svg+xml; charset=UTF-8','public, max-age=31536000, immutable'],
         'navigation.js'=>['043d60291ae86ea025f0254b12d9a02465a371b6bfc23e45b09581df35131e3a','text/javascript; charset=UTF-8','public, max-age=3600'],

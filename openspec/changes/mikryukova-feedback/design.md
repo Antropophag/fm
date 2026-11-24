@@ -57,3 +57,8 @@ Apply блокирует всю используемую source/dependency вы�
 ### Final-review closure R5
 
 Qualified graph SHALL иметь ровно один accepted расчёт. Saved accepted right ↔ active claim ↔ frontier проверяются по точной идентичности, единственности и before gross; отсутствующий frontier не считается нулём. В apply после начала транзакции блокируется полная authorization tuple actor/role assignments/roles/permissions и повторно проверяется otiz.manage. Отзыв роли сериализуется: если revocation committed прежде получения lock, apply возвращает FORBIDDEN без maintenance writes. Receipt replay также требует текущей авторизации; отозванное право не обходится сохранённым результатом.
+
+
+### Полная CI — сохранённые соседние сценарии
+
+Первый full run45497531832 выявил25 regression entries. Полный failed-job inventory, все REGRESSION_FAILURE и логи сохранены до исправлений. Пять runtime signatures: лишний пустой перенос в HTML без нормативного блока; ZERO_OBLIGATION ошибочно стал no_change; view-created settlement owner потерял отдельный legacyPrefix; справочник потерял reset и return query. Исправления восстанавливают established поведение; соответствующие существующие независимые тесты остаются oracle. Остальные15entries — текущие schema41 inventories/порядок, CSS hash и fixtures, которым нужны отдельные stops/валидный договорный источник/корректный multi-page cohort. Не вводить floors fallback или ослабление source validation ради старых fixtures.
