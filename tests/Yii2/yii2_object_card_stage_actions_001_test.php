@@ -74,7 +74,7 @@ try {
     $check(false, str_contains($readyReader['body'], 'name="action" value="open_confirmed"') || str_contains($readyReader['body'], 'Открыть работы</button>'), 'restricted opening command absent');
     $check(1, substr_count($readyReader['body'], 'class="fm2-next-action"'), 'restricted opening one block');
 
-    $metadata=array_replace($fixture->metadata($manager,'22222222-2222-4222-8222-000000000002'),['mode'=>'correction','documentDate'=>'2026-09-02','rootOriginalId'=>$legacyOriginal->rootOriginalId(),'targetRevisionId'=>$legacyOriginal->currentRevisionId(),'expectedCurrentRevisionId'=>$legacyOriginal->currentRevisionId(),'correctionReason'=>'Дата приложения подтверждена']);
+    $metadata=array_replace($fixture->metadata($manager,'22222222-2222-4222-8222-000000000002'),['mode'=>'correction','rootOriginalId'=>$legacyOriginal->rootOriginalId(),'targetRevisionId'=>$legacyOriginal->currentRevisionId(),'expectedCurrentRevisionId'=>$legacyOriginal->currentRevisionId(),'correctionReason'=>'Заменён ошибочный скан']);
     $check(201,$fixture->upload($manager,$metadata)['status'],'correction with signed date opens legacy original');
     $check(303, $fixture->selection($manager, '44444444-4444-4444-8444-000000000001', [7002], 'new_order', 1)['status'], 'prepare later order while work is open');
     $duringBefore = $fixture->facts();

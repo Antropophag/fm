@@ -83,6 +83,7 @@ tests/InstallationProcess/construction_control_completed_filter_001_test.php	2.5
 tests/InstallationProcess/control_engineer_assignment_001_test.php	5.372
 tests/InstallationProcess/control_queue_bulk_protocol_manual_test.php	0.656
 tests/InstallationProcess/deadline_transfer_certificate_001_test.php	4.880
+tests/Yii2/equipment_reclamation_001_test.php	11.000
 tests/InstallationProcess/deadline_transfer_certificate_schema_001_test.php	8.960
 tests/InstallationProcess/harness_artifact_isolation_001_test.php	0.635
 tests/InstallationProcess/identity_access_runtime_ddl_001_test.php	1.492
@@ -274,3 +275,9 @@ tests/Yii2/yii2_user_access_concurrency_001_test.php	2.410
 tests/Yii2/yii2_user_access_edges_001_test.php	3.335
 tests/Yii2/yii2_workforce_sync_console_001_test.php	3.338
 tests/Yii2/yii2_workforce_sync_db_001_test.php	1.201
+
+# Local-preview scheduling estimates; not historical FULL-run medians.
+tests/Otiz/reclamation_inputs_001_test.php	15.000
+tests/Yii2/order_local_preview_001_test.php	15.000
+tests/Runtime/order_reclamation_schema_001_test.php	8.000
+tests/Yii2/order_review_corrections_001_test.php	35.000

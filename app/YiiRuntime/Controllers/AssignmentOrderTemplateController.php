@@ -13,7 +13,7 @@ final class AssignmentOrderTemplateController extends PreopeningController
     {
         return array_merge(parent::behaviors(), ['verbs' => [
             'class' => VerbFilter::class,
-            'actions' => ['generate' => ['POST']],
+            'actions' => ['generate' => ['GET', 'HEAD', 'POST']],
         ]]);
     }
 
@@ -25,13 +25,19 @@ final class AssignmentOrderTemplateController extends PreopeningController
         try {
             $resources = new PreopeningResources();
             if (!$this->processCap('assignment_order.composition.select') || $resources->portal()->authorizeActor($this->actor())['status'] !== 'allowed') return $this->status(403);
-            if (!$this->formMedia()) return $this->status(415);
-            if (!$this->closedBody()) return $this->status(400);
             $model = $resources->portal()->readSelectionPortal($id, $this->actor());
             if ($model['status'] !== 'found') return $this->domain($model);
-            $result = $resources->template((int) $model['caseId'], $orderId, $this->actor());
-            if ($result['status'] !== 'generated') return $this->domain($result);
-            $bytes = $result['bytes'];
+            if (Yii::$app->request->isGet || Yii::$app->request->isHead) {
+                $result = $resources->lastTemplate((int) $model['caseId'], $orderId, $this->actor());
+                if ($result['status'] !== 'generated') return $this->domain($result);
+                $bytes = $result['bytes'];
+            } else {
+                if (!$this->formMedia()) return $this->status(415);
+                $fields=$this->templateFields();if($fields===null)return$this->status(400);
+                $result = $resources->template((int) $model['caseId'], $orderId, $this->actor(), $fields['appendixStartDate']);
+                if ($result['status'] !== 'generated') return $this->domain($result);
+                $bytes = $result['bytes'];
+            }
             $response = Yii::$app->response;
             $response->format = Response::FORMAT_RAW; $response->statusCode = 200;
             $response->headers->set('Content-Type', 'application/pdf');
@@ -51,14 +57,11 @@ final class AssignmentOrderTemplateController extends PreopeningController
         return preg_match('~^application/x-www-form-urlencoded(?:\s*;\s*charset=utf-8)?$~iD', (string) Yii::$app->request->contentType) === 1;
     }
 
-    private function closedBody(): bool
+    private function templateFields():?array
     {
-        $body = Yii::$app->request->rawBody;
-        if ($body === '' || str_ends_with($body, '&')) return false;
-        $parts = explode('=', $body, 2);
-        return count(explode('&', $body)) === 1
-            && !preg_match('/%(?![0-9A-Fa-f]{2})/', implode('', $parts))
-            && rawurldecode(str_replace('+', ' ', $parts[0])) === '_csrf';
+        $body=Yii::$app->request->rawBody;if($body===''||str_ends_with($body,'&')||preg_match('/%(?![0-9A-Fa-f]{2})/',$body))return null;$names=[];foreach(explode('&',$body)as$pair){$name=rawurldecode(str_replace('+',' ',explode('=',$pair,2)[0]));if(isset($names[$name]))return null;$names[$name]=true;}parse_str($body,$fields);
+        if(!is_array($fields)||array_keys($fields)!==['_csrf','appendixStartDate']||!is_string($fields['_csrf'])||!is_string($fields['appendixStartDate']))return null;
+        $date=$fields['appendixStartDate'];$parsed=\DateTimeImmutable::createFromFormat('!Y-m-d',$date);return$parsed!==false&&$parsed->format('Y-m-d')===$date?$fields:null;
     }
 
     public function actionMethod(string $id, string $orderId): Response

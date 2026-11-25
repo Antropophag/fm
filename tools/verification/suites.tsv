@@ -193,6 +193,7 @@ db	php	tests/Otiz/object_payment_hold_concurrency_001_test.php	integration
 db	php	tests/Otiz/object_register_paging_001_test.php	integration
 db	php	tests/Otiz/object_register_paging_http_001_test.php	integration
 db	php	tests/Otiz/object_scoped_decisions_20261030_test.php	integration
+db	php	tests/Otiz/reclamation_inputs_001_test.php	integration
 db	php	tests/Otiz/remaining_crew_reserve_001_test.php	integration
 db	php	tests/Otiz/reserved_shares_20261029_test.php	integration
 db	php	tests/Otiz/reserved_shares_concurrency_20261029_test.php	integration
@@ -217,6 +218,7 @@ db	php	tests/Runtime/migration_concurrency_lock_001_test.php	integration
 db	php	tests/Runtime/migration_parallel_runners_001_test.php	integration
 db	php	tests/Runtime/object_details_editing_recovery_001_test.php	integration
 db	php	tests/Runtime/object_details_editing_restore_roundtrip_001_test.php	integration
+db	php	tests/Runtime/order_reclamation_schema_001_test.php	integration
 db	php	tests/Runtime/production_process_readiness_001_test.php	integration
 db	php	tests/Runtime/production_readiness_schema_001_test.php	integration
 db	php	tests/Runtime/production_schema_frontier_001_test.php	integration
@@ -239,10 +241,13 @@ db	php	tests/Workforce/installer_utilization_forecast_001_test.php	integration
 db	php	tests/Workforce/installer_utilization_observations_001_test.php	integration
 db	php	tests/Yii2/deadline_transfer_certificate_http_001_test.php	integration
 db	php	tests/Yii2/email_first_password_001_test.php	integration
+db	php	tests/Yii2/equipment_reclamation_001_test.php	integration
 db	php	tests/Yii2/legacy_control_engineer_reads_001_test.php	integration
 db	php	tests/Yii2/mikryukova_directory_001_test.php	integration
 db	php	tests/Yii2/mikryukova_feedback_http_001_test.php	integration
 db	php	tests/Yii2/object_payment_hold_http_001_test.php	integration
+db	php	tests/Yii2/order_local_preview_001_test.php	integration
+db	php	tests/Yii2/order_review_corrections_001_test.php	integration
 db	php	tests/Yii2/password_recovery_001_test.php	integration
 db	php	tests/Yii2/password_recovery_delivery_safety_001_test.php	integration
 db	php	tests/Yii2/password_recovery_edges_001_test.php	integration
@@ -588,6 +593,7 @@ unit	php	tests/Otiz/excel_calculation_001_test.php	unit
 unit	php	tests/Otiz/legacy_premium_calculation_001_test.php	unit
 unit	php	tests/Otiz/mikryukova_workbook_001_test.php	unit
 unit	php	tests/Otiz/production_performance_register_001_test.php	unit
+unit	php	tests/Otiz/reclamation_deadline_001_test.php	unit
 unit	php	tests/Otiz/report_filters_20261029_test.php	unit
 unit	php	tests/Otiz/settlement_v2_001_test.php	unit
 unit	php	tests/Otiz/settlement_v2_workbook_001_test.php	unit
@@ -632,6 +638,7 @@ unit	php	tests/Verification/yii2_worktree_autoload_001_test.php	governance
 unit	php	tests/WeeklyFkrReport/weekly_report_001_test.php	integration
 unit	php	tests/WeeklyFkrReport/weekly_schedule_001_test.php	integration
 unit	node	tests/Yii2/checklist_service_worker_navigation_001_test.mjs	unit
+unit	php	tests/Yii2/order_local_preview_metadata_001_test.php	unit
 unit	node	tests/Yii2/production_performance_sw_001_test.mjs	unit
 unit	node	tests/Yii2/production_performance_upload_001_test.mjs	unit
 unit	python3	tests/Yii2/runtime_help_001_test.py	unit

@@ -164,7 +164,7 @@ try {
     "no-js first panel source",
   );
   check(
-    (await p.getByText("Плановое начало", { exact: true }).count()) > 0,
+    (await p.getByText("Начало", { exact: true }).count()) > 0,
     "no-js first panel content",
   );
   await noJs.close();

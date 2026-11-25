@@ -3,7 +3,7 @@ declare(strict_types=1);
 require dirname(__DIR__).'/bootstrap.php';require __DIR__.'/PreopeningFixture.php';
 // ACTUAL-START-FROM-ORDER-001: real HTTP partial/retry, invalid input, and legacy read-only history.
 function oshMetadata(PreopeningFixture$f,array&$cookies,int$n=1):array{
-    return ['csrfToken'=>$f->token($cookies),'requestId'=>sprintf('17171717-1717-4717-8717-%012d',$n),'mode'=>'initial','documentDate'=>'2026-09-01','appendixStartDate'=>'2030-10-09','compositionConfirmed'=>true,'rootOriginalId'=>null,'targetRevisionId'=>null,'expectedCurrentRevisionId'=>null,'correctionReason'=>null,'originalFilename'=>'signed.pdf'];
+    return ['csrfToken'=>$f->token($cookies),'requestId'=>sprintf('17171717-1717-4717-8717-%012d',$n),'mode'=>'initial','appendixStartDate'=>'2030-10-09','externalDocumentNumber'=>'1C-DO-START','rootOriginalId'=>null,'targetRevisionId'=>null,'expectedCurrentRevisionId'=>null,'correctionReason'=>null,'originalFilename'=>'signed.pdf'];
 }
 $f=new PreopeningFixture(dirname(__DIR__,2));try{
     $f->start();$cookies=[];assertSameValue(303,$f->login($cookies)['status'],'login');assertSameValue(303,$f->selection($cookies)['status'],'selection');

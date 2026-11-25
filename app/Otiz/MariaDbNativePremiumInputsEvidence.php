@@ -112,4 +112,18 @@ trait MariaDbNativePremiumInputsEvidence
             return null;
         }
     }
+
+    private function reclamations(int $case, array &$issues): ?array
+    {
+        try {
+            return new \FMonitor2\EquipmentReclamation\EquipmentReclamations(
+                $this->db,
+                $this->prefix,
+                $this->clock,
+            )->currentEvidence($case);
+        } catch (\DomainException $e) {
+            $this->issue($issues, 'RECLAMATION_EVIDENCE_INVALID');
+            return null;
+        }
+    }
 }

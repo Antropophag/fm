@@ -63,12 +63,21 @@ final class MariaDbNativePremiumInputs
             $this->issue($issues, "DEADLINE_EVIDENCE_ABSENT");
         }
         $certificate = $this->certificate($case, $issues);
+        $reclamations = $this->reclamations($case, $issues);
+        $deadlineAllowance = null;
+        if ($original !== null && $reclamations !== null) {
+            try {
+                $deadlineAllowance = ReclamationDeadline::resolve($original['value'], $certificate, $reclamations);
+            } catch (\InvalidArgumentException|\DomainException) {
+                $this->issue($issues, 'DEADLINE_EVIDENCE_INVALID');
+            }
+        }
         $completion = $this->completion($case, $issues);
         [$composition, $selected] = $this->composition($case, $object, $issues);
         [$progress, $progressProof, $contrib] = $this->progress($case, $date, $issues);
         $finance = $this->finance($object, $issues);
         $team = $this->team($case, $progress, $selected, $contrib, $issues);
-        $deadline = $certificate["newDeadline"] ?? ($original["value"] ?? null);
+        $deadline = $deadlineAllowance['effectiveDeadline'] ?? null;
         $pto = $completion["date"];
         $operands = null;
         if ($issues === []) {
@@ -94,7 +103,7 @@ final class MariaDbNativePremiumInputs
                 "deadlineDate" => $fact(
                     $deadline,
                     $certificate["certificateDate"] ?? substr($at, 0, 10),
-                    $certificate["source"] ?? $original["source"],
+                    $deadlineAllowance['source'],
                 ),
                 "completionDate" => $fact($pto, $completion["date"] ?? $date, $completion["evidence"]["source"]),
             ];
@@ -117,6 +126,8 @@ final class MariaDbNativePremiumInputs
                 "originalDeadline" => $original,
                 "contractualPeriod" => $period,
                 "certificate" => $certificate,
+                "reclamations" => $reclamations,
+                "deadlineAllowance" => $deadlineAllowance,
                 "completion" => $completion["evidence"],
                 "composition" => $composition,
                 "progress" => $progressProof,

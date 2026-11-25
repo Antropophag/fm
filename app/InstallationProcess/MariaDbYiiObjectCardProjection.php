@@ -169,7 +169,7 @@ final readonly class MariaDbYiiObjectCardProjection
         unset($event);
         if (($card['openedByUserId'] ?? null) !== null) {
             $id = (int) $card['openedByUserId'];
-            $card['openedByName'] = $names[$id] ?? 'Пользователь недоступен · ID ' . $id;
+            $card['openedByName'] = $names[$id] ?? 'Пользователь недоступен';
         }
         return $card;
     }

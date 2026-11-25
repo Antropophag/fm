@@ -8,29 +8,32 @@ final readonly class MariaDbOriginalStartOwner
 {
     public function __construct(private MariaDbAssignmentOrderApplicationSql$sql,private O\AssignmentOrderOriginalApplication$original,private SelectionClock$clock){}
 
-    public function submit(O\SubmitAssignmentOrderOriginalCommand$c,int$objectId,string$appendixStartDate):array
+    public function submit(O\SubmitAssignmentOrderOriginalCommand$c,int$objectId,string$appendixStartDate,string$externalDocumentNumber):array
     {
         $out=static fn(string$status,?string$reason,bool$retry,?O\AssignmentOrderOriginalResult$original=null,?array$opening=null):array=>['status'=>$status,'reasonCode'=>$reason,'retryable'=>$retry,'original'=>$original,'opening'=>$opening];
-        if($objectId<1||!self::date($appendixStartDate))return$out('rejected','invalid_command',false);
+        if($objectId<1||!self::date($appendixStartDate)||trim($externalDocumentNumber)===''||mb_strlen($externalDocumentNumber)>255)return$out('rejected','invalid_command',false);
         $s=$this->sql;
         try{
-            if(!$s->idle()||!\FMonitor2\InstallationProcess\AssignmentOrderOriginalStartSchemaMigration::isCompleteCompatible($s->db,$s->prefix))return$out('failed','dependency_unavailable',true);
+            if(!$s->idle()||!\FMonitor2\InstallationProcess\AssignmentOrderOriginalExternalNumberSchemaMigration::isCompleteCompatible($s->db,$s->prefix))return$out('failed','dependency_unavailable',true);
             $permission=$c->mode===O\AssignmentOrderOriginalMode::INITIAL?'assignment_order.original.upload':'assignment_order.original.correct';
             if(!$this->authorized($c->actorUserId,$permission)||!$this->authorized($c->actorUserId,'installation.open'))return$out('rejected','authorization_denied',false);
             $cases=$s->rows('SELECT id FROM '.$s->table('fm2_installation_cases').' WHERE legacy_installation_object_id=?',[$objectId]);
             if(count($cases)!==1||(int)$cases[0]['id']!==$c->installationCaseId)return$out('rejected','object_not_found',false);
-            if($c->mode===O\AssignmentOrderOriginalMode::CORRECTION&&$this->opened($objectId)){
-                $prior=$this->startForRevision((string)$c->targetRevisionId);
-                if($prior===null||$prior!==$appendixStartDate)return$out('rejected','appendix_start_changed',false);
+            $documentDate=$c->documentDate;
+            if($c->mode===O\AssignmentOrderOriginalMode::CORRECTION){
+                $target=$this->targetRevision((string)$c->targetRevisionId,$c->installationCaseId,$c->assignmentOrderId,$objectId);
+                if($target===null||!is_string($target['external_document_number'])||trim($target['external_document_number'])===''||!self::date((string)$target['appendix_start_date']))return$out('rejected','replacement_metadata_unavailable',false);
+                if(!hash_equals((string)$target['external_document_number'],$externalDocumentNumber)||!hash_equals((string)$target['appendix_start_date'],$appendixStartDate))return$out('rejected','replacement_metadata_changed',false);
+                $documentDate=(string)$target['document_date'];if(!self::date($documentDate))return$out('rejected','replacement_metadata_unavailable',false);
             }
             $bytes=$this->bytes($c->upload->stream);if($bytes===null)return$out('failed','dependency_unavailable',true);
-            $copy=new O\SubmitAssignmentOrderOriginalCommand($c->requestId,$c->mode,$c->installationCaseId,$c->assignmentOrderId,$c->actorUserId,$c->documentDate,$c->compositionConfirmed,$c->rootOriginalId,$c->targetRevisionId,$c->expectedCurrentRevisionId,$c->correctionReason,new O\AssignmentOrderOriginalUpload(new O\AssignmentOrderOriginalMemoryStream($bytes),$c->upload->originalFilename,$c->upload->declaredMediaType));
-            $sha=hash('sha256',$bytes);$size=strlen($bytes);$fingerprint=$this->fingerprint($c,$objectId,$appendixStartDate,$sha,$size);
+            $copy=new O\SubmitAssignmentOrderOriginalCommand($c->requestId,$c->mode,$c->installationCaseId,$c->assignmentOrderId,$c->actorUserId,$documentDate,$c->compositionConfirmed,$c->rootOriginalId,$c->targetRevisionId,$c->expectedCurrentRevisionId,$c->correctionReason,new O\AssignmentOrderOriginalUpload(new O\AssignmentOrderOriginalMemoryStream($bytes),$c->upload->originalFilename,$c->upload->declaredMediaType));
+            $sha=hash('sha256',$bytes);$size=strlen($bytes);$fingerprint=$this->fingerprint($copy,$objectId,$appendixStartDate,$externalDocumentNumber,$sha,$size);
             $intent=$this->intent($c->requestId);
             if($intent!==null&&!hash_equals($intent['semantic_fingerprint'],$fingerprint))return$out('conflict','request_id_conflict',false);
             if($intent===null&&$size>=5){
                 $instant=$this->clock->now();if($instant->status!==SelectionLookupStatus::FOUND||$instant->payload===null)return$out('failed','dependency_unavailable',true);
-                try{$s->execute('INSERT INTO '.$s->table('fm2_assignment_order_original_starts').' (request_id,installation_case_id,object_id,assignment_order_id,actor_user_id,mode,document_date,appendix_start_date,pdf_sha256,byte_size,semantic_fingerprint,created_at_utc) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',[$c->requestId,$c->installationCaseId,$objectId,$c->assignmentOrderId,$c->actorUserId,$c->mode->value,$c->documentDate,$appendixStartDate,$sha,$size,$fingerprint,self::dbTime($instant->payload->utcRfc3339Seconds)]);}catch(\Throwable){$intent=$this->intent($c->requestId);if($intent===null||!hash_equals($intent['semantic_fingerprint'],$fingerprint))return$out('conflict','request_id_conflict',false);}
+                try{$s->execute('INSERT INTO '.$s->table('fm2_assignment_order_original_starts').' (request_id,installation_case_id,object_id,assignment_order_id,actor_user_id,mode,document_date,appendix_start_date,external_document_number,pdf_sha256,byte_size,semantic_fingerprint,created_at_utc) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',[$c->requestId,$c->installationCaseId,$objectId,$c->assignmentOrderId,$c->actorUserId,$c->mode->value,$documentDate,$appendixStartDate,$externalDocumentNumber,$sha,$size,$fingerprint,self::dbTime($instant->payload->utcRfc3339Seconds)]);}catch(\Throwable){$intent=$this->intent($c->requestId);if($intent===null||!hash_equals($intent['semantic_fingerprint'],$fingerprint))return$out('conflict','request_id_conflict',false);}
             }
             $receipt=$this->original->submitAssignmentOrderOriginal($copy);
             if(!in_array($receipt->status(),[O\AssignmentOrderOriginalStatus::ACCEPTED,O\AssignmentOrderOriginalStatus::REPLAYED],true))return$out($receipt->status()->value,$receipt->reasonCode()?->value,$receipt->retryable(),$receipt);
@@ -77,10 +80,10 @@ final readonly class MariaDbOriginalStartOwner
     private function bytes(O\AssignmentOrderOriginalByteStream$stream):?string{$bytes='';while(true){$r=$stream->read(65536);if($r->status===O\AssignmentOrderOriginalStreamReadStatus::EOF)break;if($r->status!==O\AssignmentOrderOriginalStreamReadStatus::BYTES||$r->bytes==='')return null;$bytes.=$r->bytes;if(strlen($bytes)>20971520)return null;}return$bytes;}
     private function intent(string$request):?array{$r=$this->sql->rows('SELECT * FROM '.$this->sql->table('fm2_assignment_order_original_starts').' WHERE request_id=?',[$request]);return count($r)===1?$r[0]:null;}
     private function canonical(string$revision):?array{$r=$this->sql->rows('SELECT s.* FROM '.$this->sql->table('fm2_assignment_order_original_revisions').' v JOIN '.$this->sql->table('fm2_assignment_order_original_starts').' s ON s.request_id=v.request_id WHERE v.revision_id=?',[$revision]);return count($r)===1?$r[0]:null;}
-    private function startForRevision(string$revision):?string{return$this->canonical($revision)['appendix_start_date']??null;}
+    private function targetRevision(string$revision,int$case,int$order,int$object):?array{$r=$this->sql->rows('SELECT s.* FROM '.$this->sql->table('fm2_assignment_order_original_revisions').' v JOIN '.$this->sql->table('fm2_assignment_order_original_roots').' r ON r.root_original_id=v.root_original_id JOIN '.$this->sql->table('fm2_assignment_order_original_starts').' s ON s.request_id=v.request_id WHERE v.revision_id=? AND r.installation_case_id=? AND r.assignment_order_id=? AND s.installation_case_id=? AND s.assignment_order_id=? AND s.object_id=?',[$revision,$case,$order,$case,$order,$object]);return count($r)===1?$r[0]:null;}
     private function opened(int$object):bool{$r=$this->sql->rows('SELECT actual_start_date,opened_at FROM '.$this->sql->table('fm2_installation_cases').' WHERE legacy_installation_object_id=?',[$object]);return count($r)===1&&$r[0]['actual_start_date']!==null&&$r[0]['opened_at']!==null;}
     private function sequence(int$object):int{$r=$this->sql->rows('SELECT a.application_sequence FROM '.$this->sql->table('fm2_installation_cases').' c LEFT JOIN '.$this->sql->table('fm2_assignment_order_applications').' a ON a.installation_case_id=c.id WHERE c.legacy_installation_object_id=? ORDER BY a.application_sequence DESC LIMIT 1',[$object]);return$r===[]||$r[0]['application_sequence']===null?0:(int)$r[0]['application_sequence'];}
-    private function fingerprint(O\SubmitAssignmentOrderOriginalCommand$c,int$object,string$date,string$sha,int$size):string{return hash('sha256',SelectionScalar::json([$c->mode->value,$c->installationCaseId,$object,$c->assignmentOrderId,$c->actorUserId,$c->documentDate,$c->compositionConfirmed,$c->rootOriginalId,$c->targetRevisionId,$c->expectedCurrentRevisionId,$c->correctionReason,$c->upload->originalFilename,$c->upload->declaredMediaType,$date,$sha,$size]));}
+    private function fingerprint(O\SubmitAssignmentOrderOriginalCommand$c,int$object,string$date,string$externalDocumentNumber,string$sha,int$size):string{return hash('sha256',SelectionScalar::json([$c->mode->value,$c->installationCaseId,$object,$c->assignmentOrderId,$c->actorUserId,$c->documentDate,$c->compositionConfirmed,$c->rootOriginalId,$c->targetRevisionId,$c->expectedCurrentRevisionId,$c->correctionReason,$c->upload->originalFilename,$c->upload->declaredMediaType,$date,$externalDocumentNumber,$sha,$size]));}
     private static function date(string$v):bool{if(preg_match('/^\d{4}-\d{2}-\d{2}$/D',$v)!==1)return false;$d=\DateTimeImmutable::createFromFormat('!Y-m-d',$v);return$d!==false&&$d->format('Y-m-d')===$v;}
     private static function dbTime(string$v):string{return str_replace(['T','Z'],[' ','.000000'],$v);}
 }

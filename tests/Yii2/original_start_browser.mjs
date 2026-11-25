@@ -23,11 +23,12 @@ try{
  await login(page,c.email);await page.goto(c.origin+'/pilot/objects/4512/assignment-orders/81/originals/submit');
  let form=page.locator('[data-original-upload-form]');await form.waitFor();
  check(await form.locator('[name=appendixStartDate]').count()===1,'INTENDED_RED: upload offers signed appendix start date');
- check(await form.locator('[name=documentDate]').count()===1,'document date remains distinct');
+ check(await form.locator('[name=documentDate]').count()===0,'document date is server-owned');
+ check(await form.locator('[name=externalDocumentNumber]').count()===1,'upload requires the 1C document number');
  check(await form.locator('[name=appendixStartDate]').inputValue()==='2026-10-01','initial suggested start comes from plan for explicit confirmation');
  for(const width of [1440,390]){await page.setViewportSize({width,height:900});check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'upload has no horizontal overflow');await page.screenshot({path:c.artifacts+`/original-start-upload-${width}.png`,fullPage:true});}
  await form.locator('[name=original]').setInputFiles({name:'signed.pdf',mimeType:'application/pdf',buffer:Buffer.from(c.pdf,'base64')});
- await fillDate(form,'documentDate','2026-09-01');await fillDate(form,'appendixStartDate','2030-10-09');await form.locator('[name=compositionConfirmed]').check();
+ await form.locator('[name=externalDocumentNumber]').fill('1C-DO-2030-10');await fillDate(form,'appendixStartDate','2030-10-09');
  const requestId=await form.locator('[name=requestId]').inputValue();let first=true;let resolveLost;const lost=new Promise(r=>resolveLost=r);
  await page.route('**/originals',async route=>{
   if(first&&route.request().method()==='POST'){first=false;const response=await route.fetch();check(response.status()===201,'server accepts and opens before response loss');await route.abort('failed');resolveLost();}
@@ -43,7 +44,7 @@ try{
  check(await page.locator('time[datetime="2030-10-09"]').count()>0,'card shows signed future start');
  for(const width of [1440,390]){await page.setViewportSize({width,height:900});check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'opened card no overflow');await page.screenshot({path:c.artifacts+`/original-start-card-${width}.png`,fullPage:true});}
  await page.goto(c.origin+'/pilot/objects/4512/assignment-orders/81/originals/history');check((await page.locator('body').innerText()).includes('2030-10-09')||(await page.locator('body').innerText()).includes('09.10.2030'),'history displays signed appendix date');
- await page.goto(c.origin+'/pilot/objects/4512/assignment-orders/81/originals/submit');form=page.locator('[data-original-upload-form]');check(await form.locator('[name=appendixStartDate]').inputValue()==='2030-10-09','correction loads preserved signed date, not object plan');
+ await page.goto(c.origin+'/pilot/objects/4512/assignment-orders/81/originals/submit');form=page.locator('[data-original-upload-form]');check(await form.locator('[name=appendixStartDate]').inputValue()==='2030-10-09','scan replacement loads preserved signed date, not object plan');check(await form.locator('[name=externalDocumentNumber]').inputValue()==='1C-DO-2030-10','scan replacement preserves the external document number');
  const engineerContext=await browser.newContext(),engineer=await engineerContext.newPage();await login(engineer,c.engineerEmail);
  const checklist=await engineer.goto(c.origin+'/pilot/objects/4512/checklist');check(checklist.status()===200,'checklist accessible immediately despite future date');
  check(await engineer.locator('[name=actualStartDate]').count()===0,'engineer has no date-opening control');

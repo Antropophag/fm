@@ -13,5 +13,5 @@ $clock=new class implements C\SelectionClock{public function now():C\SelectionIn
 $original=O\AssignmentOrderSelectedOriginalVerificationFactory::create($db,new O\AssignmentOrderOriginalProductionConfig($input['privateRoot'],'start_',$input['safeLog']),$fresh,$originalClock);
 $command=new O\SubmitAssignmentOrderOriginalCommand('12121212-1212-4212-8212-000000000001',O\AssignmentOrderOriginalMode::INITIAL,4512,81,18,'2026-09-04',true,null,null,null,null,new O\AssignmentOrderOriginalUpload(new O\AssignmentOrderOriginalMemoryStream(base64_decode($input['pdf'],true)),'signed.pdf','application/pdf'));
 $deadline=microtime(true)+10;while(!is_file($input['go'])){if(microtime(true)>$deadline)throw new RuntimeException('barrier timeout');usleep(10000);}
-$r=C\ProductionOriginalStartFactory::create($db,'start_',$original,$clock)->submit($command,4512,'2026-09-20');
+$r=C\ProductionOriginalStartFactory::create($db,'start_',$original,$clock)->submit($command,4512,'2026-09-20','1C-DO-START');
 file_put_contents($argv[2],json_encode(['status'=>$r['status'],'reasonCode'=>$r['reasonCode'],'retryable'=>$r['retryable']],JSON_THROW_ON_ERROR));$db->close();

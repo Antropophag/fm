@@ -99,14 +99,17 @@
     },
     {
       "categories": [
-        "integration"
+        "integration",
+        "unit"
       ],
       "name": "otiz-money",
       "patterns": [
         "app/Otiz/**"
       ],
       "tests": [
-        "tests/Otiz/snapshot_publication_001_test.php"
+        "tests/Otiz/snapshot_publication_001_test.php",
+        "tests/Otiz/reclamation_deadline_001_test.php",
+        "tests/Otiz/reclamation_inputs_001_test.php"
       ]
     },
     {
@@ -222,6 +225,19 @@
         "deploy/**"
       ],
       "tests": []
+    },
+    {
+      "name": "equipment-reclamation",
+      "patterns": [
+        "app/EquipmentReclamation/**"
+      ],
+      "categories": [
+        "integration",
+        "governance"
+      ],
+      "tests": [
+        "tests/Yii2/equipment_reclamation_001_test.php"
+      ]
     },
     {
       "name": "deadline-certificate",
@@ -464,11 +480,13 @@
         "app/Otiz/NativePremiumNorms.php",
         "app/Otiz/ObjectEconomy.php",
         "app/Otiz/ContractualReplacementPeriod.php",
-        "app/Otiz/MariaDbObjectRegister.php"
+        "app/Otiz/MariaDbObjectRegister.php",
+        "app/Otiz/MariaDbNativePremiumInputsEvidence.php"
       ],
       "verifiers": [
         "tests/Otiz/excel_inputs_001_test.php",
-        "tests/Otiz/object_register_paging_001_test.php"
+        "tests/Otiz/object_register_paging_001_test.php",
+        "tests/Otiz/reclamation_inputs_001_test.php"
       ],
       "consumers": []
     },
@@ -675,7 +693,8 @@
         "app/YiiRuntime/Views/otiz-calculation-v2.php",
         "app/YiiRuntime/Views/otiz-economy-v2.php",
         "app/autoload.php",
-        "public/yii.php"
+        "public/yii.php",
+        "app/Otiz/OtizV2WorkbookEvidence.php"
       ],
       "verifiers": [
         "tests/Otiz/native_admission_001_test.php",
@@ -686,7 +705,9 @@
         "tests/Otiz/settlement_v2_workbook_001_test.php",
         "tests/Otiz/object_scoped_decisions_20261030_test.php",
         "tests/Yii2/yii2_otiz_decision_preview_20261030_test.php",
-        "tests/Yii2/yii2_otiz_settlement_v2_001_test.php"
+        "tests/Yii2/yii2_otiz_settlement_v2_001_test.php",
+        "tests/Otiz/reclamation_inputs_001_test.php",
+        "tests/Otiz/mikryukova_workbook_001_test.php"
       ],
       "consumers": []
     },
@@ -727,11 +748,14 @@
         "app/RuntimeRestore/RuntimeRecoverySchemaV35.php",
         "app/RuntimeRestore/RuntimeRecoverySchemaV36.php",
         "app/RuntimeRestore/RuntimeRecoverySchemaV37.php",
-        "app/RuntimeRestore/RuntimeRecoverySchemaV38.php"
+        "app/RuntimeRestore/RuntimeRecoverySchemaV38.php",
+        "app/RuntimeRestore/RuntimeRecoverySchemaV42.php",
+        "app/RuntimeRestore/RuntimeRecoverySchemaV43.php"
       ],
       "verifiers": [
         "tests/Runtime/runtime_recovery_001_test.php",
-        "tests/Runtime/runtime_recovery_forward_update_001_test.php"
+        "tests/Runtime/runtime_recovery_forward_update_001_test.php",
+        "tests/Runtime/order_reclamation_schema_001_test.php"
       ],
       "consumers": [
         "runtime-schema-inventory"
@@ -897,7 +921,9 @@
         "app/YiiRuntime/Controllers/OriginalHistoryController.php",
         "app/YiiRuntime/Models/OriginalMetadata.php",
         "app/YiiRuntime/PreopeningResources.php",
-        "app/RuntimeRestore/RuntimeRecoverySchemaV39.php"
+        "app/RuntimeRestore/RuntimeRecoverySchemaV39.php",
+        "app/InstallationProcess/AssignmentOrderOriginalExternalNumberSchemaMigration.php",
+        "app/InstallationProcess/MariaDbPilotUserDisplayNameQuery.php"
       ],
       "verifiers": [
         "tests/AssignmentOrderComposition/confirmed_original_opening_001_test.php",
@@ -906,7 +932,10 @@
         "tests/AssignmentOrderComposition/original_start_001_test.php",
         "tests/InstallationProcess/original_start_schema_001_test.php",
         "tests/Yii2/yii2_original_start_metadata_001_test.php",
-        "tests/Yii2/yii2_original_start_browser_001_test.php"
+        "tests/Yii2/yii2_original_start_browser_001_test.php",
+        "tests/Yii2/order_local_preview_001_test.php",
+        "tests/Yii2/order_local_preview_metadata_001_test.php",
+        "tests/Runtime/order_reclamation_schema_001_test.php"
       ],
       "consumers": [
         "canonical-migration-frontier"
@@ -1008,6 +1037,57 @@
       ],
       "verifiers": [
         "tests/Otiz/mikryukova_demo_recalculate_001_test.php"
+      ],
+      "consumers": []
+    },
+    {
+      "name": "assignment-template-artifact",
+      "patterns": [
+        "app/AssignmentOrderComposition/AssignmentOrderTemplateApplication.php",
+        "app/AssignmentOrderComposition/MariaDbTemplateApplication.php",
+        "app/AssignmentOrderComposition/MariaDbTemplateDateReader.php",
+        "app/YiiRuntime/Controllers/AssignmentOrderTemplateController.php"
+      ],
+      "verifiers": [
+        "tests/AssignmentOrderComposition/template_generation_001_test.php",
+        "tests/Yii2/order_local_preview_001_test.php"
+      ],
+      "consumers": [
+        "assignment-original-start-opening",
+        "current-schema-recovery"
+      ]
+    },
+    {
+      "name": "equipment-reclamation",
+      "patterns": [
+        "app/EquipmentReclamation/**",
+        "app/InstallationProcess/EquipmentReclamationSchemaMigration.php",
+        "app/InstallationProcess/MariaDbEquipmentReclamations.php",
+        "app/Otiz/ReclamationDeadline.php",
+        "app/YiiRuntime/Controllers/EquipmentReclamationController.php"
+      ],
+      "verifiers": [
+        "tests/Yii2/equipment_reclamation_001_test.php",
+        "tests/Otiz/reclamation_deadline_001_test.php",
+        "tests/Otiz/reclamation_inputs_001_test.php",
+        "tests/Runtime/order_reclamation_schema_001_test.php"
+      ],
+      "consumers": [
+        "canonical-migration-frontier",
+        "otiz-premium-norms",
+        "otiz-settlement-v2-application",
+        "training-otiz-recalculation"
+      ]
+    },
+    {
+      "name": "otiz-admin-diagnostics",
+      "patterns": [
+        "app/YiiRuntime/Controllers/OtizEvidenceController.php",
+        "app/YiiRuntime/OtizEvidenceHtml.php"
+      ],
+      "verifiers": [
+        "tests/Yii2/yii2_otiz_evidence_reads_001_test.php",
+        "tests/Yii2/yii2_otiz_decisions_001_test.php"
       ],
       "consumers": []
     }
@@ -1153,6 +1233,7 @@
         "app/AssignmentOrderComposition/**",
         "app/AssignmentOrderOriginal/**",
         "app/DeadlineTransferCertificate/**",
+        "app/EquipmentReclamation/**",
         "app/IdentityAccess/**",
         "app/InspectionEvidence/**",
         "app/InstallationProcess/**",
