@@ -46,6 +46,25 @@ synthetic tokens определяются тестом независимо от
 обоих конфигов. Primary evidence outside repo:
 `/var/folders/yc/548th18156s39y3kx0xc05tc0000gn/T/fmonitor-nginx-probe-gjf79wee`.
 
+## Runtime combined logging — owner decision 2026-11-24
+
+Для сбора логов ИБ runtime nginx дополнительно пишет стандартный `combined`
+в stdout сразу после существующего `safe_json`. Обычный запрос `/health/live`
+даёт ровно одну safe JSON запись и одну combined запись с адресом клиента,
+временем, request line, status, размером ответа, Referer и User-Agent.
+Для GET и POST точного `/pilot/activate` остаётся только safe JSON, без combined:
+query/header/body secrets по-прежнему отсутствуют в обоих log streams.
+Это временное исключение сохраняется до отдельной поставки новой авторизации;
+предположение о будущем удалении кодов не отменяет текущую защиту.
+
+`deploy/yii2/nginx.conf` сохраняет прежний формат: одна safe JSON запись на запрос.
+Acceptance `private-and-diagnosable-activation-proxy` дополнительно проверяет
+полную combined строку обычного runtime запроса с несекретными Referer/User-Agent
+и общее число stdout записей, чтобы обнаружить дублирование activation logs.
+Существующие семь групп проверок, включая ошибки upstream и FastCGI parity,
+остаются обязательными. БД, schema, permissions, history, recovery и authentication
+flows не меняются; дополнительных dependencies и изменений CI policy нет.
+
 ## Sources
 
 - [nginx access/log_format](https://nginx.org/en/docs/http/ngx_http_log_module.html)

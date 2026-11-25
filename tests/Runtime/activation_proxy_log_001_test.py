@@ -123,13 +123,13 @@ def verify_failed_start_cleanup(image_id):
               'failure cleanup preserves unrelated container')
 
 
-def inspect_family(image_id, family, evidence):
+def inspect_family(image_id, family, evidence, target="/pilot/activate"):
     container_name = 'fm2-log-test-' + uuid.uuid4().hex[:12]
     owner_marker = uuid.uuid4().hex
     config = ROOT / 'deploy' / family / 'nginx.conf'
     text = config.read_text()
     normal = location(text, r'/')
-    activation = location(text, r'=\s+/pilot/activate')
+    activation = location(text, r'=\s+' + re.escape(target))
     check(activation is not None, family + ': exact activation boundary missing')
     check(handoff(normal) == handoff(activation), family + ': FastCGI handoff/Host/body/timeout parity')
     expected = '/workspace/fmonitor-2/public/' + ('yii.php' if family == 'yii2' else 'runtime.php')
@@ -160,10 +160,13 @@ def inspect_family(image_id, family, evidence):
             sent_headers = dict(headers)
             if body:
                 sent_headers['Content-Type'] = 'application/x-www-form-urlencoded'
-            status, response_body = request(port, method, '/pilot/activate?token=' + tokens['A'], sent_headers, body)
+            status, response_body = request(port, method, target + '?token=' + tokens['A'], sent_headers, body)
             check(status == 502, family + ': activation upstream failure stays 502')
             check(all(token.encode() not in response_body for token in tokens.values()), family + ': failure body safe')
-        status, _ = request(port, 'GET', '/health/live')
+        status, _ = request(port, 'GET', '/health/live', {
+            'Referer': 'https://example.invalid/ib-log-probe',
+            'User-Agent': 'IB-LOG-PROBE',
+        })
         check(status == 502, family + ': ordinary upstream failure stays 502')
         deadline = time.monotonic() + 3
         while True:
@@ -177,8 +180,17 @@ def inspect_family(image_id, family, evidence):
         for stream, contents in [('access', logs.stdout), ('error', logs.stderr)]:
             for letter, token in tokens.items():
                 check(token not in contents, family + ': INTENDED_RED token ' + letter + ' leaked in ' + stream)
-        check('/pilot/activate' not in logs.stderr, family + ': activation request-associated error suppressed')
+        check(target not in logs.stderr, family + ': activation request-associated error suppressed')
         check('/health/live' in logs.stderr and 'upstream' in logs.stderr, family + ': ordinary upstream diagnostics retained')
+        access_lines = [line for line in logs.stdout.splitlines() if line.strip()]
+        combined = [line for line in access_lines if re.fullmatch(
+            r'\S+ - \S+ \[[^\]]+\] "GET /health/live HTTP/1\.1" 502 \d+ '
+            r'"https://example\.invalid/ib-log-probe" "IB-LOG-PROBE"', line)]
+        expected_combined = 1 if family == 'runtime' else 0
+        check(len(combined) == expected_combined,
+              family + ': ordinary combined access record for security collection')
+        check(len(access_lines) == 3 + expected_combined,
+              family + ': exact access count without activation duplicates')
         records = []
         for line in logs.stdout.splitlines():
             try:
@@ -188,7 +200,7 @@ def inspect_family(image_id, family, evidence):
             if isinstance(record, dict):
                 records.append(record)
         check(len(records) == 3, family + ': one structured access record per request')
-        expected_records = [('GET', '/pilot/activate'), ('POST', '/pilot/activate'), ('GET', '/health/live')]
+        expected_records = [('GET', target), ('POST', target), ('GET', '/health/live')]
         ids = []
         # nginx workers may flush completed requests in a different order.
         actual_records = [(record.get('method'), record.get('uri')) for record in records]
@@ -217,6 +229,7 @@ def main():
     verify_failed_start_cleanup(image_id)
     for family in ['yii2', 'runtime']:
         inspect_family(image_id, family, evidence)
+        inspect_family(image_id, family, evidence, "/pilot/reset-password")
     (evidence / 'summary.json').write_text(json.dumps({'image': image_id, 'failures': FAILURES}, indent=2))
     if FAILURES:
         for failure in FAILURES:

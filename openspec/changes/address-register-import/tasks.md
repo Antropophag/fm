@@ -141,9 +141,9 @@ remains unperformed; no merge/main push/deployment/dev-prod import authorized.
 
 ## 8. Owner correction26.11.2026 —21 поле
 
-- [ ] 8.1 Root contract/test matrix и RED:21 field mapping, ignored values, old values/history/report retention, pending package guard, dates later/no duplicates, Z, capacity counts.
-- [ ] 8.2 Planner-required independent Gate3 и separate sol/low production executor.
-- [ ] 8.3 Focused/architecture checks, independent exact-source final review.
+- [x] 8.1 Root contract/test matrix и RED:21 field mapping, ignored values, old values/history/report retention, pending package guard, dates later/no duplicates, Z, capacity counts.
+- [x] 8.2 Planner-required independent Gate3 и separate sol/low production executor.
+- [x] 8.3 Focused/architecture checks, independent exact-source final review.
 - [ ] 8.4 Corporate identity verification, commit/push PR307, новый full exact-source GitHubCI; ready handoff без merge/deploy/live import.
 
-- [ ] 8.5 Root A14/tests и independent Gate3 для main reconciliation; separate executor сохраняет40/41, добавляет address42; root объединяет frontier consumers. Полный final/CI только после merge origin/main в branch, без переписывания истории.
+- [x] 8.5 Root A14/tests и independent Gate3 для main reconciliation; separate executor сохраняет40/41, добавляет address42; root объединяет frontier consumers. Полный final/CI только после merge origin/main в branch, без переписывания истории.

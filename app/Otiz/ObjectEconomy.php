@@ -8,11 +8,11 @@ final class ObjectEconomy
     /** The global fold needs no SQL norm join: parse each compact input once. */
     public static function norms(array $row,NativePremiumNorms $norms): array
     {
-        $floors=filter_var(json_decode((string)$row['floor_json'],true),FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+        $stops=filter_var(json_decode((string)$row['stops_json'],true),FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
         $capacity=filter_var(json_decode((string)$row['capacity_json'],true),FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
         $text=mb_strtolower((string)$row['type_text'],'UTF-8');
         $type=str_contains($text,'груз')?'cargo':(str_contains($text,'пассаж')?'passenger':null);
-        $row['premium_cents']=$floors===false||$capacity===false?null:$norms->premiumCents($type,(int)$floors,(int)$capacity);
+        $row['premium_cents']=$stops===false||$capacity===false?null:$norms->premiumCents($type,(int)$stops,(int)$capacity);
         $row['shaft_bp']=$norms->shaftBasisPoints((string)$row['material_text']);
         return $row;
     }

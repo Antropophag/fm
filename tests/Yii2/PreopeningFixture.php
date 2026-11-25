@@ -27,7 +27,7 @@ final class PreopeningFixture
         try {
         $this->db=$this->base->selection->db;$this->database=$this->base->selection->schema->source->name;
         $this->artifacts=sys_get_temp_dir().'/yii-preopening-'.bin2hex(random_bytes(6));if(!mkdir($this->artifacts,0700))throw new TestFailure('SETUP_FAILURE artifacts');
-        $migration=FMonitor2\InstallationProcess\CanonicalMigrationApplication::run($this->db,$this->p,FMonitor2\InstallationProcess\ProductionPilotMigrationCatalogue::migrations());
+        $migration=FMonitor2\InstallationProcess\CanonicalMigrationApplication::run($this->db,$this->p,array_slice(FMonitor2\InstallationProcess\ProductionPilotMigrationCatalogue::migrations(),0,39,true));
         assertSameValue(0,$migration['exitCode'],'canonical v24 preopening fixture');
         $p=$this->p;$now='2026-09-10T09:00:00+03:00';
         $assignmentTable=(int)$this->db->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='{$p}fm2_control_engineer_assignments'")->fetch_column()===1;
@@ -51,6 +51,9 @@ final class PreopeningFixture
             else{$this->insert($p.'fm2_pilot_users',['user_id'=>$id,'full_name'=>'Fixture '.$id,'email'=>$email,'status'=>1,'activation_state'=>'active','session_version'=>1,'source_updated_at'=>$now]);$this->insert($p.'fm2_pilot_user_roles',['user_id'=>$id,'role_id'=>$id-90,'origin'=>'fixture','assigned_at'=>$now]);}
             $this->insert($p.'fm2_pilot_auth_credentials',['user_id'=>$id,'email_normalized'=>$email,'password_hash'=>password_hash($this->password,PASSWORD_ARGON2ID),'password_set_at'=>$now,'updated_at'=>$now]);
         }
+        // Complete credentials before the current frontier validates active identities.
+        $current=FMonitor2\InstallationProcess\CanonicalMigrationApplication::run($this->db,$this->p,FMonitor2\InstallationProcess\ProductionPilotMigrationCatalogue::migrations());
+        assertSameValue([0,42],[$current['exitCode'],$current['result']['schemaVersion']??null],'canonical current preopening fixture');
         $permissions=[1=>['objects.read','assignment_order.prepare','assignment_order.original.read','installation.open','assignment_order.composition.apply'],2=>['objects.read','assignment_order.original.read'],4=>['objects.read','access.administer'],5=>['objects.read'],6=>['objects.read','assignment_order.original.read','otiz.manage'],7=>['objects.read','assignment_order.prepare','assignment_order.composition.select','assignment_order.original.read','assignment_order.original.upload','assignment_order.original.correct','installation.open']];
         foreach($permissions as$role=>$caps)foreach($caps as$cap)$this->insert($p.'fm2_pilot_role_permissions',['role_id'=>$role,'permission'=>$cap]);
         $payload=json_encode(['schemaVersion'=>'technical-object-detail-v1','objectId'=>4512,'fields'=>['floors'=>['raw'=>'9','display'=>'9'],'weight'=>['raw'=>'630','display'=>'630']]],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);

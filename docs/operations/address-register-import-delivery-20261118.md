@@ -307,3 +307,71 @@ frozen evidence. Root retained all other file SHA-256 digests and verifies them
 before commit. New correction commit/push and full exact-source GitHubCI remain
 pending; both prior CI outcomes are retained and not relabelledGREEN. Real paid
 calls0, FIAS/live acceptanceUNKNOWN, no merge/deployment/dev-prod import.
+
+## Owner correction —26.11.2026:21 fields and current-main compatibility
+
+Owner resumed existing worktree/PR307 and explicitly authorized autonomous work
+to a reviewable, CI-verified PR. Only B–H/P–AC are new imported requisites and
+field-change rows; I–O/AD–AG remain raw evidence. Historical values/events/reports
+remain; Z is duration, dates may be filled later without duplicates. Real imports,
+paid calls, PR merge/main push and deployment remain prohibited. Corporate commit
+identity is explicitly requested for this task. Previous dfb6927f/v4/fullCI44650539950
+is baseline evidence only, never verification of this correction.
+
+Root authored A13/A14, test fixtures/regressions and verification mapping. Gate3
+v20 returned pending-package recovery and historical CSV gaps; both fixed. V21
+returned a new main-reconciliation data/sequence witness gap; the full matrix
+was rebuilt with all5 password/OTIZ families populated and4 sequence gaps. Exact
+main f935c748 fixture probe passed on an isolated disposable DB. Gate3v22 APPROVED
+without findings. Its exact package/snapshot and5GREEN/5INTENDED_RED evidence are
+linked in the review. Root spec/test checkpoint dcce5b9f preserves these stages.
+
+Read-only compatibility inspection found PR307 behind current main by9 commits
+and34 conflicts. Main owns email40 and OTIZ41, so approved A14 appends address42
+with118 recovery tables/64 AUTO_INCREMENT. A history-preserving merge of exact
+f935c748 into the task branch is in progress. Root owns test/docs/policy conflict
+resolutions; /root/fields21_production (gpt-5.6-sol/low) owns production and the
+21-field implementation. /root/fields21_review independently reviewed v20–v22
+and authored no specifications/tests/implementation. Supplemental final review
+will include exact merged test/policy bytes and production resolution.
+
+Evidence home: ~/.local/share/fmonitor-2/address-register-import/fields21/.
+No local full suite was run. Some preliminary evidence was superseded after
+source/plan changes; only frozen exact-source records enter review packages.
+Combined focused checks, independent final review, merge commit/push and new
+exact-source full GitHubCI remain pending at this checkpoint.
+
+### Final combined candidate —26.11.2026
+
+Independent final reviewv5 APPROVED, no findings, including exact merged frontier
+tests/policy and post-Gate3 fixture qualifications. Reviewed candidate433687cd,
+executablee53e02f, snapshot5cb044ff; full identifiers are in the review record.
+Root final package20261125T232824Z-5f78379cd3 contains10/10 exact-source GREEN.
+Full capacity/restore232.341s:2668 objects/667 fake addresses/56028 rows,19994
+boundary/419874 rows,118 tables/64 sequences, populated predecessor facts and
+sequence gaps, restore/replay under unchanged256MiB/16MiB. Adjacent11/11GREEN;
+private adjacent-source-lineage.json proves only3 importer tests changed after
+those checks, with production/policy/adjacent inputs identical.
+
+Qualification rework: v1 retained two old multirow counters and a synthetic
+legacy outcome incorrectly serialized Traversable evidence; root corrected the
+fixture/counters without production changes. Value-based report comparisons are
+backed by exact persisted package-byte equality. A real CLI regression preserves
+PREVIEW_STALE exit75; separate executor changed only its transient status.
+The initial capacity attempt failed before application startup on Docker Hub DNS;
+host resolution recovered and the corrected-source retry completed. Complete
+failed inventory and dispositions remain private. Final code bytes are frozen.
+
+Only this delivery record, current-goal state, lifecycle task checkboxes and final
+review record are added after the reviewed snapshot; all108 other reviewed file
+hashes are checked before commit. Corporate author/committer and GitHub
+Antropophag API/SSH identity are verified separately. Commit/push/newfullCI
+follow; authoritative changing CI state is retained by harness/PR307 and private
+fields21 evidence, not asserted by this pre-CI source record.
+
+Actual authors: /root specifications/tests/policy/docs; /root/fields21_production
+(gpt-5.6-sol/low) production and merge conflicts; /root/fields21_review independent
+Gate3v20–v22 and finalv5. Two Gate3 returns addressed missing observation, with
+full matrix rebuilt for the v42 preservation witness. No full local suite, real
+imports, paid calls, PR merge, main push or deployment occurred. Live acceptance
+and archival tasks remain outside this owner-authorized PR-ready delivery.

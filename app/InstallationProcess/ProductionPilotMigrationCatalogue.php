@@ -47,7 +47,9 @@ final class ProductionPilotMigrationCatalogue
             37=>OtizSettlementV2CorrectionsSchemaMigration::class,
             38=>OtizPaymentDecisionObjectScopeSchemaMigration::class,
             39=>AssignmentOrderOriginalStartSchemaMigration::class,
-            40=>AddressRegisterImportSchemaMigration::class,
+            40=>EmailFirstPasswordRecoverySchemaMigration::class,
+            41=>OtizPaymentControlSchemaMigration::class,
+            42=>AddressRegisterImportSchemaMigration::class,
         ];
     }
 }

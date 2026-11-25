@@ -1,0 +1,50 @@
+{
+  "change": "email-first-password-recovery-ci-repair",
+  "planned_paths": [
+    "app/YiiRuntime/Controllers/AuthController.php",
+    "openspec/changes/email-first-password-recovery/ci-repair-verification-input.json",
+    "tests/AssignmentOrderComposition/original_ready_queue_manual_test.php",
+    "tests/Deployment/production_make_live_001_test.py",
+    "tests/InstallationProcess/assignment_order_original_attempt_audit_schema_001_test.php",
+    "tests/InstallationProcess/classification_provenance_schema_001_test.php",
+    "tests/InstallationProcess/object_detail_snapshot_schema_001_test.php",
+    "tests/InstallationProcess/workforce_canonical_runner_001_test.php",
+    "tests/Otiz/settlement_owner_001_test.php",
+    "tests/Otiz/settlement_v2_concurrency_001_test.php",
+    "tests/Otiz/settlement_v2_db_001_test.php",
+    "tests/Runtime/object_details_editing_restore_roundtrip_001_test.php",
+    "tests/Runtime/production_runtime_browser_001_test.php",
+    "tests/Runtime/runtime_readiness_load_001_test.php",
+    "tests/Runtime/runtime_recovery_001_test.php",
+    "tests/Runtime/yii2_production_web_cutover_001_test.php",
+    "tests/Support/yii2_production_web_cutover_contract.php",
+    "tests/Yii2/yii2_otiz_concurrency_001_test.php",
+    "tests/Yii2/yii2_session_failure_001_test.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "EMAIL-FIRST-PASSWORD-RECOVERY-001",
+      "acceptance_id": "durable-session-before-success",
+      "spec_path": "specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+      "seam": "real sessionwritefault must preserve prior failedattempts; safe return consumed beforeclose",
+      "tests": [
+        "tests/Yii2/yii2_session_failure_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Yii2/yii2_session_failure_001_test.php": "INTENDED_RED"
+      }
+    },
+    {
+      "spec_id": "EMAIL-FIRST-PASSWORD-RECOVERY-001",
+      "acceptance_id": "canonical-table-order",
+      "spec_path": "specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+      "seam": "last-modified current physical table order; remaining13 consumer GREEN retained with unchanged test/code blob lineage",
+      "tests": [
+        "tests/InstallationProcess/workforce_canonical_runner_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/workforce_canonical_runner_001_test.php": "GREEN"
+      }
+    }
+  ]
+}

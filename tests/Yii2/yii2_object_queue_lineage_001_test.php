@@ -25,6 +25,8 @@ try {
  $f->close();$f=null;
  // Native lineage comes from already-approved public selection and original commands.
  $original=new FMonitor2\Tests\Support\SelectedOriginalFixture();$db=$original->selection->db;
+ // Complete synthetic active identities before the current schema validates them.
+ $fixtureHash=password_hash('Synthetic coherent lineage 2026!',PASSWORD_ARGON2ID);$seed=$db->prepare("INSERT INTO fm2_pilot_auth_credentials(user_id,email_normalized,password_hash,password_set_at,updated_at) SELECT u.user_id,LOWER(TRIM(u.email)),?,u.source_updated_at,u.source_updated_at FROM fm2_pilot_users u LEFT JOIN fm2_pilot_auth_credentials c ON c.user_id=u.user_id WHERE u.activation_state='active' AND c.user_id IS NULL");$seed->execute([$fixtureHash]);$seed->close();
  $migration=FMonitor2\InstallationProcess\CanonicalMigrationApplication::run($db,'',FMonitor2\InstallationProcess\ProductionPilotMigrationCatalogue::migrations());assertSameValue(0,$migration['exitCode'],'canonical v24 native fixture');
  $db->query("UPDATE fm_maintable SET entrance='1',workdatestart='2026-10-01',plan_finish_date='2026-10-31' WHERE id=4512");
  $db->query("INSERT INTO fm2_pilot_role_permissions(role_id,permission) VALUES(1,'objects.read')");

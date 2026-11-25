@@ -70,6 +70,7 @@ final class MariaDbRuntimeReadiness
             ] as $schema) {
                 if (!$schema::isCompleteCompatible($connection, $prefix)) throw new \RuntimeException();
             }
+            if (!Schema\EmailFirstPasswordRecoverySchemaMigration::isReady($connection,$prefix)) throw new \RuntimeException();
             if (!Schema\MariaDbProductionProcessSchemaReadiness::isCompleteCompatible($connection, $prefix)
                 || !Schema\MariaDbOriginalAttemptAuditSchemaFingerprint::fullV3($connection, $prefix)
                 || !Schema\MariaDbAssignmentOrderIdentityRegistrySourceShape::compatible($connection, $prefix)

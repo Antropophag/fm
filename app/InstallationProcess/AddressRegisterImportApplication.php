@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace FMonitor2\InstallationProcess;
 final class AddressRegisterImportApplication
 {
+    private const CURRENT_FIELDS = ['year','regnumber','unom','sourceArea','sourceDistrict','address','entrance','floors','weight','pittype','pitmaterial','cabinDoor','shaftDoor','speed','frequencyDoor','frequencyMain','designPeriodRaw','installationDays','equipmentRequestDate','plannedStartDate','plannedFinishDate'];
     public function __construct(
         private MariaDbAddressRegisterImportStore $store,
         private string $target,
@@ -136,9 +137,11 @@ final class AddressRegisterImportApplication
         if ($p["target"] !== $this->target) {
             return $this->error("TARGET_MISMATCH");
         }
-        if (in_array($p["status"], ["ready", "applied"], true)) {
+        if ($p["status"] === "applied") {
             return $p["report"];
         }
+        if (!$this->hasCurrentFields($p)) return $this->previewStale($p);
+        if ($p["status"] === "ready") return $p["report"];
         if (
             ($opt["retryUnknown"] ||
                 $opt["maxPaidRequests"] > (int) $p["budget_limit"]) &&
@@ -180,6 +183,9 @@ final class AddressRegisterImportApplication
         }
         if ($p["target"] !== $this->target) {
             return $this->error("TARGET_MISMATCH");
+        }
+        if ($p["status"] !== "applied" && !$this->hasCurrentFields($p)) {
+            return $this->previewStale($p);
         }
         return $this->store->apply(
             $p,
@@ -929,6 +935,22 @@ final class AddressRegisterImportApplication
             "objects" => $p["objects"],
             "providerEvidence" => [],
         ];
+    }
+    private function hasCurrentFields(array $package): bool
+    {
+        $found = false;
+        foreach (($package["source"]["objects"] ?? []) as $object) {
+            $found = true;
+            if (array_keys($object["fields"] ?? []) !== self::CURRENT_FIELDS) return false;
+        }
+        return $found;
+    }
+    private function previewStale(array $package): array
+    {
+        return array_replace($package["report"], [
+            "status" => "failed",
+            "reasonCode" => "PREVIEW_STALE",
+        ]);
     }
     private function summary(array $p): array
     {

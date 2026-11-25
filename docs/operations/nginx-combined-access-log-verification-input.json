@@ -1,0 +1,43 @@
+{
+  "change": "nginx-combined-access-log",
+  "planned_paths": [
+    "deploy/runtime/nginx.conf",
+    "tests/Runtime/activation_proxy_log_001_test.py",
+    "specs/ACTIVATION-PROXY-LOG-001.md",
+    "docs/operations/nginx-combined-access-log-delivery.md",
+    "docs/operations/nginx-combined-access-log-verification-input.json",
+    "reviews/tests/NGINX-COMBINED-ACCESS-LOG-001.md",
+    "reviews/code/NGINX-COMBINED-ACCESS-LOG-001.md"
+  ],
+  "lifecycle": {
+    "intent": "COMPACT_MAINTENANCE",
+    "issue": "Owner 2026-11-24 Ilyas security log collection",
+    "change_kind": "BOUNDED_FIX",
+    "requirement_status": "CURRENT",
+    "semantic_change": "ESTABLISHED_BEHAVIOR_FIX",
+    "canonical_requirements": [
+      {
+        "path": "specs/ACTIVATION-PROXY-LOG-001.md"
+      }
+    ],
+    "executable_regression": "tests/Runtime/activation_proxy_log_001_test.py",
+    "sensitivity": {
+      "classification": "SENSITIVE",
+      "boundaries": [
+        "activation-proxy-privacy"
+      ],
+      "rationale": "Additional runtime access format must preserve activation secrets and existing diagnostics."
+    }
+  },
+  "acceptances": [
+    {
+      "spec_id": "ACTIVATION-PROXY-LOG-001",
+      "acceptance_id": "private-and-diagnosable-activation-proxy",
+      "spec_path": "specs/ACTIVATION-PROXY-LOG-001.md",
+      "seam": "Real nginx syntax and HTTP stdout/stderr for runtime and Yii configs",
+      "tests": [
+        "tests/Runtime/activation_proxy_log_001_test.py"
+      ]
+    }
+  ]
+}

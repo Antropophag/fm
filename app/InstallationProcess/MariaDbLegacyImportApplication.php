@@ -85,7 +85,8 @@ final class MariaDbLegacyImportApplication
             if(count($links)>1)throw new \DomainException('IDENTITY_LINK_AMBIGUOUS');
             if($links===[]){
                 $q=$this->db->prepare("SELECT user_id FROM `{$this->processPrefix}fm2_pilot_users` WHERE email=? FOR UPDATE");$q->execute([$email]);if($q->get_result()->fetch_assoc()!==null)throw new \DomainException('IDENTITY_EMAIL_CONFLICT');
-                $q=$this->db->prepare("INSERT INTO `{$this->processPrefix}fm2_pilot_users`(full_name,email,phone,status,activation_state,session_version,source_updated_at)VALUES(?,?,'',1,'pending_invitation',1,?)");$q->execute([$name,$email,$cutoff]);$local=(int)$this->db->insert_id;
+                $q=$this->db->prepare("INSERT INTO `{$this->processPrefix}fm2_pilot_users`(full_name,email,phone,status,activation_state,session_version,source_updated_at)VALUES(?,?,'',1,'pending_password',1,?)");$q->execute([$name,$email,$cutoff]);$local=(int)$this->db->insert_id;
+                $q=$this->db->prepare("INSERT INTO `{$this->processPrefix}fm2_pilot_auth_credentials`(user_id,email_normalized,password_hash,password_set_at,updated_at)VALUES(?,?,NULL,NULL,?)");$q->execute([$local,$email,$cutoff]);
                 $q=$this->db->prepare("INSERT INTO `{$this->processPrefix}fm2_pilot_user_roles`(user_id,role_id,origin,assigned_at,assigned_by_user_id)VALUES(?,?,'legacy_import',?,NULL)");$q->execute([$local,$roleId,$cutoff]);
                 $q=$this->db->prepare("INSERT INTO `{$this->processPrefix}fm2_process_user_capabilities`(user_id,capability,position_snapshot)VALUES(?,'construction_control_engineer','Инженер строительного контроля')");$q->execute([$local]);
                 $request=self::uuid("identity:{$legacy}");$fingerprint=hash('sha256',json_encode([$legacy,$name,$email,(int)$row['status'],(int)$row['role_id'],(int)$row['role_status']],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));

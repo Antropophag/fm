@@ -1,0 +1,40 @@
+{
+  "change": "email-first-password-recovery-config-consumers",
+  "planned_paths": [
+    "tools/delivery/local-runtime-env",
+    "tools/delivery/compose.runtime.yaml.in",
+    "tests/Deployment/erp_equipment_facts_runtime_001_test.py",
+    "deploy/production/compose.yaml",
+    "deploy/runtime/compose.yaml",
+    "tests/Deployment/password_recovery_configuration_001_test.py",
+    "tests/Yii2/password_recovery_delivery_safety_001_test.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "EMAIL-FIRST-PASSWORD-RECOVERY-001",
+      "acceptance_id": "actual-smtp-consumers-and-local-runtime-config",
+      "spec_path": "specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+      "seam": "three real Compose renders and closed local env parser; preserved scheduler activation dependency",
+      "tests": [
+        "tests/Deployment/password_recovery_configuration_001_test.py",
+        "tests/Deployment/erp_equipment_facts_runtime_001_test.py"
+      ],
+      "gate3_expected": {
+        "tests/Deployment/password_recovery_configuration_001_test.py": "INTENDED_RED",
+        "tests/Deployment/erp_equipment_facts_runtime_001_test.py": "INTENDED_RED"
+      }
+    },
+    {
+      "spec_id": "EMAIL-FIRST-PASSWORD-RECOVERY-001",
+      "acceptance_id": "pre-network-crash-safe-claim",
+      "spec_path": "specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+      "seam": "observe already-durable unknown/erased envelope on independent DB connection at sender entry",
+      "tests": [
+        "tests/Yii2/password_recovery_delivery_safety_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Yii2/password_recovery_delivery_safety_001_test.php": "GREEN"
+      }
+    }
+  ]
+}

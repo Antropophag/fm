@@ -7,7 +7,7 @@ final class ObjectDetailsFieldRegistry
     private const DEFINITIONS=[
         'address'=>['label'=>'Адрес','type'=>'required_string'],'entrance'=>['label'=>'Подъезд','type'=>'required_string'],
         'regnumber'=>['label'=>'Регистрационный номер','type'=>'nullable_string'],'zavnumber'=>['label'=>'Заводской номер','type'=>'nullable_string'],
-        'floors'=>['label'=>'Этажность','type'=>'integer'],'weight'=>['label'=>'Грузоподъёмность','type'=>'integer'],
+        'floors'=>['label'=>'Этажность','type'=>'integer'],'stops'=>['label'=>'Количество остановок','type'=>'integer'],'weight'=>['label'=>'Грузоподъёмность','type'=>'integer'],
         'speed'=>['label'=>'Скорость','type'=>'decimal','unit'=>'м/с'],'pittype'=>['label'=>'Тип шахты','type'=>'reference'],
         'pitmaterial'=>['label'=>'Материал шахты','type'=>'reference'],'lift_type'=>['label'=>'Тип лифта','type'=>'reference'],
         'paired'=>['label'=>'Спаренный лифт','type'=>'boolean'],
@@ -43,7 +43,7 @@ final class ObjectDetailsFieldRegistry
             };
             if($key==='zavnumber'&&$out[$key]!==null&&strlen($out[$key])>120)throw new \InvalidArgumentException('Factory number is too long.');
             $max=['address'=>500,'entrance'=>80,'regnumber'=>120][$key]??null;if($max!==null&&is_string($out[$key])&&strlen($out[$key])>$max)throw new \InvalidArgumentException('Value is too long.');
-            if($key==='floors'&&$out[$key]>200)throw new \InvalidArgumentException('Floor count is out of range.');
+            if(in_array($key,['floors','stops'],true)&&$out[$key]>200)throw new \InvalidArgumentException('Count is out of range.');
             if($key==='speed'&&(float)$out[$key]>20)throw new \InvalidArgumentException('Speed is out of range.');
         }return$out;
     }

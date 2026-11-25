@@ -77,8 +77,11 @@ final class IdentityAccessDefinitionSchemaMigration
             $legacy = "activation_state|enum('invited','active','blocked')|NO|NULL||utf8mb4|{$collation}";
             $pending = "activation_state|enum('pending_invitation','invited','active','blocked')|NO|NULL||utf8mb4|{$collation}";
             if ($pendingColumns[5] !== $legacy) return false;
-            $pendingColumns[5] = $pending;
-            if ($columnSignatures !== $pendingColumns) return false;
+            $accepted = [];
+            foreach ([$pending,"activation_state|enum('pending_invitation','invited','pending_password','active','blocked')|NO|NULL||utf8mb4|{$collation}"] as $state) {
+                $variant=$pendingColumns;$variant[5]=$state;$accepted[]=$variant;
+            }
+            if (!in_array($columnSignatures,$accepted,true)) return false;
         }
         $indexes = $connection->query("SELECT NON_UNIQUE,INDEX_NAME,SEQ_IN_INDEX,COLUMN_NAME,INDEX_TYPE FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='{$escaped}' ORDER BY INDEX_NAME,SEQ_IN_INDEX")->fetch_all(MYSQLI_ASSOC);
         if (IdentityAccessSemanticFingerprintSchemaMigration::indexes($indexes) !== IdentityAccessSemanticFingerprintSchemaMigration::indexSignatures($expected['indexes'])) {

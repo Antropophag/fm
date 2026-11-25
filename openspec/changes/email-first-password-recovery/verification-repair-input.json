@@ -1,0 +1,37 @@
+{
+  "change": "email-first-password-recovery-final-qualification",
+  "planned_paths": [
+    "app/YiiRuntime/Controllers/AuthController.php",
+    "tests/Yii2/yii2_activation_password_20261029_test.php",
+    "tests/Yii2/yii2_user_access_001_test.php",
+    "tests/Runtime/runtime_recovery_forward_update_001_test.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "EMAIL-FIRST-PASSWORD-RECOVERY-001",
+      "acceptance_id": "valid-unicode-password-login",
+      "spec_path": "specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+      "seam": "public owner password set and real normal login with accepted200Unicode chars",
+      "tests": [
+        "tests/Yii2/yii2_activation_password_20261029_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Yii2/yii2_activation_password_20261029_test.php": "INTENDED_RED"
+      }
+    },
+    {
+      "spec_id": "EMAIL-FIRST-PASSWORD-RECOVERY-001",
+      "acceptance_id": "preserved-recovery-and-public-regression-markers",
+      "spec_path": "specs/EMAIL-FIRST-PASSWORD-RECOVERY-001.md",
+      "seam": "real historical22/23 backup/restore and canonical40 upgrade; existing useraccess HTTP/RBAC",
+      "tests": [
+        "tests/Runtime/runtime_recovery_forward_update_001_test.php",
+        "tests/Yii2/yii2_user_access_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Runtime/runtime_recovery_forward_update_001_test.php": "GREEN",
+        "tests/Yii2/yii2_user_access_001_test.php": "GREEN"
+      }
+    }
+  ]
+}

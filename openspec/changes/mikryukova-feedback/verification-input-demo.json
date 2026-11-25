@@ -1,0 +1,26 @@
+{
+  "change": "mikryukova-feedback",
+  "planned_paths": [
+    "app/Otiz/TrainingOtizRecalculation.php",
+    "app/Otiz/MariaDbOtizSettlementV2.php",
+    "bin/fmonitor2-training-otiz-recalculate.php",
+    ".quality-graph/verification-policy.json",
+    "tests/Otiz/mikryukova_demo_recalculate_001_test.php",
+    "specs/MIKRYUKOVA-FEEDBACK-001.md",
+    "app/Otiz/MariaDbTrainingOtizRecalculation.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "MIKRYUKOVA-FEEDBACK-001",
+      "acceptance_id": "demo-atomic-reprice",
+      "spec_path": "specs/MIKRYUKOVA-FEEDBACK-001.md",
+      "seam": "TrainingOtizRecalculation preview/apply home-only canonical training graph",
+      "tests": [
+        "tests/Otiz/mikryukova_demo_recalculate_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Otiz/mikryukova_demo_recalculate_001_test.php": "INTENDED_RED"
+      }
+    }
+  ]
+}

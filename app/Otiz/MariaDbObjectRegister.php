@@ -61,7 +61,7 @@ final readonly class MariaDbObjectRegister
             }unset($row);
             $summary=ObjectEconomy::emptySummary();$norms=new NativePremiumNorms();
             // No details/trace blobs, object arrays, or current-progress hydration in the global fold.
-            $result=$this->db->query($base.' SELECT floor_json,capacity_json,type_text,material_text,has_calculation,trace_progress_cents,accrued_cents,paid_cents,discipline_cents,deadline_cents,snapshot_id,calculation_state,pool_cents,snapshot_closed_cents FROM raw_objects',MYSQLI_USE_RESULT);
+            $result=$this->db->query($base.' SELECT stops_json,capacity_json,type_text,material_text,has_calculation,trace_progress_cents,accrued_cents,paid_cents,discipline_cents,deadline_cents,snapshot_id,calculation_state,pool_cents,snapshot_closed_cents FROM raw_objects',MYSQLI_USE_RESULT);
             try{while($row=$result->fetch_assoc())ObjectEconomy::accumulate($summary,ObjectEconomy::decorate(ObjectEconomy::norms($row,$norms)));}finally{$result->free();}
             $this->db->commit();
             return compact('query','page','pageSize','pages','total','rows','summary');
