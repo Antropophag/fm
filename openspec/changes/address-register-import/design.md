@@ -70,12 +70,12 @@ yii address-register/report --package=<id> --target=dev
 |---|---|
 | A | Только происхождение/порядок, не object ID |
 | B–H | Год, регномер, UNOM, исходные округ/район, адрес, подъезд |
-| I–O | Этажность, грузоподъёмность, тип/материал шахты, двери кабины/шахты, скорость существующего лифта |
+| I–O | Исключены из новых реквизитов; остаются только в raw |
 | P–V | Те же отдельные параметры планируемого нового лифта |
 | W–X | Частотные преобразователи дверей и главного привода нового лифта |
 | Y | Период проектирования с точностью исходного текста, без фиктивного дня начала |
 | Z–AC | Длительность монтажа, дата заявки, плановые начало/окончание |
-| AD–AG | Проектирование и замена до/после снижения, раздельные decimal суммы |
+| AD–AG | Исключены из новых реквизитов; остаются только в raw |
 
 Установочные характеристики не подтверждаются как фактические до проектирования. Старый одиночный technical snapshot не переписывается новым набором. В новой карточке effective текущие общие поля должны иметь явно документированную семантику планируемого устанавливаемого оборудования; исходный existing набор сохраняется отдельно и доступен в import report. Перед Gate 2 зафиксировать mapping к существующим payroll/classification потребителям так, чтобы импорт не подменил финансовые входы.
 
@@ -210,3 +210,27 @@ candidate SQL generator. AddressRegisterIdentityLookup receives source objects
 and an iterable of candidate rows, synchronously builds its immutable spools/index,
 and contains no database connection, prefix, table or SQL knowledge. Semantics,
 256-row bound and public findMany/ordinal lookup interface are unchanged.
+
+## Delta26.11.2026:21 импортируемое поле
+
+A13 заменяет прежнее решение о загрузке existing/costs. Parser проецирует только
+B–H/P–AC, полная XLSX шапка/raw сохраняются. Registry/effective history не сужаются:
+ранее сохранённые11 полей читаются как прежде. Pending старые32-field packages
+требуют нового preview, immutable applied reports/replay сохраняются.
+Root — contract/tests; отдельный sol/low executor — production; planner выбирает
+Gate3/final и full CI. Исторический dfb6927f/reviewv4/CI44650539950 — baseline,
+не проверка этой дельты. Проверяются parser, apply/overwrite, legacy retention,
+JSON/CSV, null dates→fill, replay, capacity/restore, architecture/adjacent.
+DDL/frontier/runtime dependencies/permissions не меняются; schema и restore
+проверяют совместимость. UI и финансовые вычисления не затронуты. Используется
+тот же application mutation seam; без live adapters/импортов/платных вызовов.
+
+## Main reconciliation26.11.2026
+
+Merge origin/main f935c748 required for PR307 mergeability. Preserve main email40
+and OTIZ41, append address42; combined recovery118 tables/64 AUTO_INCREMENT.
+A14 supersedes older v40/frontier113/60 references for the combined candidate.
+Preserve upstream stops plus importer provenance, shared registry/card/readiness
+and all verification consumers. Root resolves tests/spec/docs; separate executor
+resolves production/policy. Gate3 then focused combined-schema/restore/adjacent,
+final independent review and exact CI; no main push, real migration or deploy.

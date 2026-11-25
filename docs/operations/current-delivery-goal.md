@@ -1,3 +1,17 @@
+# Текущая коррекция —21 поле адресного CLI,26.11.2026
+
+Owner поручил продолжить worktree address-register-import / PR307 до merge-ready:
+исключить I–O/AD–AG из новых реквизитов/field reports, оставить B–H/P–AC и Z.
+Полный XLSX/raw, старые данные/история сохраняются;2668 объектов2027 без дат,
+даты позже повторным импортом без дублей. Root spec/tests, separate sol/low
+production executor, planner-required independent reviews и новый exact CI.
+Baseline dfb6927f/reviewv4/CI44650539950 не проверяют эту дельту.
+Реальные импорты, paid calls, merge/main push/deployment запрещены.
+Evidence: ~/.local/share/fmonitor-2/address-register-import/fields21/.
+История ниже сохранена.
+
+---
+
 # Адресный импортёр: финальная коррекция одобрена — 20.11.2026
 
 Frozen source7f1a9de9: original10/10 и adjacent6/6 GREEN; полный capacity/restore

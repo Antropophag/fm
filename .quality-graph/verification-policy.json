@@ -950,6 +950,7 @@
         "app/YiiRuntime/AddressRegisterImportConsole.php",
         "bin/fmonitor2-address-register.php",
         "app/RuntimeRestore/RuntimeRecoverySchemaV40.php",
+        "app/RuntimeRestore/RuntimeRecoverySchemaV42.php",
         "app/InstallationProcess/MariaDbAddressRegisterImport*.php"
       ],
       "verifiers": [

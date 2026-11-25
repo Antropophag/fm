@@ -50,7 +50,8 @@
     "app/InstallationProcess/AddressRegisterPayloadWriter.php",
     "app/InstallationProcess/AddressRegisterEvidenceReader.php",
     "app/InstallationProcess/AddressRegisterEvidenceSpool.php",
-    "app/InstallationProcess/AddressRegisterIdentityLookup.php"
+    "app/InstallationProcess/AddressRegisterIdentityLookup.php",
+    "app/RuntimeRestore/RuntimeRecoverySchemaV42.php"
   ],
   "acceptances": [
     {
@@ -67,14 +68,14 @@
     },
     {
       "spec_id": "ADDRESS-REGISTER-IMPORT-001",
-      "acceptance_id": "A02",
+      "acceptance_id": "A02,A13-fields21",
       "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
       "seam": "CLI address-register and ProductionAddressRegisterImportFactory public application",
       "tests": [
         "tests/InstallationProcess/address_register_import_parser_001_test.php"
       ],
       "gate3_expected": {
-        "tests/InstallationProcess/address_register_import_parser_001_test.php": "GREEN"
+        "tests/InstallationProcess/address_register_import_parser_001_test.php": "INTENDED_RED"
       }
     },
     {
@@ -110,12 +111,12 @@
         "tests/InstallationProcess/address_register_import_concurrency_001_test.php"
       ],
       "gate3_expected": {
-        "tests/InstallationProcess/address_register_import_concurrency_001_test.php": "INTENDED_RED"
+        "tests/InstallationProcess/address_register_import_concurrency_001_test.php": "GREEN"
       }
     },
     {
       "spec_id": "ADDRESS-REGISTER-IMPORT-001",
-      "acceptance_id": "A11-schema",
+      "acceptance_id": "A11-schema,A14-main42",
       "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
       "seam": "CLI address-register and ProductionAddressRegisterImportFactory public application",
       "tests": [
@@ -139,7 +140,7 @@
     },
     {
       "spec_id": "ADDRESS-REGISTER-IMPORT-001",
-      "acceptance_id": "A10-reports",
+      "acceptance_id": "A10-reports,A13-fields21",
       "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
       "seam": "CLI address-register and ProductionAddressRegisterImportFactory public application",
       "tests": [
@@ -151,7 +152,7 @@
     },
     {
       "spec_id": "ADDRESS-REGISTER-IMPORT-001",
-      "acceptance_id": "A11-restore,A12-capacity",
+      "acceptance_id": "A11-restore,A12-capacity,A14-main42",
       "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
       "seam": "CLI address-register and ProductionAddressRegisterImportFactory public application",
       "tests": [
@@ -170,7 +171,7 @@
         "tests/InstallationProcess/address_register_import_identity_001_test.php"
       ],
       "gate3_expected": {
-        "tests/InstallationProcess/address_register_import_identity_001_test.php": "GREEN"
+        "tests/InstallationProcess/address_register_import_identity_001_test.php": "INTENDED_RED"
       }
     }
   ]

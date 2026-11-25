@@ -4,7 +4,7 @@
 
 Оператор загружает адресный перечень через CLI. Во время preview ДаДата проверяет дома, оператор видит изменения, apply публикует весь пакет одной транзакцией. Обычный режим только дополняет неизвестное; overwrite заменяет непустыми значениями, сохраняя историю. Пустые даты допустимы в каталоге. Документы и процессные факты не меняются.
 
-Версия 1.2 (capacity correction 2026-11-19), включая подтверждённое уточнение минимизации расходов 2026-11-18: подтверждены в беседе и поручением «Погнали». Полный нормативный набор требований и сценариев включён по ссылке: [OpenSpec](../openspec/changes/address-register-import/specs/installation/address-register-import/spec.md). Этот документ уточняет наблюдаемые seams и матрицу проверок, не отменяя требований OpenSpec.
+Версия 1.3 (21-field correction 2026-11-26), включая подтверждённое уточнение минимизации расходов 2026-11-18: подтверждены в беседе и поручением «Погнали». Полный нормативный набор требований и сценариев включён по ссылке: [OpenSpec](../openspec/changes/address-register-import/specs/installation/address-register-import/spec.md). Этот документ уточняет наблюдаемые seams и матрицу проверок, не отменяя требований OpenSpec.
 
 ## Public seams
 
@@ -45,7 +45,7 @@ CLI exit: 0 estimated/ready/applied/replayed/report/exported/imported; 2 blocked
 
 ### Сохранение входных границ при потоковой обработке
 
-CLI/application принимают исходный XLSX только из локального обычного файла: URL/нефайловые streams и специальные файлы отклоняются до их открытия/чтения, provider не вызывается. Размер и тип открытого файла проверяются перед созданием снимка. Потоковый reader подписанного evidence обязан соблюдать строгий JSON: фактический NUL после завершённого документа и любой иной непустой хвост не являются EOF; такой файл, как и недоверенная подпись, даёт CLI exit2/status=rejected/reasonCode=EVIDENCE_INVALID без stderr и без новых cache rows. При unknown COMMIT сохраняется полный рассмотренный preview-отчёт (summary, все32 rows, objects, providerEvidence), явно помеченный unknown; недоступность DB после ACK-loss не разрешает усечь ответ.
+CLI/application принимают исходный XLSX только из локального обычного файла: URL/нефайловые streams и специальные файлы отклоняются до их открытия/чтения, provider не вызывается. Размер и тип открытого файла проверяются перед созданием снимка. Потоковый reader подписанного evidence обязан соблюдать строгий JSON: фактический NUL после завершённого документа и любой иной непустой хвост не являются EOF; такой файл, как и недоверенная подпись, даёт CLI exit2/status=rejected/reasonCode=EVIDENCE_INVALID без stderr и без новых cache rows. При unknown COMMIT сохраняется полный рассмотренный preview-отчёт (summary, все21 rows, objects, providerEvidence), явно помеченный unknown; недоступность DB после ACK-loss не разрешает усечь ответ.
 
 ## Авторизация и среда
 
@@ -53,13 +53,13 @@ CLI/application принимают исходный XLSX только из ло�
 
 ## Формат, mapping и значения
 
-Профиль v1: лист «Адресный перечень», шапка 5–6, строки объектов с 7; заголовки проверяются после нормализации whitespace/case, допустимы только явные варианты известной опечатки «Материл». A — ordinal provenance, B–H — year/regnumber/unom/sourceArea/sourceDistrict/address/entrance. I–O — existingFloors/existingWeight/existingPitType/existingPitMaterial/existingCabinDoor/existingShaftDoor/existingSpeed. P–V — floors/weight/pittype/pitmaterial/cabinDoor/shaftDoor/speed планируемого оборудования; W–X — frequencyDoor/frequencyMain. Y — designPeriodRaw (сохраняет точность месяца); Z — installationDays; AA — equipmentRequestDate; AB–AC — plannedStartDate/plannedFinishDate; AD–AG — designCost/replacementCost/discountedDesignCost/discountedReplacementCost. Contract из параметра проверяется против шапки; отсутствие даты договора не фабрикуется.
+Профиль v1: лист «Адресный перечень», шапка 5–6, строки объектов с 7; заголовки проверяются после нормализации whitespace/case, допустимы только явные варианты известной опечатки «Материл». A — ordinal provenance, B–H — year/regnumber/unom/sourceArea/sourceDistrict/address/entrance. I–O — семь исключённых характеристик старого оборудования; сохраняются только в raw источнике, не нормализуются как реквизиты. P–V — floors/weight/pittype/pitmaterial/cabinDoor/shaftDoor/speed планируемого оборудования; W–X — frequencyDoor/frequencyMain. Y — designPeriodRaw (сохраняет точность месяца); Z — installationDays; AA — equipmentRequestDate; AB–AC — plannedStartDate/plannedFinishDate; AD–AG — четыре исключённые стоимости; сохраняются только в raw источнике, не нормализуются как реквизиты. Contract из параметра проверяется против шапки; отсутствие даты договора не фабрикуется.
 
 Обязательные значения новой строки: year, regnumber, unom, address, entrance. Остальные допускают unknown. Строки иных лет исключаются; строки объектов распознаются по заполненному B или A с данными C:H, чтобы malformed row не исчезала молча. Итоги и примечания после таблицы не считаются объектами. Пустая AH допустима, непустая неизвестная колонка блокирует. Для поддержанного header проверять все колонки, включая пустые в data.
 
 Строковые идентификаторы trim, UTF-8, без NUL/control, регномер/UNOM <=120 bytes, entrance <=80 bytes. Числовая ячейка ID должна быть целой и точно представимой (<=15 десятичных цифр); строки сохраняют нули/буквы. Даты: Excel serial с учетом epoch 1900/1904, либо валидные DD.MM.YYYY/ISO YYYY-MM-DD, без времени/нулевых дат. Если обе даты есть, finish >= start. Даты project/request не подменяют installation dates.
 
-Числа: integer floors 1..200, weight 1..100000, days 1..3660; speed положительная <=20, decimal округление half-up до 2 знаков, trailing zeros несущественны. Money >=0, <=999999999999.99, decimal half-up 2, без binary float; ноль настоящий. Bool только да/нет (case-insensitive), 1/0; отсутствие = unknown. Словари включают все исследованные значения: шахта глухая, железо-сетчатая, комбинированная, каркасно-приставная; материал железобетон, кирпич, металлокаркас и сетка/стекло, железобетон и металл, кирпич и металл; двери автоматические/ручные. Raw и canonical хранятся отдельно. Общая current проекция содержит планируемые технические сведения; existing сохраняется отдельным набором. Никакой прямой записи premium operands.
+Числа: integer floors 1..200, weight 1..100000, days 1..3660; speed положительная <=20, decimal округление half-up до 2 знаков, trailing zeros несущественны. Bool только да/нет (case-insensitive), 1/0; отсутствие = unknown. Словари включают все исследованные значения: шахта глухая, железо-сетчатая, комбинированная, каркасно-приставная; материал железобетон, кирпич, металлокаркас и сетка/стекло, железобетон и металл, кирпич и металл; двери автоматические/ручные. Raw и canonical хранятся отдельно. Общая current проекция содержит планируемые технические сведения; ранее сохранённый existing набор остаётся читаемым без изменения. Никакой прямой записи premium operands.
 
 Bounded input: 20 MiB compressed, 128 MiB суммарно expanded, 2048 zip entries, индекс строки worksheet <=20000 (19994 строки объектов с7), 64 колонки, 32768 символов в одной ячейке; превышение `INPUT_LIMIT_EXCEEDED`, без каталога. Не извлекать ZIP на файловую систему, не загружать внешние ссылки/DTD. Формулы в выбранных data rows не вычисляются и отклоняются; формулы в footer игнорируются, контрольные суммы считаются из строк.
 
@@ -114,7 +114,7 @@ RuntimeRecoverySchemaV40 и RuntimeRecovery включают новые семе
 
 Для уже связанного import source ручное очищение текущего regnumber не уничтожает immutable source→object identity. При неизменных прежнем регномере источника, UNOM/доме/подъезде ordinary import сохраняет этот tombstone; overwrite может восстановить тот же source regnumber. Противоречащий непустой текущий идентификатор по-прежнему блокирует пакет. Новые объекты с неизвестной идентичностью не подбираются по догадке.
 
-Отчёт включает source={sha256,sheet},target,mode (fill_missing/overwrite),phase (preview/applied),providerEvidence=[{requestHash,responseHash,capturedAt,provider,response}]. У каждой field row есть sheet,row,target,mode,registrationNumber,objectId,field,action,old,input,value,reasonCode,message,nextAction; preview objectId=null для нового объекта, applied содержит созданный ID. FILLED success reasonCode=null, message preview «Будет заполнено пустое поле.», applied «Поле заполнено.»; nextAction preview «Проверьте изменения и примените пакет.», applied «Действий не требуется.». Контрактные количества считаются по32 исходным полям B:AG: default synthetic row содержит28 непустых полей, поэтому summary={selected:1,excluded:0,created:1,updated:0,unchanged:0,filled:28,replaced:0,warnings:0,errors:0}. Contract membership и provider metadata не увеличивают filled/replaced. JSON сохраняет исходные значения, CSV их безопасное представление. Private output root проверяется на стадии export, ошибка экспорта CLI report=70/REPORT_EXPORT_FAILED, даже если каталог уже применён.
+Отчёт включает source={sha256,sheet},target,mode (fill_missing/overwrite),phase (preview/applied),providerEvidence=[{requestHash,responseHash,capturedAt,provider,response}]. У каждой field row есть sheet,row,target,mode,registrationNumber,objectId,field,action,old,input,value,reasonCode,message,nextAction; preview objectId=null для нового объекта, applied содержит созданный ID. FILLED success reasonCode=null, message preview «Будет заполнено пустое поле.», applied «Поле заполнено.»; nextAction preview «Проверьте изменения и примените пакет.», applied «Действий не требуется.». Контрактные количества считаются по21 импортируемому полю B–H и P–AC: default synthetic row содержит19 непустых полей, поэтому summary={selected:1,excluded:0,created:1,updated:0,unchanged:0,filled:19,replaced:0,warnings:0,errors:0}. Contract membership и provider metadata не увеличивают filled/replaced. JSON сохраняет исходные значения, CSV их безопасное представление. Private output root проверяется на стадии export, ошибка экспорта CLI report=70/REPORT_EXPORT_FAILED, даже если каталог уже применён.
 
 ## Capacity correction 2026-11-19 — обязательное уточнение реализации
 
@@ -130,7 +130,7 @@ Top-level application returns остаются array. `rows`, `objects`, `provid
 
 Preview SHA protocol `address-register-preview-v2` последовательно учитывает компактный header и canonical элементы с однозначным type/ordinal/length framing; разбиение на chunks не влияет на hash. Opaque previewSha256 остаётся64 lowercase hex. Нельзя изменить payload после публикации pointer; пропуск/повреждение части выявляется по count/digest и не выдаётся за успех.
 
-Отчёт содержит все32 поля B:AG на строку, включая `SKIPPED_EMPTY` с old/input/final для пустого входа. Они не увеличивают filled/replaced/warnings и не очищают БД. Для default synthetic row по-прежнему filled28; всего32 field rows. Подготовка2668/667 даёт85376 field rows,667 fake calls при первом разрешённом preview и0 при повторе. Real-scale regression проходит apply/report/export, backup/restore и same-operation replay при256 MiB и16 MiB DB packet. Boundary preparation19994 valid rows с пригодным кэшем содержит639808 field rows; дополнительная строка блокируется до любых provider attempts.
+Отчёт содержит все21 поле B–H и P–AC на строку, включая `SKIPPED_EMPTY` с old/input/final для пустого входа. Они не увеличивают filled/replaced/warnings и не очищают БД. Для default synthetic row по-прежнему filled19; всего21 field rows. Подготовка2668/667 даёт56028 field rows,667 fake calls при первом разрешённом preview и0 при повторе. Real-scale regression проходит apply/report/export, backup/restore и same-operation replay при256 MiB и16 MiB DB packet. Boundary preparation19994 valid rows с пригодным кэшем содержит419874 field rows; дополнительная строка блокируется до любых provider attempts.
 
 CLI commit-loss regression вызывает неизменённый CLI/factory/application/store через тестовый TCP proxy, который доставляет COMMIT серверу, получает успешное подтверждение и закрывает соединение до передачи ACK клиенту; CLI сохраняет unknown/COMMIT_OUTCOME_UNKNOWN, exit75 и один commit. Обычный следующий CLI вызов с тем же operation ID читает replay без повторных фактов. Fault injection остаётся только в тестовой сетевой fixture; production hooks/env/argv не добавляются.
 
@@ -165,7 +165,7 @@ durable shadow projection, schema change or importer DDL is introduced.
 The deterministic public-seam regression compares SQL handler read work for20
 source objects before/after2674 unrelated catalog rows and then40 source objects:
 added catalog work <=24000 handler reads, doubled-source added work <=2500.
-It also asserts complete32-field reports and unchanged business facts/provider
+It also asserts complete21-field reports and unchanged business facts/provider
 calls/attempts for cached preparation. Full2668/667 and19994-object capacity,
 restore/replay,256MiB/16MiB and existing concurrency checks remain mandatory.
 
@@ -226,3 +226,67 @@ entry_id, entry_version, lock_owner, lock_key and other pending-row bytes remain
 unchanged across budget denial and budget-only resume; no extra cache version is
 created. A valid explicit retry completes that same entry/version and clears its
 locks. Completed older evidence remains immutable.
+
+## A13: исключение старого оборудования и стоимостей — 26.11.2026
+
+Решение владельца заменяет прежний 32-field mapping. Новый parser/application
+загружает ровно21 поле в порядке B–H, P–AC: year, regnumber, unom, sourceArea,
+sourceDistrict, address, entrance, floors, weight, pittype, pitmaterial, cabinDoor,
+shaftDoor, speed, frequencyDoor, frequencyMain, designPeriodRaw, installationDays,
+equipmentRequestDate, plannedStartDate, plannedFinishDate. XLSX остаётся прежним:
+лист, полная шапка A–AG и позиции колонок не меняются. I–O и AD–AG остаются
+в raw/source evidence; их непустые значения не проходят предметную numeric/dictionary
+валидацию и не становятся fields, mutations, новыми field rows или счётчиками
+изменений. Общие ограничения ZIP/XML/ячейки и запрет формул сохраняются.
+
+Новые preview/applied/report/JSON/CSV содержат21 field row на объект, даже при
+пустом входе. Default synthetic row:19 FILLED и2 SKIPPED_EMPTY;2668 объектов:
+56028 field rows и50692 FILLED. Набор19994 объектов:419874 field rows.
+Заполненные и пустые исключённые ячейки одинаково не влияют на каталог ни в
+fill_missing, ни в overwrite. Старые11 значений, snapshots, detail events,
+source evidence и сохранённые отчёты не удаляются и не переписываются; общий
+реестр исторических полей и schema/frontier113/60 остаются совместимыми.
+Чтение/экспорт старого отчёта сохраняет его прежние32 строки, успешный replay
+сохраняет исторический outcome. Неприменённый пакет со старым32-field payload
+не может загрузить исключённые реквизиты: apply/resume требуют новый preview
+(PREVIEW_STALE, без бизнес-записей/provider calls); старый report остаётся читаемым.
+
+2668 объектов2027 загружаются без AB/AC; AA также может быть пустой. Z сохраняется
+как длительность монтажа, не превращается в даты. Последующий импорт того же
+identity с AB/AC дополняет даты того же объекта/дела без дублей и без новых
+обращений при пригодном кэше. Повтор и пустые даты при overwrite сохраняют
+полученные даты; фактические даты/документы/открытие работ не возникают.
+
+Public regressions: parser exact mapping и ignored-value boundaries; reports
+preview/apply/export плюс сохранённые legacy values/history/reports и old pending
+package rejection; integration null dates→fill/replay; full synthetic capacity
+2668/667 и19994 boundary/restore при прежних256MiB/16MiB. Реальные импорты
+и платные обращения не входят в эту поставку.
+
+## A14: совместимость с актуальным main —26.11.2026
+
+В main f935c748 migration40 принадлежит EmailFirstPasswordRecovery,41 —
+OtizPaymentControl. Поэтому неопубликованная миграция адресного импортёра
+добавляется как42 после обеих; прежние определения40/41 и их данные не
+переписываются. Упоминания v40/113/60 выше описывают прежнюю ветку до merge:
+для финального combined source нормативны v42,118 таблиц и64 AUTO_INCREMENT.
+RuntimeRecoverySchemaV42 расширяет точный V41 семью address-import таблицами
+и одним allocator; V40/V41 остаются совместимыми со своими владельцами.
+Public canonical migration проверяет порядок1..42, v41→v42 и replay; DDL
+и строки predecessor не меняются. Public backup/restore сохраняет union
+password/OTIZ/address families, sequences, историю и replay. Current-frontier
+consumers/tests/readiness синхронизируются без удаления прежних проверок.
+
+Effective object details сохраняет одновременно upstream stops и import-source
+provenance; registry/card/queue/readiness retain обе ветви. Permission/provider/
+budget/business behavior upstream не изменяются. История Git сохраняется merge
+origin/main в рабочую ветку; переписывание опубликованных commits не допускается.
+Root владеет conflict-resolution tests и контрактом, separate sol/low executor —
+production reconciliation; independent Gate3/final и новый exact-source fullCI
+проверяют combined candidate. Это совместимость PR, не live migration/deployment.
+
+A14 executable witness seeds all five predecessor families (including binary
+password token hash, request timestamps, OTIZ hold reason and12345-cent allocation
+with valid parents). Four predecessor sequences have gaps beyond retained IDs.
+Exact rows/DDL/next-ID comparisons cover upgrade, migration replay, public full
+backup/restore and importer replay. Empty inventories alone are insufficient.

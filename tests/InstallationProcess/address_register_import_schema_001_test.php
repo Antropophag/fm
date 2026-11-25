@@ -1,15 +1,18 @@
 <?php
 declare(strict_types=1);require dirname(__DIR__).'/bootstrap.php';require dirname(__DIR__,2).'/vendor/autoload.php';
 assertSameValue(true,class_exists(FMonitor2\InstallationProcess\AddressRegisterImportSchemaMigration::class),'INTENDED_RED ADDRESS-REGISTER-IMPORT-001 A11 schema');
+require dirname(__DIR__).'/Support/AddressRegisterPredecessorFixture.php';
 use FMonitor2\InstallationProcess\AddressRegisterImportSchemaMigration as Migration;
 use FMonitor2\InstallationProcess\CanonicalMigrationApplication;
 use FMonitor2\InstallationProcess\ProductionPilotMigrationCatalogue;
-use FMonitor2\RuntimeRestore\RuntimeRecoverySchemaV40;
+use FMonitor2\RuntimeRestore\RuntimeRecoverySchemaV42;
 mysqli_report(MYSQLI_REPORT_ERROR|MYSQLI_REPORT_STRICT);$admin=new mysqli(getenv('FMONITOR_TEST_DB_HOST')?:'127.0.0.1',getenv('FMONITOR_TEST_DB_ADMIN_USER')?:'root',getenv('FMONITOR_TEST_DB_ADMIN_PASSWORD')?:'fmonitor2_test_root_local','',(int)(getenv('FMONITOR_TEST_DB_PORT')?:23306));$name='t_address_schema_'.bin2hex(random_bytes(6));$admin->query("CREATE DATABASE `$name`");$admin->select_db($name);$p='ari_';
 try{
- $catalog=ProductionPilotMigrationCatalogue::migrations();assertSameValue(Migration::class,$catalog[40]??null,'canonical successor40');$pre=$catalog;unset($pre[40]);assertSameValue(0,CanonicalMigrationApplication::run($admin,$p,$pre)['exitCode'],'v39 predecessor');$admin->query("INSERT INTO {$p}fm_maintable(id,regnumber,ordadr_address,entrance)VALUES(99991,'PREEXISTING','existing','1')");
- $before=$admin->query("SELECT * FROM {$p}fm_maintable")->fetch_all(MYSQLI_ASSOC);$first=Migration::apply($admin,$p);assertSameValue(true,$first['applied'],'new migration');assertSameValue($before,$admin->query("SELECT * FROM {$p}fm_maintable")->fetch_all(MYSQLI_ASSOC),'existing facts preserved');assertSameValue(false,Migration::apply($admin,$p)['applied'],'repeat safe');
- $required=['fm2_address_import_packages','fm2_address_import_cache','fm2_address_import_attempts','fm2_address_import_objects','fm2_address_import_operations','fm2_address_import_ids','fm2_address_import_payload_chunks'];$tables=array_column($admin->query('SHOW TABLES')->fetch_all(MYSQLI_NUM),0);$inventory=RuntimeRecoverySchemaV40::tables($p);foreach($required as$t){assertSameValue(true,in_array($p.$t,$tables,true),'created '.$t);assertSameValue(true,in_array($p.$t,$inventory,true),'restorable '.$t);}
+ $catalog=ProductionPilotMigrationCatalogue::migrations();assertSameValue(Migration::class,$catalog[42]??null,'canonical successor42');assertSameValue(FMonitor2\InstallationProcess\EmailFirstPasswordRecoverySchemaMigration::class,$catalog[40]??null,'upstream email migration40 retained');assertSameValue(FMonitor2\InstallationProcess\OtizPaymentControlSchemaMigration::class,$catalog[41]??null,'upstream OTIZ migration41 retained');assertSameValue(range(1,42),array_keys($catalog),'canonical complete order1..42');$pre=$catalog;unset($pre[42]);assertSameValue(0,CanonicalMigrationApplication::run($admin,$p,$pre)['exitCode'],'v41 predecessor');$admin->query("INSERT INTO {$p}fm_maintable(id,regnumber,ordadr_address,entrance)VALUES(99991,'PREEXISTING','existing','1')");
+ $upstreamBefore=AddressRegisterPredecessorFixture::seed($admin,$p,99991);
+ $predecessor=[];foreach($admin->query('SHOW TABLES')->fetch_all(MYSQLI_NUM)as[$table])$predecessor[$table]=[$admin->query("SHOW CREATE TABLE `$table`")->fetch_row()[1],$admin->query("SELECT * FROM `$table`")->fetch_all(MYSQLI_ASSOC)];
+ $before=$admin->query("SELECT * FROM {$p}fm_maintable")->fetch_all(MYSQLI_ASSOC);$first=Migration::apply($admin,$p);assertSameValue(true,$first['applied'],'new migration');assertSameValue($before,$admin->query("SELECT * FROM {$p}fm_maintable")->fetch_all(MYSQLI_ASSOC),'existing facts preserved');assertSameValue($upstreamBefore,AddressRegisterPredecessorFixture::snapshot($admin,$p),'v42 preserves populated predecessor and sequence gaps');assertSameValue(false,Migration::apply($admin,$p)['applied'],'repeat safe');assertSameValue($upstreamBefore,AddressRegisterPredecessorFixture::snapshot($admin,$p),'v42 replay preserves predecessor rows DDL and next IDs');foreach($predecessor as$table=>$state)assertSameValue($state,[$admin->query("SHOW CREATE TABLE `$table`")->fetch_row()[1],$admin->query("SELECT * FROM `$table`")->fetch_all(MYSQLI_ASSOC)],'v41 predecessor DDL and rows retained '.$table);
+ $required=['fm2_address_import_packages','fm2_address_import_cache','fm2_address_import_attempts','fm2_address_import_objects','fm2_address_import_operations','fm2_address_import_ids','fm2_address_import_payload_chunks'];$tables=array_column($admin->query('SHOW TABLES')->fetch_all(MYSQLI_NUM),0);$inventory=RuntimeRecoverySchemaV42::tables($p);assertSameValue(118,count($inventory),'combined recovery table count');assertSameValue(64,count(RuntimeRecoverySchemaV42::autoIncrement($p)),'combined recovery AUTO_INCREMENT count');foreach(['fm2_password_events','fm2_password_recovery_requests','fm2_password_recovery_attempts','fm2_otiz_object_payment_hold_events','fm2_otiz_payment_allocations']as$t)assertSameValue(true,in_array($p.$t,$inventory,true),'upstream family remains recoverable '.$t);foreach($required as$t){assertSameValue(true,in_array($p.$t,$tables,true),'created '.$t);assertSameValue(true,in_array($p.$t,$inventory,true),'restorable '.$t);}
  // Immutable local cache sequence resolves same-clock evidence without random UUID order.
  $cacheTable=$p.'fm2_address_import_cache';$cacheColumns=$admin->query("SELECT COLUMN_NAME,COLUMN_TYPE,IS_NULLABLE,COLUMN_DEFAULT,EXTRA FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='$cacheTable' ORDER BY ORDINAL_POSITION")->fetch_all(MYSQLI_NUM);foreach($cacheColumns as&$column)if($column[3]==='NULL')$column[3]=null;unset($column);
  assertSameValue([
@@ -127,14 +130,14 @@ try{
  assertSameValue(0,(int)$admin->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='{$p}fm2_address_import_ids'")->fetch_column(),'no partial DDL before full preflight');
  // Preserve the canonical 25-byte prefix boundary and namespace isolation.
  foreach([str_repeat('p',25),str_repeat('q',25)]as$longPrefix){
-  assertSameValue(0,CanonicalMigrationApplication::run($admin,$longPrefix,$pre)['exitCode'],'long-prefix v39 predecessor');
+  assertSameValue(0,CanonicalMigrationApplication::run($admin,$longPrefix,$pre)['exitCode'],'long-prefix v41 predecessor');
   $result=CanonicalMigrationApplication::run($admin,$longPrefix,$catalog);
-  assertSameValue([0,40],[$result['exitCode'],$result['result']['schemaVersion']??null],'INTENDED_RED A11 canonical 25-byte prefix v40');
+  assertSameValue([0,42],[$result['exitCode'],$result['result']['schemaVersion']??null],'INTENDED_RED A11 canonical 25-byte prefix v42');
   foreach($required as$table)assertSameValue(1,(int)$admin->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='{$longPrefix}{$table}'")->fetch_column(),'long-prefix family '.$table);
   Migration::assertCompatible($admin,$longPrefix);$before=$snapshot();
   assertSameValue(false,Migration::apply($admin,$longPrefix)['applied'],'long-prefix repeat');
   assertSameValue($before,$snapshot(),'long-prefix repeat/readiness no DDL');
-  // Simulate the compatible six-table partial state left by interrupted v40 DDL.
+  // Simulate the compatible six-table partial state left by interrupted v42 DDL.
   $admin->query("DROP TABLE {$longPrefix}fm2_address_import_payload_chunks");$before=$snapshot();
   assertSameValue(true,Migration::apply($admin,$longPrefix)['applied'],'long-prefix missing chunks recovery');
   foreach($before as$table=>$ddl)assertSameValue($ddl,$admin->query("SHOW CREATE TABLE `$table`")->fetch_row()[1],'partial recovery preserves existing DDL');
