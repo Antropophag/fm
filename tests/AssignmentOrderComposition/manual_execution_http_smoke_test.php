@@ -13,8 +13,8 @@ try {
     foreach(['assignment_order.composition.apply','installation.open','objects.read','checklist.read'] as $cap)$native->schema->insert('fm2_pilot_role_permissions',['role_id'=>1,'permission'=>$cap]);
     $payload='{"sections":[{"id":1,"name":"Работы","items":[{"id":28,"name":"Работа","weight":2}]}]}';
     $native->schema->insert('fm2_checklist_template_snapshots',['snapshot_version'=>'manual-http-smoke-v1','captured_at'=>'2026-09-01 00:00:00','valid_from'=>'2026-09-01 00:00:00','validity_scope'=>'active_baseline_and_future_native_only','source_label'=>'synthetic HTTP smoke','content_sha256'=>hash('sha256',$payload),'payload_json'=>$payload,'created_at'=>'2026-09-01 00:00:00']);
-    $db->query('UPDATE fm_maintable SET workdatestart=NULL,plan_finish_date=NULL');
-    $template=$f->http->request('POST','/pilot/objects/4512/assignment-orders/81/template',http_build_query(['csrfToken'=>$f->http->csrf]));assertSameValue(200,$template['status'],'optional PDF with unknown planning dates');
+    $db->query("UPDATE fm_maintable SET workdatestart='2026-09-04',plan_finish_date=NULL");
+    $template=$f->http->request('POST','/pilot/objects/4512/assignment-orders/81/template',http_build_query(['csrfToken'=>$f->http->csrf]));assertSameValue(200,$template['status'],'compatibility PDF uses the selected start date with unknown finish');
     $accepted=F::json($f->post($f->fields()),201);
     $history=$f->http->request('GET','/pilot/objects/4512/assignment-orders/81/originals/history');assertSameValue(200,$history['status'],'original history HTTP');
     $download=$f->http->request('GET','/pilot/objects/4512/assignment-orders/81/originals/'.$accepted['currentRevisionId'].'/download');assertSameValue(200,$download['status'],'original download HTTP');assertSameValue($accepted['sha256'],hash('sha256',$download['body']),'download exact accepted PDF');

@@ -318,7 +318,7 @@ try {
                 'fm2_control_engineer_assignments',
                 'fm2_deadline_certificate_operations','fm2_deadline_certificate_pdf_chunks','fm2_deadline_certificate_revisions','fm2_deadline_certificate_roots',
                 'fm2_engineer_migration_operations',
-                'fm2_equipment_fact_current','fm2_equipment_fact_diagnostics','fm2_equipment_fact_history','fm2_equipment_fact_runs','fm2_equipment_fact_sync_metadata',
+                'fm2_equipment_fact_current','fm2_equipment_fact_diagnostics','fm2_equipment_fact_history','fm2_equipment_fact_runs','fm2_equipment_fact_sync_metadata','fm2_equipment_reclamations',
                 'fm2_feedback',
                 'fm2_feedback_results',
                 'fm2_installation_cases',

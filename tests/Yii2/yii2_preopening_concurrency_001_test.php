@@ -14,13 +14,13 @@ try {
     $selection=['requestId'=>'11111111-1111-4111-8111-000000000066','mode'=>'new_order','expectedSelectionRevision'=>'0','expectedControlEngineerAssignmentRevision'=>'1'];
     $results=$batch('/pilot/objects/4512/assignment-order/selection',static fn($i)=>http_build_query(['_csrf'=>$csrf[$i]]+$selection).'&installerTabIds%5B%5D=7001',static fn($i)=>['Content-Type: application/x-www-form-urlencoded']);
     foreach($results as$r)assertSameValue(303,$r['status'],'concurrent same selection succeeds/replays');assertSameValue(1,count($f->rows('fm2_assignment_order_selections')),'one immutable selection');
-    $path='/pilot/objects/4512/assignment-orders/81/originals';$metadata=$f->metadata($b,'22222222-2222-4222-8222-000000000066');$pdf=FMonitor2\Tests\Support\SelectedOriginalFixture::pdf();
+    $path='/pilot/objects/4512/assignment-orders/81/originals';$metadata=$f->metadata($b,'22222222-2222-4222-8222-000000000066');$pdf=FMonitor2\Tests\Support\SelectedOriginalFixture::pdf();$correctionPdf=FMonitor2\Tests\Support\OriginalStartFixture::otherPdf();
     foreach(['initial','correction']as$mode){
         if($mode==='correction'){$metadata=array_replace($metadata,['requestId'=>'22222222-2222-4222-8222-000000000067','mode'=>'correction','rootOriginalId'=>$receipt['rootOriginalId'],'targetRevisionId'=>$receipt['currentRevisionId'],'expectedCurrentRevisionId'=>$receipt['currentRevisionId'],'correctionReason'=>'Concurrent scan replacement']);}
-        $results=$batch($path,static fn($i)=>$pdf,static function($i)use($metadata,$csrf){$m=array_replace($metadata,['csrfToken'=>$csrf[$i]]);return['Content-Type: application/pdf','X-CSRF-Token: '.$csrf[$i],'X-FMonitor-Original: '.base64_encode(json_encode($m,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR))];});
+        $bytes=$mode==='correction'?$correctionPdf:$pdf;$results=$batch($path,static fn($i)=>$bytes,static function($i)use($metadata,$csrf){$m=array_replace($metadata,['csrfToken'=>$csrf[$i]]);return['Content-Type: application/pdf','X-CSRF-Token: '.$csrf[$i],'X-FMonitor-Original: '.base64_encode(json_encode($m,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR))];});
         $statuses=array_column($results,'status');assertSameValue(true,in_array(201,$statuses,true),'one accepted original '.$mode);
         foreach($results as$r){assertSameValue(true,in_array($r['status'],[200,201,503],true),'bounded native concurrency result');if($r['status']===503)assertSameValue(true,str_contains(strtolower($r['headers']),'retry-after: 60'),'concurrent retry guidance');}
-        $metadata['csrfToken']=$csrfB;$replayed=$f->upload($b,$metadata,$pdf);assertSameValue(200,$replayed['status'],'same upload resolves through native replay');$receipt=json_decode($replayed['body'],true,flags:JSON_THROW_ON_ERROR);
+        $metadata['csrfToken']=$csrfB;$replayed=$f->upload($b,$metadata,$bytes);assertSameValue(200,$replayed['status'],'same upload resolves through native replay');$receipt=json_decode($replayed['body'],true,flags:JSON_THROW_ON_ERROR);
         assertSameValue($mode==='initial'?1:2,count($f->rows('fm2_assignment_order_original_revisions')),'no duplicate revision from concurrent transport');
     }
     assertSameValue(2,count($f->rows('fm2_assignment_order_applications')),'one application per accepted original revision');

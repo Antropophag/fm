@@ -79,3 +79,59 @@ The complete retrospective Gate 3 test/spec verdict is **APPROVED**:
 - schema preimplementation Gate 3 remains independently documented rather than being absorbed or recharacterized here.
 
 This approval authorizes the separate executor to implement only the reviewed FCR-1 correction with the approved test kept byte-identical. It is not implementation GREEN and does not approve final release. The production fix, scoped correction GREEN, independent final code review, exact-source Linux CI, PR admission, merge, and deployment all remain pending.
+
+---
+
+## CI test-consumer delta review against `09db5402`
+
+- Source/test verdict: **APPROVED**
+- Admission status: **NOT GREEN — exact-source CI evidence pending**
+- Snapshot base: `09db5402252f29328436674c48e467c52fb0edab`
+- Snapshot patch SHA-256: `755b3f58ecc867543812f222236bcec241840e67fecbff72394037c1907f45a8`
+- Prepared root-context package: `/Users/antropophag/.local/share/fmonitor-2/delivery-harness/packages/20261126T002204Z-4c4d60e41c/package.json`
+- Candidate source: `9aaceeb4aae992716aacb0cc9afb422702f2dbc8c9099d07554130d1ad5260bf`
+- Executable source: `dd22ede9d18f2f033122e3e0625067b86b5e5ba1a9425ba465b70a2b05e26764`
+- Test authors: root for the two unit corrections, governance correction, and five end-to-end/browser corrections; separate integration consumer agents for the remaining fixture/oracle updates
+- Reviewer: `/root/schema_gate3_reviewer`, independent; authored none of this delta
+
+The prepared reviewer route correctly refused to produce review admission because the package contains no exact-source harness records for the 37 mapped acceptance consumers. This review therefore assesses the frozen source/test delta only. It does not convert raw local output into harness GREEN and does not treat the prior CI failure run as approval.
+
+### Findings
+
+No findings.
+
+### Test-delta assessment
+
+The complete 37-consumer inventory and diagnoses under `/Users/antropophag/.local/share/fmonitor-2/order-local-preview-20261125/ci-45721698081` were inspected against the frozen diff. The changes are bounded consumer closure for already-reviewed preview behavior:
+
+- canonical schema expectations advance to exact frontier 43 and add the reclamation table without replacing exact catalogues with counts or permissive membership checks;
+- template fixtures now supply the required chosen start date and assert the expanded exact persisted-artifact metadata;
+- scan-replacement fixtures remove retired client fields, preserve immutable signed date/number, use distinct replacement bytes, and retain replay/history/access assertions;
+- ordinary user-copy expectations remove technical IDs, reason codes, and sync diagnostics while retaining immutable facts in lower-level projections, exports, or admin seams;
+- object-card state tests retain permission denial, exact href, read-only, pending/applied separation, and no-reopen assertions while adopting the approved compact wording;
+- renderer HTML remains an exact literal oracle with independently updated byte length and SHA-256, escaping, projection, and active-content checks intact;
+- asset cutover tests retain exact source-byte hashes and HTTP security/cache checks rather than weakening to presence checks;
+- the shipped-consumer governance test adds `order_reclamation_schema_001_test.php` in exact canonical order and preserves the exact-list, missing, ambiguous, and unregistered fail-closed cases;
+- visual ownership replaces a brittle immediate-sibling regex with ordered structural assertions proving the picker is inside the form, the form ends before the public modal, and the dialog retains its explicit installer binding. Existing responsive ownership, global-shell, and no-ellipsis checks remain;
+- browser flows now use the current external-number/start-date and scan-replacement contract, compare the downloaded current original to the distinct replacement bytes, and preserve navigation and immutable-fact assertions.
+
+No removed assertion was found to conceal a production defect or materially weaken its original boundary. The root-owned final browser v4 logs and the independently assigned integration logs report the corrected consumers passing, but these raw bounded checks are diagnostic support only.
+
+### Safe-error retained invariant
+
+`tests/Runtime/yii2_safe_error_correlation_001_test.php` is strengthened rather than loosened. The stale expectation of one signed intent is replaced by the exact two append-only identities: initial and correction request IDs, modes, identical signed start, and identical external number. The test still requires two revisions, zero applications, null actual start, safe 503 envelope, privacy, correlation behavior, and genuine 403/503 distinctions elsewhere in the suite. The macOS `/dev/full` limitation remains a local environment gap; the Linux safe-error consumer is mandatory and has not been declared GREEN by this review.
+
+### Production CSS delta
+
+The sole production change narrows `.fm2-original-workflow h2` to the two intended workflow headings. This prevents unrelated calendar headings from inheriting compact workflow typography. It changes no business state, permissions, or layout ownership, and the existing browser geometry assertion remains bounded at `<=20` rather than being relaxed.
+
+### Evidence route and verdict
+
+The repository-authored `verification-ci-input` mapping of all 37 failed consumers should remain unchanged. A scoped CSS/browser/root-acceptance package may supplement the frozen source review, but it must not replace, reduce, or remap the 37 mandatory consumers. The correct route is:
+
+1. retain this **APPROVED** independent source/test review and the earlier full-review history;
+2. run the existing exact-source Linux CI plan for the frozen candidate;
+3. require all 37 mapped consumers, including `yii2_safe_error_correlation_001_test.php`, to produce exact-source GREEN evidence before admission;
+4. treat any missing exact-source result as `UNKNOWN`, not GREEN.
+
+Final delta verdict: **APPROVED for source/test adequacy; NOT GREEN for CI or admission**. This review is independent of, and does not substitute for, the mandatory exact-source CI result and final source approval.

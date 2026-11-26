@@ -34,8 +34,7 @@ $f=new PreopeningFixture(dirname(__DIR__,2));try{
     $history=$f->request('GET','/pilot/objects/4512/assignment-orders/81/originals/history',[],$cookies);
     assertSameValue(200,$history['status'],'legacy original history stays readable');assertSameValue(true,str_contains($history['body'],'Не зафиксирована'),'legacy missing date is explicit unknown');
     $form=$f->request('GET','/pilot/objects/4512/assignment-orders/81/originals/submit',[],$cookies);
-    assertSameValue(200,$form['status'],'legacy correction form is readable');
-    assertSameValue(1,preg_match('/name="appendixStartDate"[^>]*value=""/',$form['body']),'legacy missing date never substituted from plan');
+    assertSameValue(409,$form['status'],'legacy original without signed metadata cannot be scan-corrected');
     echo "PASS original-start legacy history unknown date\n";
 }finally{$f->close();}
 
