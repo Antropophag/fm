@@ -21,6 +21,22 @@ final class AddressRegisterAddressValidation
         return ['accepted'=>true,'reasonCode'=>null,'address'=>trim((string)$cleaned['result']),'houseFiasId'=>(string)$cleaned['house_fias_id']];
     }
 
+    /** Manual confirmation preserves every structural/FIAS guard but does not fabricate provider QC. */
+    public static function validateConfirmedHouse(string $source,array $confirmed):array
+    {
+        $reject=static fn():array=>['accepted'=>false,'reasonCode'=>'ADDRESS_UNVERIFIED'];
+        if((string)($confirmed['fias_level']??'')!=='8'||(string)($confirmed['fias_actuality_state']??'')!=='0'
+            ||($confirmed['region_iso_code']??null)!=='RU-MOW'||trim((string)($confirmed['result']??''))===''
+            ||trim((string)($confirmed['house']??''))===''||!self::uuid((string)($confirmed['house_fias_id']??''))
+            ||trim((string)($confirmed['unparsed_parts']??''))!==''||trim((string)($confirmed['flat']??''))!==''
+            ||trim((string)($confirmed['room']??''))!=='')return$reject();
+        $sourceParts=self::sourceHouse($source);if($sourceParts===null)return$reject();
+        if(self::component($sourceParts['house'])!==self::component((string)$confirmed['house']))return$reject();
+        $block=trim((string)($confirmed['block']??''));$type=self::blockType((string)($confirmed['block_type']??''));
+        if(($sourceParts['block']??'')!==self::component($block)||($sourceParts['blockType']??'')!==$type)return$reject();
+        return['accepted'=>true,'reasonCode'=>null,'address'=>trim((string)$confirmed['result']),'houseFiasId'=>(string)$confirmed['house_fias_id']];
+    }
+
     private static function uuid(string $value): bool { return preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD',$value)===1; }
     private static function component(string $value): string { return mb_strtolower(trim($value),'UTF-8'); }
     private static function blockType(string $value): string { $value=rtrim(self::component($value),'.');return match($value){'к','корп','корпус'=>'к','с','стр','строение'=>'с',default=>$value}; }

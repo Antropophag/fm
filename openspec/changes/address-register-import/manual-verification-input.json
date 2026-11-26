@@ -1,0 +1,26 @@
+{
+  "change": "address-register-import-manual-confirmation",
+  "planned_paths": [
+    "app/InstallationProcess/AddressRegisterDadataProvider.php",
+    "app/InstallationProcess/AddressRegisterAddressValidation.php",
+    "app/InstallationProcess/AddressRegisterImportApplication.php",
+    "tests/InstallationProcess/address_register_import_provider_001_test.php",
+    "tests/InstallationProcess/address_register_import_economy_001_test.php",
+    "specs/ADDRESS-REGISTER-IMPORT-001.md",
+    "app/InstallationProcess/MariaDbAddressRegisterImportStore.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A17-manual-confirmation",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "public confirmAddresses/resume/apply plus audited effective address edit",
+      "tests": [
+        "tests/InstallationProcess/address_register_import_manual_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/address_register_import_manual_001_test.php": "INTENDED_RED"
+      }
+    }
+  ]
+}

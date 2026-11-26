@@ -195,6 +195,40 @@ final class AddressRegisterImportApplication
             $this->now()
         );
     }
+    public function confirmAddresses(string $packageId,array $resolutions,string $reason):array
+    {
+        $deny=$this->access();if($deny)return$deny;
+        if(!$this->validUuid($packageId)||trim($reason)===''||$resolutions===[])return['status'=>'rejected','reasonCode'=>'MANUAL_ADDRESS_CONFIRMATION_INVALID'];
+        $owner=$this->uuid();
+        if(!$this->store->acquirePreparation($packageId,$owner,$this->now()))return['status'=>'blocked','reasonCode'=>'CACHE_BUSY'];
+        try{
+            $p=$this->store->package($packageId);
+            if(!$p||$p['target']!==$this->target||!in_array($p['status'],['rejected','blocked'],true))return['status'=>'rejected','reasonCode'=>'MANUAL_ADDRESS_CONFIRMATION_INVALID'];
+            $addresses=[];foreach($p['source']['objects']as$o){$address=$this->normalizeAddress((string)$o['fields']['address']);$addresses[$this->requestHash($address)]=$address;}
+            $existing=$p['report']['manualAddressConfirmations']??[];$byId=[];$byHash=[];
+            foreach($existing as$record){$byId[(string)$record['decisionId']]=$record;$byHash[(string)$record['requestHash']]=$record;}
+            $pending=[];$seen=[];
+            foreach($resolutions as$r){
+                if(!is_array($r)||array_keys($r)!==['decisionId','requestHash','responseHash','evidenceSha256','address']||!$this->validUuid((string)$r['decisionId'])
+                    ||!preg_match('/^[0-9a-f]{64}$/D',(string)$r['requestHash'])||!preg_match('/^[0-9a-f]{64}$/D',(string)$r['responseHash'])||!preg_match('/^[0-9a-f]{64}$/D',(string)$r['evidenceSha256'])
+                    ||!is_array($r['address'])||array_keys($r['address'])!==['result','house','block','block_type','house_fias_id','region_iso_code','fias_level','fias_actuality_state']
+                    ||!isset($addresses[$r['requestHash']])||isset($seen[$r['decisionId']])||isset($seen[$r['requestHash']]))return['status'=>'rejected','reasonCode'=>'MANUAL_ADDRESS_CONFIRMATION_INVALID'];
+                $seen[$r['decisionId']]=true;$seen[$r['requestHash']]=true;
+                $cache=$this->store->cache((string)$r['requestHash']);
+                if(!$cache||$cache['lock_owner']!==null||!$this->fresh($cache)||!hash_equals((string)$cache['response_hash'],(string)$r['responseHash'])
+                    ||!AddressRegisterAddressValidation::validateConfirmedHouse($addresses[$r['requestHash']],$r['address'])['accepted'])return['status'=>'rejected','reasonCode'=>'MANUAL_ADDRESS_CONFIRMATION_INVALID'];
+                $base=['decisionId'=>$r['decisionId'],'requestHash'=>$r['requestHash'],'responseHash'=>$r['responseHash'],'evidenceSha256'=>$r['evidenceSha256'],'address'=>$r['address'],'actorId'=>$this->actor,'reason'=>trim($reason)];
+                if(isset($byId[$r['decisionId']])||isset($byHash[$r['requestHash']])){
+                    $old=$byId[$r['decisionId']]??$byHash[$r['requestHash']];$compare=$old;unset($compare['confirmedAt']);
+                    if($compare!==$base)return['status'=>'rejected','reasonCode'=>'MANUAL_ADDRESS_CONFIRMATION_INVALID'];
+                    continue;
+                }
+                $pending[]=array_replace($base,['confirmedAt'=>$this->now()]);
+            }
+            if($pending!==[]){$p['report']['manualAddressConfirmations']=[...$existing,...$pending];$this->store->updatePackage($packageId,$p['status'],$p['report'],$this->now());}
+            return['status'=>'confirmed','reasonCode'=>null,'packageId'=>$packageId,'manualAddressConfirmations'=>[...$existing,...$pending]];
+        }finally{$this->store->releasePreparation($packageId,$owner);}
+    }
     public function report(string $packageId): array
     {
         $deny = $this->access();
@@ -639,16 +673,19 @@ final class AddressRegisterImportApplication
         $rowWriter = new AddressRegisterPayloadWriter();
         $summary = $this->summary($parsed);
         $identityLookup = $this->store->findMany($parsed["objects"]);
+        $confirmations=[];foreach(($p['report']['manualAddressConfirmations']??[])as$confirmation)$confirmations[(string)$confirmation['requestHash']]=$confirmation;
         $ordinal = 0;
         foreach ($parsed["objects"] as $o) {
             $f = $o["fields"];
             $hash = $this->requestHash($this->normalizeAddress($f["address"]));
             $addressEvidence = $evidence->get($hash);
-            $addressValidation = AddressRegisterAddressValidation::validate(
-                (string) $f["address"],
-                $addressEvidence["response"]
-            );
-            if (!(bool) ($addressEvidence["accepted"] ?? false) || !$addressValidation["accepted"]) {
+            $manual=$confirmations[$hash]??null;
+            if(is_array($manual)&&(!hash_equals((string)$addressEvidence['response_hash'],(string)$manual['responseHash'])
+                ||!AddressRegisterAddressValidation::validateConfirmedHouse((string)$f['address'],$manual['address'])['accepted']))$manual=null;
+            $addressValidation=$manual===null
+                ?AddressRegisterAddressValidation::validate((string)$f["address"],$addressEvidence["response"])
+                :AddressRegisterAddressValidation::validateConfirmedHouse((string)$f["address"],$manual['address']);
+            if ($manual===null&&(!(bool) ($addressEvidence["accepted"] ?? false) || !$addressValidation["accepted"])) {
                 $errorWriter->add($this->addressError($o, $addressEvidence["response"]));
                 $errorCount++;
                 $errorReason ??= "ADDRESS_UNVERIFIED";
@@ -669,7 +706,7 @@ final class AddressRegisterImportApplication
                 $errorReason ??= "IDENTITY_CONFLICT";
             }
             $seenRegistrationNumbers[$registrationNumber] = true;
-            $clean = $evidence->get($hash)["response"];
+            $clean = $manual===null?$addressEvidence["response"]:$manual['address'];
             $f["address"] = $clean["result"];
             $o["fields"] = $f;
             $matches = $identityLookup->find($ordinal, $f);
@@ -693,10 +730,7 @@ final class AddressRegisterImportApplication
                             (string) $clean["house_fias_id"]
                         )) ||
                     (($m["house_fias_id"] ?? "") === "" &&
-                        !AddressRegisterAddressValidation::validate(
-                            (string) ($m["ordadr_address"] ?? ""),
-                            $clean
-                        )["accepted"])
+                        !($manual===null?AddressRegisterAddressValidation::validate((string)($m["ordadr_address"]??""),$clean):AddressRegisterAddressValidation::validateConfirmedHouse((string)($m["ordadr_address"]??""),$clean))["accepted"])
                 ) {
                     $errorWriter->add($this->err($o, "IDENTITY_CONFLICT")); $errorCount++;
                     $errorReason ??= "IDENTITY_CONFLICT";
@@ -706,7 +740,8 @@ final class AddressRegisterImportApplication
                 ? $this->store->details((int) $matches[0]["id"])
                 : ["_revision" => 0];
             $o["expectedRevision"] = $d["_revision"];
-            $o["evidence"] = $clean;
+            $o["evidence"] = $addressEvidence["response"];
+            if($manual!==null)$o['manualAddressConfirmation']=$manual;
             $objectWriter->add($o);
             $objectChanged = false;
             foreach ($f as $field => $input) {
@@ -806,6 +841,7 @@ final class AddressRegisterImportApplication
             "phase" => "preview",
             "summary" => $summary,
             "rows" => $rows,
+            "errors" => $errors,
             "objects" => $objects,
             "providerEvidence" => $provider,
             "cost" => [

@@ -1113,6 +1113,7 @@
         "tests/InstallationProcess/address_register_import_concurrency_001_test.php",
         "tests/InstallationProcess/address_register_import_schema_001_test.php",
         "tests/InstallationProcess/address_register_import_economy_001_test.php",
+        "tests/InstallationProcess/address_register_import_manual_001_test.php",
         "tests/InstallationProcess/address_register_import_reports_001_test.php",
         "tests/Runtime/address_register_import_restore_001_test.php",
         "tests/InstallationProcess/address_register_import_identity_001_test.php"

@@ -1,3 +1,32 @@
+# Whole address package applied on home —26.11.2026
+
+Owner confirmed contract truth. Public audited edit corrected object1305 to
+Mira47structure2; same ID/case and earlier history/dates/stops6 preserved.
+Public manual confirmation admitted12 addresses without changing original provider
+QC/cache; whole2668 package applied once:2667created,1existing updated,2976 total.
+No newpaidcalls:667 cumulative responses/attempts unchanged. All21fields and Z
+retained; newobjects haveNULLplanned dates. Public portal catalogue/cards and
+health verified. Full fresh backup and postapply archives saved; archivehash
+9ab00b9ee6d2fdd7bef5fcf2169be4fdb181c6af957d96deb48c4babe9928a1b
+verified locally/home. Evidence: private moscow-context-20261126/applied-completion.json.
+A17 focused/economy/identity/architecture and independent v2/metadata review pass.
+FullCI was not a prerequisite under explicit owner rapid-home exception; live
+source/PR/CI remain harness facts, no merge/main push/corporate deployment.
+Previous hold and intermediate entries below are historical, not active blockers.
+
+---
+
+# Whole-package import authorized by contract —26.11.2026
+
+Owner confirms contract is correct: correct existing object1305 to source structure2
+through public audited edit; explicitly confirm12 separately verified addresses,
+then apply entire2668package withzero newpaidcalls. PreserveID/case/history/oldcache.
+A17 ownsmanualconfirmation seam; root tests/ops, separateexecutorproduction.
+Rapidhomeexception remains; freshbackup, focusedchecks, independentinspection.
+Previous pause below is superseded by this owner confirmation.
+
+---
+
 # Moscow preparation completed; whole-package apply held —26.11.2026
 
 All667 paid responses are saved locally and on home, within cumulative cap667.

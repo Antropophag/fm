@@ -164,4 +164,8 @@ commits не переписываются. Предыдущий CI45722428139 SU
 - [x] 10.2 Focused checks and independent inspection; retain formal gate/CI status honestly.
 - [x] 10.3 Same-package capped home resume and new local/home immutable result archive; no apply.
 
-- [ ] 10.4 Resolve the owner-held object identity and explicitly admit the12 verified manual references before any whole-package apply. No automatic acceptance override has been performed.
+- [x] 10.4 Resolve the owner-held object identity and explicitly admit the12 verified manual references before any whole-package apply. No automatic acceptance override has been performed.
+
+## 11. Owner confirms contract truth
+- [x] 11.1 Public audited manual address decisions and effective address identity lookup, focused regressions.
+- [x] 11.2 Correct existing object and applywholepackage withbackup/no additionalpaidcalls; archive/verify/replay.

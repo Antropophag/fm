@@ -132,10 +132,11 @@ final class MariaDbAddressRegisterImportStore
  }
  private function identityCandidateRows():iterable
  {
-     $effectiveRegistration="CASE WHEN JSON_CONTAINS_PATH(e.values_json,'one','$.regnumber') THEN NULLIF(JSON_UNQUOTE(JSON_EXTRACT(e.values_json,'$.regnumber')),'null') ELSE m.regnumber END";
+    $effectiveRegistration="CASE WHEN JSON_CONTAINS_PATH(e.values_json,'one','$.regnumber') THEN NULLIF(JSON_UNQUOTE(JSON_EXTRACT(e.values_json,'$.regnumber')),'null') ELSE m.regnumber END";
+    $effectiveAddress="CASE WHEN JSON_CONTAINS_PATH(e.values_json,'one','$.address') THEN NULLIF(JSON_UNQUOTE(JSON_EXTRACT(e.values_json,'$.address')),'null') ELSE m.ordadr_address END";
      $effectiveEntrance="CASE WHEN JSON_CONTAINS_PATH(e.values_json,'one','$.entrance') THEN NULLIF(JSON_UNQUOTE(JSON_EXTRACT(e.values_json,'$.entrance')),'null') ELSE m.entrance END";
      $effectiveUnom="CASE WHEN JSON_CONTAINS_PATH(e.values_json,'one','$.unom') THEN NULLIF(JSON_UNQUOTE(JSON_EXTRACT(e.values_json,'$.unom')),'null') ELSE o.unom END";
-     $select="SELECT m.id,$effectiveRegistration regnumber,m.ordadr_address,$effectiveEntrance entrance,$effectiveUnom unom,o.house_fias_id,o.registration_number source_registration,o.source_identity_hash FROM `{$this->legacy}fm_maintable` m LEFT JOIN `{$this->p}fm2_address_import_objects` o ON o.object_id=m.id LEFT JOIN `{$this->p}fm2_object_detail_edits` e ON e.object_id=m.id";
+    $select="SELECT m.id,$effectiveRegistration regnumber,$effectiveAddress ordadr_address,$effectiveEntrance entrance,$effectiveUnom unom,o.house_fias_id,o.registration_number source_registration,o.source_identity_hash FROM `{$this->legacy}fm_maintable` m LEFT JOIN `{$this->p}fm2_address_import_objects` o ON o.object_id=m.id LEFT JOIN `{$this->p}fm2_object_detail_edits` e ON e.object_id=m.id";
      $last=null;
      while(true){if($last===null){$statement=$this->db->prepare($select.' ORDER BY m.id LIMIT 256');$statement->execute();}else{$statement=$this->db->prepare($select.' WHERE m.id>? ORDER BY m.id LIMIT 256');$statement->execute([$last]);}$rows=$statement->get_result()->fetch_all(MYSQLI_ASSOC);if($rows===[])return;foreach($rows as$row){$last=(string)$row['id'];yield$row;}if(count($rows)<256)return;}
  }
@@ -143,10 +144,11 @@ final class MariaDbAddressRegisterImportStore
  {
      $registration=(string)$f['regnumber'];
      $identity=hash('sha256',$f['regnumber'].'|'.$f['unom'].'|'.$f['entrance']);
-     $effectiveRegistration="CASE WHEN JSON_CONTAINS_PATH(e.values_json,'one','$.regnumber') THEN NULLIF(JSON_UNQUOTE(JSON_EXTRACT(e.values_json,'$.regnumber')),'null') ELSE m.regnumber END";
+    $effectiveRegistration="CASE WHEN JSON_CONTAINS_PATH(e.values_json,'one','$.regnumber') THEN NULLIF(JSON_UNQUOTE(JSON_EXTRACT(e.values_json,'$.regnumber')),'null') ELSE m.regnumber END";
+    $effectiveAddress="CASE WHEN JSON_CONTAINS_PATH(e.values_json,'one','$.address') THEN NULLIF(JSON_UNQUOTE(JSON_EXTRACT(e.values_json,'$.address')),'null') ELSE m.ordadr_address END";
      $effectiveEntrance="CASE WHEN JSON_CONTAINS_PATH(e.values_json,'one','$.entrance') THEN NULLIF(JSON_UNQUOTE(JSON_EXTRACT(e.values_json,'$.entrance')),'null') ELSE m.entrance END";
      $effectiveUnom="CASE WHEN JSON_CONTAINS_PATH(e.values_json,'one','$.unom') THEN NULLIF(JSON_UNQUOTE(JSON_EXTRACT(e.values_json,'$.unom')),'null') ELSE o.unom END";
-     $statement=$this->db->prepare("SELECT m.id,$effectiveRegistration regnumber,m.ordadr_address,$effectiveEntrance entrance,$effectiveUnom unom,o.house_fias_id FROM `{$this->legacy}fm_maintable` m LEFT JOIN `{$this->p}fm2_address_import_objects` o ON o.object_id=m.id LEFT JOIN `{$this->p}fm2_object_detail_edits` e ON e.object_id=m.id WHERE BINARY $effectiveRegistration=? OR BINARY o.registration_number=? OR BINARY o.source_identity_hash=?");
+    $statement=$this->db->prepare("SELECT m.id,$effectiveRegistration regnumber,$effectiveAddress ordadr_address,$effectiveEntrance entrance,$effectiveUnom unom,o.house_fias_id FROM `{$this->legacy}fm_maintable` m LEFT JOIN `{$this->p}fm2_address_import_objects` o ON o.object_id=m.id LEFT JOIN `{$this->p}fm2_object_detail_edits` e ON e.object_id=m.id WHERE BINARY $effectiveRegistration=? OR BINARY o.registration_number=? OR BINARY o.source_identity_hash=?");
      $statement->execute([$registration,$registration,$identity]);
      return$statement->get_result()->fetch_all(MYSQLI_ASSOC);
  }
@@ -281,7 +283,7 @@ final class MariaDbAddressRegisterImportStore
      if(count($bindings)>1)throw new \RuntimeException('IDENTITY_CONFLICT');
      if($bindings){
          $binding=$bindings[0];
-         if((int)$binding['object_id']!==$objectId||$binding['registration_number']!==$fields['regnumber']||$binding['unom']!==$fields['unom']||$binding['entrance']!==$fields['entrance']||$binding['house_fias_id']!==$object['evidence']['house_fias_id'])throw new \RuntimeException('IDENTITY_CONFLICT');
+         if((int)$binding['object_id']!==$objectId||$binding['registration_number']!==$fields['regnumber']||$binding['unom']!==$fields['unom']||$binding['entrance']!==$fields['entrance']||$binding['house_fias_id']!==$this->houseFiasId($object))throw new \RuntimeException('IDENTITY_CONFLICT');
      }
      foreach(['regnumber','unom','entrance']as$field){
          $current=$effective[$field]['value']??null;
@@ -313,9 +315,15 @@ final class MariaDbAddressRegisterImportStore
      $fields=$object['fields'];$identity=hash('sha256',$fields['regnumber'].'|'.$fields['unom'].'|'.$fields['entrance']);
      $statement=$this->db->prepare("SELECT object_id,registration_number,unom,house_fias_id,entrance FROM `{$this->p}fm2_address_import_objects` WHERE source_identity_hash=? FOR UPDATE");
      $statement->execute([$identity]);$bound=$statement->get_result()->fetch_assoc();
-     if($bound){if((int)$bound['object_id']!==$objectId||$bound['registration_number']!==$fields['regnumber']||$bound['unom']!==$fields['unom']||$bound['entrance']!==$fields['entrance']||$bound['house_fias_id']!==$object['evidence']['house_fias_id'])throw new \RuntimeException('IDENTITY_CONFLICT');return;}
+     if($bound){if((int)$bound['object_id']!==$objectId||$bound['registration_number']!==$fields['regnumber']||$bound['unom']!==$fields['unom']||$bound['entrance']!==$fields['entrance']||$bound['house_fias_id']!==$this->houseFiasId($object))throw new \RuntimeException('IDENTITY_CONFLICT');return;}
      $statement=$this->db->prepare("INSERT INTO `{$this->p}fm2_address_import_objects`(source_identity_hash,object_id,registration_number,unom,house_fias_id,entrance,source_json,created_at_utc)VALUES(?,?,?,?,?,?,?,?)");
-     $statement->execute([$identity,$objectId,$fields['regnumber'],$fields['unom'],$object['evidence']['house_fias_id'],$fields['entrance'],$this->json($object),$now]);
+     $statement->execute([$identity,$objectId,$fields['regnumber'],$fields['unom'],$this->houseFiasId($object),$fields['entrance'],$this->json($object),$now]);
+ }
+ private function houseFiasId(array$object):string
+ {
+     $value=$object['manualAddressConfirmation']['address']['house_fias_id']??$object['evidence']['house_fias_id']??null;
+     if(!is_string($value)||$value==='')throw new \RuntimeException('IDENTITY_CONFLICT');
+     return$value;
  }
  private function cacheRow(string $hash,bool $completedOnly):?array
  {

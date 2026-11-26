@@ -411,6 +411,7 @@
     "app/InstallationProcess/YiiInspectionPlanning.php::cancelInspectionPlan",
     "app/InstallationProcess/YiiInspectionPlanning.php::createInspectionPlan",
     "app/InstallationProcess/YiiInspectionPlanning.php::rescheduleInspectionPlan",
-    "app/InstallationProcess/YiiInspectionPlanning.php::scheduleInspection"
+    "app/InstallationProcess/YiiInspectionPlanning.php::scheduleInspection",
+    "app/InstallationProcess/AddressRegisterImportApplication.php::confirmAddresses"
   ]
 }

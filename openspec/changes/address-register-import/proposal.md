@@ -59,3 +59,9 @@ Owner delta26.11.2026: импортировать только21 поле B–H/
 transmit Moscow context, support source house grammar, accumulate quality errors
 without weakening acceptance or resetting budget. No schema changes. Paid preview
 authorized up to667 cumulative attempts; no partial or full apply until12367 resolved.
+
+
+Owner confirmation26.11 supersedes the identity hold: contract is authoritative.
+A17 adds explicit audited package-scoped manual address confirmations, immutable
+provider responses, effective edited-address lookup, and whole-package home apply
+withfresh backup andzero newpaidcalls. No schema changes or new automatic QC policy.

@@ -676,3 +676,4 @@ unit	php	tests/Yii2/yii2_shlz_select_001_test.php	unit
 unit	php	tests/Yii2/yii2_shlz_visual_contract_001_test.php	unit
 unit	php	tests/Yii2/yii2_workforce_sync_ownership_001_test.php	unit
 unit	python3	tools/delivery/ci_launch_transport_198_test.py	governance
+db	php	tests/InstallationProcess/address_register_import_manual_001_test.php	integration

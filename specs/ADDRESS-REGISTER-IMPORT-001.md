@@ -348,3 +348,43 @@ recorded. Paid cap667/133.40rub includes the previous one attempt. All raw respo
 and signed accepted evidence SHALL be archived separately on home and local host.
 Owner reconfirmed no partial apply: package2668 stays unapplied until identity12367
 is resolved. No merge/main push/corporate deployment is authorized.
+
+## A17: явное подтверждение адреса и исправление по договору —26.11.2026
+
+Owner подтвердил, что договор верен, и тем самым разрешил исправить существующий
+объект, сохранив его ID/дело/историю, затем применить весь пакет. Частичная вставка,
+дубликаты, переписывание старой истории и новые платные запросы не допускаются.
+
+Public `confirmAddresses(packageId,resolutions,reason)` принимает адресные решения
+уполномоченного оператора для rejected/blocked пакета своего target. Каждый элемент
+содержит уникальный decisionId UUID, requestHash исходного адреса пакета, responseHash
+существующего свежего завершённого cache, evidenceSha256 и отдельный canonical address
+(result,house,block,block_type,house_fias_id,region_iso_code,fias_level,fias_actuality_state).
+Все решения сначала валидируются; неверный target/право/связь/хеш/дом/ФИАС/регион,
+пустая причина, повторный decisionId либо попытка заменить прежнее решение не пишут
+новых фактов. Идентичный replay не добавляет вторую запись. Изменение ready/applied
+пакета этим методом запрещено. Сохраняются actor/time/reason/evidence hash и точная
+связь с неизменным исходным ответом. Preparation lock исключает конкурентную замену.
+
+Manual confirmation является самостоятельным операторским evidence. Оно не меняет
+qc/accepted/время/версию/тело ответа провайдера и не выдаётся за автоматический
+clean/address. Отдельная структурная валидация требует актуальный дом ФИАС/RU-MOW,
+UUID, точный номер/корпус/строение исходника и отсутствие квартиры/комнаты/остатков.
+Качество исходного ответа сохраняется, даже если canonical address взят из отдельно
+проверенного справочника. Обычная автоматическая валидация и signed cache import
+остаются строгими. Решение сохраняется в новом report payload, старые chunks остаются.
+
+Resume использует только решение, связанное с текущим source/cache response hash;
+canonical address и manual confirmation входят в source object/report fingerprint.
+Raw providerEvidence остаётся исходным. Любой неразрешённый адрес/identity отклоняет
+весь пакет. Apply сохраняет подтверждение в source audit, выполняется атомарно и
+повторяется без дублей/провайдера. Действующие permissions/revision/unknown guards
+сохраняются. DDL и общий schema frontier не меняются.
+
+Identity lookup SHALL читать эффективный ручной address так же, как reg/entrance,
+чтобы штатное ObjectDetailsEdit исправление по договору учитывалось в preview.
+Исходная legacy address и её история сохраняются, публичное редактирование пишет
+отдельную revision/event. Другие характеристики и факты дела не изменяются.
+Root — tests/spec/operator; separate sol/low production; focused checks и независимое
+bounded review параллельно подготовке домашней операции, без ожидания fullCI по
+явному owner exception. Перед business mutation — свежий private backup.
