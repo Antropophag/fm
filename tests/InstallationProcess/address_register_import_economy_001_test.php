@@ -72,3 +72,27 @@ try{
  assertSameValue('imported',$other->owner->importAddressEvidence($freshBundle)['status'],'allocator lock released after failed atomic import');assertSameValue(count($targetCacheBefore)+3,(int)$other->db->query("SELECT COUNT(*) FROM {$other->p}fm2_address_import_cache")->fetch_column(),'retry publishes exactly complete signed version set');assertSameValue(0,$other->provider->calls,'version rollback/retry never calls provider');
  echo "PASS ADDRESS-REGISTER-IMPORT-001 A12 economy\n";
 }finally{if($other)$other->close();if($f)$f->close();}
+
+// A16: one package keeps the paid negative, collects remaining addresses, never applies.
+$f=null;
+try{
+ $f=new AddressRegisterImportFixture();$before=$f->business();$rows=[];
+ foreach([10,11,12]as$i){$r=AddressRegisterWorkbookFixture::row('MOS-'.$i,(string)$i);$r['D']='810'.$i;$rows[]=$r;}
+ $duplicate=$rows[0];$duplicate['C']='MOS-10B';$duplicate['H']='2';$rows[]=$duplicate;
+ $f->provider->patches['10']=['qc'=>1];$f->write($rows);
+ $first=$f->owner->preview($f->path,2027,'TEST-CONTRACT',false,'',['allowPaidCalls'=>true,'maxPaidRequests'=>1]);
+ assertSameValue('REQUEST_BUDGET_EXCEEDED',$first['reasonCode'],'A16 negative does not stop next unique address budget guard');
+ assertSameValue(1,$f->provider->calls,'A16 first attempt only');
+ $old=$f->db->query("SELECT * FROM {$f->p}fm2_address_import_cache WHERE accepted=0 AND lock_owner IS NULL")->fetch_all(MYSQLI_ASSOC);assertSameValue(1,count($old),'A16 paid negative durable');
+ $done=$f->owner->resume($first['packageId'],['allowPaidCalls'=>true,'maxPaidRequests'=>3,'budgetReason'=>'synthetic authorized total3']);
+ assertSameValue('rejected',$done['status'],'A16 whole package remains rejected');assertSameValue('ADDRESS_UNVERIFIED',$done['reasonCode'],'A16 quality reason');
+ assertSameValue(3,$f->provider->calls,'A16 remaining2 only, no repayment');assertSameValue(3,$done['cost']['paidAttempts'],'A16 same package cumulative attempts');
+ assertSameValue(2,$done['summary']['errors'],'A16 each affected source row counted');
+ $errors=AddressRegisterWorkbookFixture::items($done['errors']);assertSameValue(2,count($errors),'A16 detailed errors');
+ assertSameValue([7,10],array_column($errors,'row'),'A16 physical source rows');
+ assertSameValue($old,$f->db->query("SELECT * FROM {$f->p}fm2_address_import_cache WHERE accepted=0 AND lock_owner IS NULL")->fetch_all(MYSQLI_ASSOC),'A16 old response/version/flags unchanged');
+ assertSameValue($before,$f->business(),'A16 no domain writes');
+ $again=$f->owner->resume($first['packageId'],['allowPaidCalls'=>true,'maxPaidRequests'=>3]);assertSameValue('rejected',$again['status'],'A16 replay cached negative');assertSameValue(3,$f->provider->calls,'A16 repeated resume free');
+ assertSameValue(2,count(AddressRegisterWorkbookFixture::items($f->owner->exportAddressEvidence()['entries'])),'A16 only accepted exported, raw negative retained');
+ echo "PASS ADDRESS-REGISTER-IMPORT-001 A16 collect/resume/budget/retention\n";
+}finally{if($f)$f->close();}

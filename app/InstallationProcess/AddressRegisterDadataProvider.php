@@ -15,8 +15,11 @@ final class AddressRegisterDadataProvider implements AddressRegisterAddressProvi
 
     public function clean(string $source): array
     {
+        $query = preg_match('/^(?:(?:г(?:ород)?\.?\s*)?)москва(?=\s|,|$)/iu',trim($source))===1
+            ? $source
+            : 'г Москва, '.$source;
         $headers = ['Content-Type: application/json', 'Accept: application/json', 'Authorization: Token '.$this->apiKey, 'X-Secret: '.$this->secretKey];
-        $body = json_encode([$source], JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+        $body = json_encode([$query], JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
         try {
             $response = ($this->transport)(self::ENDPOINT, $headers, $body, self::POLICY);
         } catch (AddressRegisterProviderFailure $error) {

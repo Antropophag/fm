@@ -52,3 +52,10 @@ Owner delta26.11.2026: импортировать только21 поле B–H/
 с main2ea60f1 (42/43 сохраняются, address44),119 таблиц/65 счётчиков. Доставка
 использует reviewed CI-green PR307 candidate без PR merge/main push. Реальные
 импорты, paid ДаДата и корпоративный deployment по-прежнему не разрешены.
+
+
+26.11.2026 owner Moscow/rapid-preparation delta: normative A16 in
+`specs/ADDRESS-REGISTER-IMPORT-001.md`. Preserve original address/cache identity,
+transmit Moscow context, support source house grammar, accumulate quality errors
+without weakening acceptance or resetting budget. No schema changes. Paid preview
+authorized up to667 cumulative attempts; no partial or full apply until12367 resolved.

@@ -150,11 +150,18 @@ remains unperformed; no merge/main push/deployment/dev-prod import authorized.
 
 ## 9. Owner-authorized home deployment26.11
 - [x] 9.1 Root A15/tests and independent Gate3 for current main43→address44.
-- [ ] 9.2 Separate production integration, preserved history, focused checks/final review/new exact-source CI in PR307.
-- [ ] 9.3 Verify current home bytes/state, backup, deploy exact candidate safely, validate health/schema/CLI/no data loss; no actual import or paid calls.
+- [x] 9.2 Separate production integration, preserved history, focused checks/final review/new exact-source CI in PR307.
+- [x] 9.3 Verify current home bytes/state, backup, deploy exact candidate safely, validate health/schema/CLI/no data loss; no actual import or paid calls.
 
 26.11.2026 home continuation: Gate3 v23 APPROVED; root spec/tests07de0f33,
 main2ea60f1 integration сохраняет историю. По последнему owner identity contract
 для GitHub используется Antropophag <antropophag@gmail.com>; прежние corporate
 commits не переписываются. Предыдущий CI45722428139 SUCCESS относится к31761d34,
 новый44 candidate требует собственный CI. Реальные imports/paid/PR merge запрещены.
+
+## 10. Moscow preparation correction
+- [x] 10.1 Root regression criteria/tests and separate production correction.
+- [x] 10.2 Focused checks and independent inspection; retain formal gate/CI status honestly.
+- [x] 10.3 Same-package capped home resume and new local/home immutable result archive; no apply.
+
+- [ ] 10.4 Resolve the owner-held object identity and explicitly admit the12 verified manual references before any whole-package apply. No automatic acceptance override has been performed.

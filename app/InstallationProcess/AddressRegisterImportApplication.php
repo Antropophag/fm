@@ -428,22 +428,6 @@ final class AddressRegisterImportApplication
                 $this->fresh($cache) &&
                 !$opt["refreshAddresses"]
             ) {
-                if (
-                    !(bool) $cache["accepted"] ||
-                    !AddressRegisterAddressValidation::validate(
-                        $address,
-                        $cache["response"]
-                    )["accepted"]
-                ) {
-                    return $this->finish(
-                        $p,
-                        "rejected",
-                        "ADDRESS_UNVERIFIED",
-                        $paid,
-                        $parsed,
-                        []
-                    );
-                }
                 $evidence->put($hash, $cache);
                 continue;
             }
@@ -508,22 +492,6 @@ final class AddressRegisterImportApplication
                     $this->fresh($completed) &&
                     $this->mayReuseCompletedCache($cache, $completed, $opt["refreshAddresses"])
                 ) {
-                    if (
-                        !(bool) $completed["accepted"] ||
-                        !AddressRegisterAddressValidation::validate(
-                            $address,
-                            $completed["response"]
-                        )["accepted"]
-                    ) {
-                        return $this->finish(
-                            $p,
-                            "rejected",
-                            "ADDRESS_UNVERIFIED",
-                            $paid,
-                            $parsed,
-                            []
-                        );
-                    }
                     $evidence->put($hash, $completed);
                     continue;
                 }
@@ -544,22 +512,6 @@ final class AddressRegisterImportApplication
                     $this->mayReuseCompletedCache($cache, $completed, $opt["refreshAddresses"])
                 ) {
                     $this->store->discardClaim($hash, $id);
-                    if (
-                        !(bool) $completed["accepted"] ||
-                        !AddressRegisterAddressValidation::validate(
-                            $address,
-                            $completed["response"]
-                        )["accepted"]
-                    ) {
-                        return $this->finish(
-                            $p,
-                            "rejected",
-                            "ADDRESS_UNVERIFIED",
-                            $paid,
-                            $parsed,
-                            []
-                        );
-                    }
                     $evidence->put($hash, $completed);
                     continue;
                 }
@@ -622,16 +574,6 @@ final class AddressRegisterImportApplication
                     $cache = $this->store->cache($hash);
                     if (!is_array($cache)) throw new \RuntimeException('Completed cache missing');
                     $evidence->put($hash, $cache);
-                    if (!$valid["accepted"]) {
-                        return $this->finish(
-                            $p,
-                            "rejected",
-                            "ADDRESS_UNVERIFIED",
-                            $paid,
-                            $parsed,
-                            []
-                        );
-                    }
                     break;
                 } catch (AddressRegisterProviderFailure $e) {
                     $this->store->settleAttempt(
@@ -673,15 +615,6 @@ final class AddressRegisterImportApplication
                             $this->fresh($completed) &&
                             $this->mayReuseCompletedCache($cache, $completed, $opt["refreshAddresses"])
                         ) {
-                            if (
-                                !(bool) $completed["accepted"] ||
-                                !AddressRegisterAddressValidation::validate(
-                                    $address,
-                                    $completed["response"]
-                                )["accepted"]
-                            ) {
-                                return $this->finish($p, "rejected", "ADDRESS_UNVERIFIED", $paid, $parsed, []);
-                            }
                             $evidence->put($hash, $completed);
                             break;
                         }
@@ -709,6 +642,19 @@ final class AddressRegisterImportApplication
         $ordinal = 0;
         foreach ($parsed["objects"] as $o) {
             $f = $o["fields"];
+            $hash = $this->requestHash($this->normalizeAddress($f["address"]));
+            $addressEvidence = $evidence->get($hash);
+            $addressValidation = AddressRegisterAddressValidation::validate(
+                (string) $f["address"],
+                $addressEvidence["response"]
+            );
+            if (!(bool) ($addressEvidence["accepted"] ?? false) || !$addressValidation["accepted"]) {
+                $errorWriter->add($this->addressError($o, $addressEvidence["response"]));
+                $errorCount++;
+                $errorReason ??= "ADDRESS_UNVERIFIED";
+                $ordinal++;
+                continue;
+            }
             $key = $this->sourceIdentityKey($f);
             if (isset($seen[$key])) {
                 $errorWriter->add($this->err($o, "DUPLICATE_SOURCE_OBJECT")); $errorCount++;
@@ -720,10 +666,9 @@ final class AddressRegisterImportApplication
             $registrationNumber = (string) $f["regnumber"];
             if (isset($seenRegistrationNumbers[$registrationNumber])) {
                 $errorWriter->add($this->err($o, "IDENTITY_CONFLICT")); $errorCount++;
-                $errorReason = "IDENTITY_CONFLICT";
+                $errorReason ??= "IDENTITY_CONFLICT";
             }
             $seenRegistrationNumbers[$registrationNumber] = true;
-            $hash = $this->requestHash($this->normalizeAddress($f["address"]));
             $clean = $evidence->get($hash)["response"];
             $f["address"] = $clean["result"];
             $o["fields"] = $f;
@@ -731,7 +676,7 @@ final class AddressRegisterImportApplication
             $ordinal++;
             if (count($matches) > 1) {
                 $errorWriter->add($this->err($o, "IDENTITY_CONFLICT")); $errorCount++;
-                $errorReason = "IDENTITY_CONFLICT";
+                $errorReason ??= "IDENTITY_CONFLICT";
             }
             if ($matches) {
                 $m = $matches[0];
@@ -754,7 +699,7 @@ final class AddressRegisterImportApplication
                         )["accepted"])
                 ) {
                     $errorWriter->add($this->err($o, "IDENTITY_CONFLICT")); $errorCount++;
-                    $errorReason = "IDENTITY_CONFLICT";
+                    $errorReason ??= "IDENTITY_CONFLICT";
                 }
             }
             $d = $matches
@@ -827,6 +772,8 @@ final class AddressRegisterImportApplication
         $errors = $errorWriter->finish();
         $parsed["objects"] = $objects;
         if ($errorCount > 0) {
+            $summary["errors"] = $errorCount;
+            $p["report"]["summary"] = $summary;
             return $this->finish(
                 $p,
                 "rejected",
@@ -1225,6 +1172,25 @@ final class AddressRegisterImportApplication
             "reasonCode" => $c,
             "message" => "Противоречивая идентичность объекта.",
             "nextAction" => "Исправьте исходный перечень.",
+        ];
+    }
+    private function addressError(array $object, array $cleaned): array
+    {
+        return [
+            "row" => $object["sourceRow"] ?? ($object["row"] ?? 0),
+            "field" => "address",
+            "reasonCode" => "ADDRESS_UNVERIFIED",
+            "message" => "Адрес не прошёл строгую проверку.",
+            "nextAction" => "Проверьте исходный адрес.",
+            "address" => (string) ($object["fields"]["address"] ?? ""),
+            "validation" => [
+                "accepted" => false,
+                "qc" => $cleaned["qc"] ?? null,
+                "qcHouse" => $cleaned["qc_house"] ?? null,
+                "fiasLevel" => $cleaned["fias_level"] ?? null,
+                "fiasActualityState" => $cleaned["fias_actuality_state"] ?? null,
+                "regionIsoCode" => $cleaned["region_iso_code"] ?? null,
+            ],
         ];
     }
     private function secret(): string

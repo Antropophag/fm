@@ -1,3 +1,28 @@
+# Moscow preparation completed; whole-package apply held —26.11.2026
+
+All667 paid responses are saved locally and on home, within cumulative cap667.
+655 automatic house confirmations,12 separate manual references (28 source rows),
+and1 existing-object identity conflict. No objects/operations applied. Original
+paid evidence and XLSX unchanged. Owner explicitly reconfirmed no partial apply.
+Manual references have not changed cache acceptance flags; both their explicit
+admission and identity clarification are required before whole-package apply.
+Focused checks, architecture and independent bounded v4 inspection pass; fullCI
+is deferred for this owner-requested rapid home preparation, never claimed GREEN.
+Private evidence: ~/.local/share/fmonitor-2/address-register-import/moscow-context-20261126/.
+Source/PR/CI remain live facts; previous entries below are history.
+
+---
+
+# Moscow address preparation —26.11.2026
+
+Owner requests rapid preparation on home, explicitly waiving sequential CI/gate
+waiting for this operation. A16 owns scope; root tests, separate sol/low production.
+One paid attempt already used, total cap667/133.40rub. Preserve cache/archive.
+Owner reconfirms whole-package-only apply after12367 identity clarification; no apply now.
+Previous delivery/source facts below remain historical.
+
+---
+
 # Домашний адресный импортёр: финальная проверка кандидата44 —26.11.2026
 
 Gate3v23 APPROVED, separate sol/low executor завершил production integration

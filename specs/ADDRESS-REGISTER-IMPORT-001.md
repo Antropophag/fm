@@ -313,3 +313,38 @@ preflight заGREEN. После — health/readiness, CLI availability,21fields,
 совместимость и неизменность доменных строк/старой истории, без реального импорта,
 платной ДаДата, отправки тестовых писем или создания процессных фактов.
 Запускаются только ранее работавшие сервисы. Корпоративный production не затронут.
+
+
+## A16: Moscow context and complete address preparation —2026-11-26
+
+Owner confirms every source address belongs to Moscow. Provider SHALL derive a
+wire query with `г Москва, ` for unqualified source strings; already Moscow-qualified
+strings remain unchanged. Original source/raw values remain immutable. Logical
+request identity retains its existing explicit RU/MOW context and original address:
+this fixes transmission of existing context without invalidating paid evidence.
+No cache row, timestamp, accepted flag, version or old response is rewritten.
+
+House comparison SHALL support unambiguous terminal bare/explicit numeric houses,
+attached letters, official slash/hyphen compounds, optional numeric/letter corpus
+or numeric structure, existing Zelenograd corpus-as-house and exact quarter
+corpus-as-house forms. Alternative houses, backslashes, extra house markers and
+mismatched house/block/type remain rejected. Existing qc=0, qc_house=2, current
+house-level FIAS UUID, RU-MOW and no flat/room/unparsed requirements remain.
+
+A known negative address result SHALL be retained and reported for each affected
+source row while preparation continues over remaining unique addresses within the
+same durable cumulative attempt cap. Cached negative responses cost zero additional
+calls. Invalid addresses never receive proposed business objects. Valid addresses
+still undergo normal identity checks. Any error rejects the whole package; report
+errors identify original address/source row/quality, and summary.errors is exact.
+Budget, unknown transport, auth, stale evidence and held-claim guards remain intact.
+Same-package resume retains all attempts; no automatic refresh or unknown retry.
+No schema, permissions, public apply semantics or financial calculations change.
+
+Owner authorizes rapid home preparation without waiting for full CI/gate ceremony;
+root owns regression tests and separate sol/low executor production. This is not a
+claim of formal gate approval. Focused checks and independent inspection remain
+recorded. Paid cap667/133.40rub includes the previous one attempt. All raw responses
+and signed accepted evidence SHALL be archived separately on home and local host.
+Owner reconfirmed no partial apply: package2668 stays unapplied until identity12367
+is resolved. No merge/main push/corporate deployment is authorized.

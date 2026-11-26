@@ -243,3 +243,10 @@ full restore. Separate executor resolves production; root resolves frontier
 tests/policy, fresh Gate3/final/CI before deployment. Preserve home state/WIP
 and backups, use existing home compose route; no actual import/paid calls,
 PR merge/main push or corporate deploy. No unrelated feature redesign.
+
+
+26.11.2026 owner Moscow/rapid-preparation delta: normative A16 in
+`specs/ADDRESS-REGISTER-IMPORT-001.md`. Preserve original address/cache identity,
+transmit Moscow context, support source house grammar, accumulate quality errors
+without weakening acceptance or resetting budget. No schema changes. Paid preview
+authorized up to667 cumulative attempts; no partial or full apply until12367 resolved.

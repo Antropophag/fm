@@ -264,3 +264,10 @@ SHALL переживать upgrade/replay/backup/restore без изменени
 - **WHEN** reviewed и CI-green combined candidate выкладывается с private backup
 - **THEN** текущие функции/данные/WIP/env сохранены, schema44 и CLI21 доступны,
   health/readiness успешны, реального импорта и платных вызовов нет
+
+
+26.11.2026 owner Moscow/rapid-preparation delta: normative A16 in
+`specs/ADDRESS-REGISTER-IMPORT-001.md`. Preserve original address/cache identity,
+transmit Moscow context, support source house grammar, accumulate quality errors
+without weakening acceptance or resetting budget. No schema changes. Paid preview
+authorized up to667 cumulative attempts; no partial or full apply until12367 resolved.

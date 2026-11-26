@@ -1,0 +1,27 @@
+{
+  "change": "address-register-import-moscow",
+  "planned_paths": [
+    "app/InstallationProcess/AddressRegisterDadataProvider.php",
+    "app/InstallationProcess/AddressRegisterAddressValidation.php",
+    "app/InstallationProcess/AddressRegisterImportApplication.php",
+    "tests/InstallationProcess/address_register_import_provider_001_test.php",
+    "tests/InstallationProcess/address_register_import_economy_001_test.php",
+    "specs/ADDRESS-REGISTER-IMPORT-001.md"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A16-moscow-collection",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "public provider validation/transport and preview/resume unchanged cumulative budget",
+      "tests": [
+        "tests/InstallationProcess/address_register_import_provider_001_test.php",
+        "tests/InstallationProcess/address_register_import_economy_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/address_register_import_provider_001_test.php": "INTENDED_RED",
+        "tests/InstallationProcess/address_register_import_economy_001_test.php": "INTENDED_RED"
+      }
+    }
+  ]
+}
