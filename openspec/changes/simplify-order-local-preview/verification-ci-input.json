@@ -44,7 +44,8 @@
     "tests/Yii2/preopening_browser.mjs",
     "app/YiiRuntime/Assets/pilot.css",
     "tests/Support/yii2_production_web_cutover_contract.php",
-    "docs/operations/order-local-preview-icon-retirements-20261126.md"
+    "docs/operations/order-local-preview-icon-retirements-20261126.md",
+    "tests/Verification/verification_delivery_deduplication_001_test.py"
   ],
   "acceptances": [
     {
@@ -89,7 +90,8 @@
         "tests/Yii2/yii2_preopening_concurrency_001_test.php",
         "tests/Yii2/yii2_preopening_routes_001_test.php",
         "tests/Yii2/yii2_shlz_visual_contract_001_test.php",
-        "tests/Yii2/yii2_sidebar_state_icons_001_test.php"
+        "tests/Yii2/yii2_sidebar_state_icons_001_test.php",
+        "tests/Verification/verification_delivery_deduplication_001_test.py"
       ]
     }
   ]

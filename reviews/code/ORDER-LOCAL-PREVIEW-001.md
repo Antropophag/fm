@@ -109,3 +109,27 @@ The root package correctly contains no harness evidence and remains `NOT_REVIEWE
 ### Findings
 
 No code/test-delta finding remains open. The verdict is conditional only on missing mandatory verification evidence, not on an identified source defect.
+
+---
+
+## Historical witness pin correction — independent final delta review
+
+- Final delta verdict: **APPROVED**
+- Findings: none
+- Comparison point / snapshot base: `a6c6049e570147a91ef1d0e3c3017ff19573a059`
+- Snapshot patch SHA-256: `b19ca07489285c8d74dadc9b3425f0325b195128b8497f5082d3b83e7ccab6f7`
+- Prepared package: `/Users/antropophag/.local/share/fmonitor-2/delivery-harness/packages/20261126T004807Z-1c056380a3/package.json`
+- Candidate source: `a1910c3fd38a902dabccbad3a10e9a27aa73d7f585fd65aeef32f68ff0d335e6`
+- Executable source: `4f1f9ba792b25ef361d8238a52148c67df3392f4cd46386cd96ed4947b062e8e`
+- Author: root, declared bounded test-consumer correction
+- Reviewer: `/root/schema_gate3_reviewer`, independent; authored none of this delta
+
+The final review inspected the complete bounded delta from `a6c6049e`: one historical SHA replacement in `tests/Verification/verification_delivery_deduplication_001_test.py`, registration as the 38th mandatory CI consumer, and append-only delivery evidence. No production source changes are present.
+
+The changed pin names a fixed historical commit containing the approved canonical browser wrapper. Its canonical file SHA-256 is `e6751ceb4d7df714d7c8978ca9513889701a9fb15c598d02e02ce98061d35197`, byte-identical to the reviewed current file. The previous fixed witness is observably stale (`946cc1cb82f3f106fe9cbce6dac6ebb0c4af550bed790ec33dd92bff29cf139d`). The oracle does not read dynamic `HEAD` or synthesize expected bytes from the worktree, so the correction does not make the test self-fulfilling.
+
+All surrounding protections remain exact: single canonical suite entry, at least one active verification mapping, no retired wrapper mapping/file, byte-for-byte historical equality, and the complete negative decision matrix for CI reuse, mismatch, failed/cancelled runs, transport uncertainty, correction dispositions, and cosmetic classification. The focused exact-source harness record is GREEN for all ten cases.
+
+The retained second-CI inventory at `/Users/antropophag/.local/share/fmonitor-2/order-local-preview-20261125/ci-45728527305/complete-inventory.json` and timings at `test-results.json` show all application unit, E2E, and integration tests passed, including Linux `yii2_safe_error_correlation_001_test.php`. The only direct regression was the stale witness; overall verify failure was propagated from governance. This evidence supports the diagnosis but does not make the corrected source CI-green.
+
+Final source approval is **APPROVED** for this bounded delta. PR admission, merge, and deployment remain blocked until a new exact-source full CI run succeeds with the existing full matrix and the newly mandatory 38th consumer. The third run must not bypass, weaken, or remap the full plan.

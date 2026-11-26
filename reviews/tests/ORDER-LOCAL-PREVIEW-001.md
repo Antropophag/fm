@@ -135,3 +135,34 @@ The repository-authored `verification-ci-input` mapping of all 37 failed consume
 4. treat any missing exact-source result as `UNKNOWN`, not GREEN.
 
 Final delta verdict: **APPROVED for source/test adequacy; NOT GREEN for CI or admission**. This review is independent of, and does not substitute for, the mandatory exact-source CI result and final source approval.
+
+---
+
+## Historical witness pin correction — Gate 3
+
+- Verdict: **APPROVED**
+- Findings: none
+- Comparison point / snapshot base: `a6c6049e570147a91ef1d0e3c3017ff19573a059`
+- Snapshot patch SHA-256: `b19ca07489285c8d74dadc9b3425f0325b195128b8497f5082d3b83e7ccab6f7`
+- Prepared package: `/Users/antropophag/.local/share/fmonitor-2/delivery-harness/packages/20261126T004807Z-1c056380a3/package.json`
+- Candidate source: `a1910c3fd38a902dabccbad3a10e9a27aa73d7f585fd65aeef32f68ff0d335e6`
+- Executable source: `4f1f9ba792b25ef361d8238a52148c67df3392f4cd46386cd96ed4947b062e8e`
+- Test author: root, declared bounded test-consumer correction
+- Reviewer: `/root/schema_gate3_reviewer`, independent
+
+The executable test delta changes only the fixed historical commit used by `tests/Verification/verification_delivery_deduplication_001_test.py` from `5dc2c8852d465885c33160faee1fd2ec0e4ee50f` to `a6c6049e570147a91ef1d0e3c3017ff19573a059`.
+
+The new witness is valid and non-circular:
+
+- `git show a6c6049e…:tests/Yii2/yii2_preopening_browser_001_test.php` has SHA-256 `e6751ceb4d7df714d7c8978ca9513889701a9fb15c598d02e02ce98061d35197`, exactly matching the current canonical file;
+- the retired `5dc2c885…` witness has different SHA-256 `946cc1cb82f3f106fe9cbce6dac6ebb0c4af550bed790ec33dd92bff29cf139d`, explaining the second-CI governance failure;
+- the oracle reads a named full historical commit through `git show`, never dynamic `HEAD`, merge-base, or current-worktree content as its expected value;
+- full-byte equality remains mandatory;
+- the suite inventory must still contain the canonical test exactly once;
+- active verification mappings must still reference the canonical test;
+- the retired wrapper must remain absent from inventory, mappings, and filesystem;
+- all CI reuse/admission, mismatch, failure/cancellation, transport-UNKNOWN, correction-disposition, and narrow-cosmetic-classifier negative tests remain unchanged.
+
+The focused harness record `/Users/antropophag/.local/share/fmonitor-2/delivery-harness/records/1795654085997140000-36056d71c594426c85481bd432d86c8b.json` is exact-source `GREEN` and runs all ten governance cases. The second exact-source CI run `45728527305` is retained as evidence that every application unit, E2E, and integration consumer—including Linux safe-error—passed; its only direct regression was this stale historical witness, with overall verify failure propagated from it.
+
+The CI verification input adds this governance test as the 38th mandatory consumer while preserving the prior 37. Gate 3 approves the test correction and mapping. It does not declare the candidate admitted: a third exact-source full CI run must execute the complete matrix, including all 38 mapped consumers, and must succeed without bypass or remapping.
