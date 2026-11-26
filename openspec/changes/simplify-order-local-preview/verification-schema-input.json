@@ -1,0 +1,23 @@
+{
+  "change": "simplify-order-local-preview-schema-integration",
+  "planned_paths": [
+    "app/RuntimeRestore/RuntimeRecovery.php",
+    "app/RuntimeRestore/RuntimeRecoverySchemaV42.php",
+    "app/RuntimeRestore/RuntimeRecoverySchemaV43.php",
+    "app/InstallationProcess/AssignmentOrderOriginalStartSchemaMigration.php",
+    "tests/Runtime/order_reclamation_schema_001_test.php",
+    "app/Runtime/MariaDbRuntimeReadiness.php",
+    "app/InstallationProcess/EquipmentReclamationSchemaMigration.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "RECLAMATION-DELAY-001",
+      "acceptance_id": "schema-recovery-frontier",
+      "spec_path": "specs/RECLAMATION-DELAY-001.md",
+      "seam": "canonical migrations, deep readiness and backup/restore",
+      "tests": [
+        "tests/Runtime/order_reclamation_schema_001_test.php"
+      ]
+    }
+  ]
+}

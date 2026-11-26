@@ -63,9 +63,10 @@ try {
     $fixture->login($cookies, 95);
     $card = $fixture->request('GET', '/pilot/objects/4512', [], $cookies);
     assertSameValue(200, $card['status'], 'authorized object card remains available after manual/hourly runs');
-    foreach (['10.09.2026', '11.09.2026', '12.09.2026', '21.09.2026', '1С ERP'] as $expected) {
+    foreach (['10.09.2026', '11.09.2026', '12.09.2026'] as $expected) {
         assertSameValue(true, str_contains($card['body'], $expected), 'authorized card displays independent ERP fact ' . $expected);
     }
+    foreach(['21.09.2026','1С ERP']as$diagnostic)assertSameValue(false,str_contains($card['body'],$diagnostic),'ordinary card hides ERP synchronization diagnostic '.$diagnostic);
 } finally { if ($fixture instanceof PreopeningFixture) $fixture->close(); }
 
 echo "PASS: ERP-EQUIPMENT-FACTS-001 public manual command and authorized card\n";

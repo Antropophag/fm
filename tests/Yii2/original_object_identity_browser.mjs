@@ -3,9 +3,9 @@ import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url),config=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
 const {chromium}=require(config.playwright),browser=await chromium.launch({headless:true});
 const expected={
-  initial:['TEST-4512','Москва, Тестовая, 1','Подъезд 2','Заводской номер: Z-77'],
-  manual:['РЕГ-&-НОВЫЙ','Очень длинный <script>alert(1)</script> & адрес объекта монтажа','Подъезд 12А','Заводской номер: ЗАВ-<42>'],
-  missing:['Регистрационный номер не указан','Адрес без номера','Подъезд 7','Заводской номер не указан'],
+  initial:['TEST-4512','Москва, Тестовая, 1','подъезд 2','заводской № Z-77'],
+  manual:['РЕГ-&-НОВЫЙ','Очень длинный <script>alert(1)</script> & адрес объекта монтажа','подъезд 12А','заводской № ЗАВ-<42>'],
+  missing:['Регномер не указан','Адрес без номера','подъезд 7','заводской номер не указан'],
 }[config.mode];
 const check=(value,message)=>{if(!value)throw new Error(message);};
 try {

@@ -1,0 +1,18 @@
+{
+  "change": "simplify-order-local-preview-review-corrections",
+  "planned_paths": [
+    "tests/Yii2/order_review_corrections_001_test.php",
+    "app/YiiRuntime/Controllers/ObjectCardController.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "ORDER-LOCAL-PREVIEW-001",
+      "acceptance_id": "review-card-corrections",
+      "spec_path": "specs/ORDER-LOCAL-PREVIEW-001.md",
+      "seam": "real authorized object-card GET, Documents state controls and unavailable deadline evidence",
+      "tests": [
+        "tests/Yii2/order_review_corrections_001_test.php"
+      ]
+    }
+  ]
+}

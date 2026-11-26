@@ -68,7 +68,7 @@
         location.assign(form.dataset.returnUrl); return;
       }
       newIntent = result.status >= 400 && result.status < 500;
-      status.textContent = newIntent ? (messages[value.reasonCode || value.error] || 'Не удалось принять оригинал. Проверьте форму и повторите загрузку.')
+      status.textContent = newIntent ? (messages[value.reasonCode || value.error] || 'Не удалось загрузить оригинал. Проверьте форму и повторите загрузку.')
         : 'Не удалось подтвердить сохранение. Повторите загрузку с тем же файлом и данными.';
     } catch {
       status.textContent = 'Не удалось подтвердить сохранение. Проверьте связь и повторите загрузку.';

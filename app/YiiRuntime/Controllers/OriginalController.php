@@ -40,11 +40,17 @@ final class OriginalController extends PreopeningController
                 $start = $resources->originalStartQuery()->readCurrent($id, $orderId);
                 if ($start['status'] === 'unavailable') return $this->status(503, true);
                 if ($result['current'] !== null) {
+                    $startValue=$start['status']==='found'&&is_array($start['value'])?$start['value']:null;
+                    if($startValue===null||trim((string)($startValue['externalDocumentNumber']??''))===''||!$this->validDate((string)($startValue['appendixStartDate']??'')))return$this->pageError(409,'В сохранённой редакции нет реквизитов, необходимых для безопасной замены скана. Создайте новое распоряжение.','/pilot/objects/'.$id.'/assignment-order/selection','К распоряжению');
                     $result['current']['appendixStartDate'] = $start['status'] === 'found' && is_array($start['value'])
                         ? ($start['value']['appendixStartDate'] ?? null)
                         : null;
+                    $result['current']['externalDocumentNumber'] = $start['status'] === 'found' && is_array($start['value']) ? ($start['value']['externalDocumentNumber'] ?? '') : '';
                 } else {
-                    $result['suggestedAppendixStartDate'] = $resources->plannedStartDate($id) ?? '';
+                    $template = \FMonitor2\AssignmentOrderComposition\ProductionAssignmentOrderTemplateFactory::dateReader($resources->db,$resources->prefix)->find((int)$result['caseId'],$orderId);
+                    if($template['status']==='unavailable')return$this->status(503,true);
+                    $result['suggestedAppendixFromTemplate']=$template['status']==='found'&&is_string($template['appendixStartDate']??null);
+                    $result['suggestedAppendixStartDate'] = $result['suggestedAppendixFromTemplate']?$template['appendixStartDate']:($resources->plannedStartDate($id)??'');
                 }
             }
             return $result['status'] === 'found'
@@ -76,8 +82,8 @@ final class OriginalController extends PreopeningController
             $bytes = Yii::$app->request->rawBody;
             if (strlen($bytes) !== $admission['length']) return $this->json(400, ['error' => 'INVALID_REQUEST']);
             $stream = new O\AssignmentOrderOriginalMemoryStream($bytes);
-            $command = $this->command($fields, $context, $stream);
-            return $this->result($resources->originalStart()->submit($command, $id, $fields['appendixStartDate']));
+            $command = $this->command($fields, $context, $stream, $resources);
+            return $this->result($resources->originalStart()->submit($command, $id, $fields['appendixStartDate'], trim($fields['externalDocumentNumber'])));
         } catch (\Throwable $error) {
             Yii::$app->response->headers->set('X-FMonitor-Error-ID', SafeRuntimeFailure::report($error, 'original_controller'));
             return $this->json(503, ['error' => 'SERVICE_UNAVAILABLE'], true);
@@ -103,12 +109,16 @@ final class OriginalController extends PreopeningController
         }
     }
 
-    private function command(array $fields, array $context, O\AssignmentOrderOriginalMemoryStream $stream): O\SubmitAssignmentOrderOriginalCommand
+    private function command(array $fields, array $context, O\AssignmentOrderOriginalMemoryStream $stream, PreopeningResources $resources): O\SubmitAssignmentOrderOriginalCommand
     {
+        $stored = $resources->originalStartQuery()->readRequest($fields['requestId'], (int) $context['caseId'], (int) $context['orderId']);
+        if ($stored['status'] === 'unavailable') throw new \RuntimeException('Original request lookup unavailable.');
+        $templateDate = $stored['status'] === 'found' ? ['status'=>'not_found','date'=>null] : \FMonitor2\AssignmentOrderComposition\ProductionAssignmentOrderTemplateFactory::dateReader($resources->db, $resources->prefix)->find((int) $context['caseId'], (int) $context['orderId']);
+        $documentDate = $stored['status'] === 'found' ? (string) $stored['value']['document_date'] : ($templateDate['status'] === 'found' ? $templateDate['date'] : (new \DateTimeImmutable('now', new \DateTimeZone('Europe/Moscow')))->format('Y-m-d'));
         return new O\SubmitAssignmentOrderOriginalCommand(
             $fields['requestId'], O\AssignmentOrderOriginalMode::from($fields['mode']),
             (int) $context['caseId'], (int) $context['orderId'], $this->actor(),
-            $fields['documentDate'], $fields['compositionConfirmed'], $fields['rootOriginalId'],
+            $documentDate, true, $fields['rootOriginalId'],
             $fields['targetRevisionId'], $fields['expectedCurrentRevisionId'], $fields['correctionReason'],
             new O\AssignmentOrderOriginalUpload($stream, $fields['originalFilename'], 'application/pdf'),
         );
@@ -161,6 +171,9 @@ final class OriginalController extends PreopeningController
         $id = $this->canonicalId($id); $orderId = $this->canonicalId($orderId);
         return $id === null || $orderId === null ? null : [$id, $orderId];
     }
+
+    private function validDate(string$value):bool
+    {if(preg_match('/^\d{4}-\d{2}-\d{2}$/D',$value)!==1)return false;$date=\DateTimeImmutable::createFromFormat('!Y-m-d',$value);return$date!==false&&$date->format('Y-m-d')===$value;}
 
     private function contextFailure(array $result): Response
     {

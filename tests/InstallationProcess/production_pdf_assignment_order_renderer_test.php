@@ -35,21 +35,33 @@ function pdfDecodedStreams(string $pdf): array
     return $streams;
 }
 
+/** Read Unicode text-showing operands independently of TCPDF line wrapping. */
+function pdfVisibleText(array $streams): string
+{
+    $parts=[];
+    $literalPattern=<<<'REGEX'
+~\(((?:\\[\s\S]|[^\\()])*)\)~
+REGEX;
+    foreach($streams as $stream){
+        preg_match_all('/\bBT\b(.*?)\bET\b/s',$stream,$blocks);
+        foreach($blocks[1]as$block){
+            preg_match_all($literalPattern,$block,$strings);
+            foreach($strings[1]as$string){$raw=stripcslashes($string);if(strlen($raw)%2===0)$parts[]=mb_convert_encoding($raw,'UTF-8','UTF-16BE');}
+        }
+    }
+    return preg_replace('/\s+/u',' ',implode(' ',$parts));
+}
 function assertPdfTextMarker(array $streams,string $marker): void
 {
-    $needle=strtolower(bin2hex(mb_convert_encoding($marker,'UTF-16BE','UTF-8')));
-    foreach($streams as $stream){if(str_contains(strtolower(bin2hex($stream)),$needle))return;}
-    throw new TestFailure("Combined PDF must contain semantic text marker: {$marker}");
+    assertSameValue(true,str_contains(pdfVisibleText($streams),$marker),'Combined PDF visible text must contain: '.$marker);
 }
-
 function pdfMarkerPosition(array $streams,string $marker): int
 {
-    $needle=strtolower(bin2hex(mb_convert_encoding($marker,'UTF-16BE','UTF-8')));$haystack=strtolower(bin2hex(implode('', $streams)));$position=strpos($haystack,$needle);if($position===false)throw new TestFailure("PDF marker absent: {$marker}");return$position;
+    $position=strpos(pdfVisibleText($streams),$marker);if($position===false)throw new TestFailure('PDF marker absent: '.$marker);return $position;
 }
-
 function assertPdfTextMarkerAbsent(array $streams,string $marker):void
 {
-    $needle=strtolower(bin2hex(mb_convert_encoding($marker,'UTF-16BE','UTF-8')));$haystack=strtolower(bin2hex(implode('', $streams)));assertSameValue(false,str_contains($haystack,$needle),"PDF must not contain marker: {$marker}");
+    assertSameValue(false,str_contains(pdfVisibleText($streams),$marker),'PDF must not contain marker: '.$marker);
 }
 
 $renderer=new ProductionPdfAssignmentOrderRenderer();

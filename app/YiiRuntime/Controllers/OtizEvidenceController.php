@@ -27,6 +27,10 @@ final class OtizEvidenceController extends PilotController
             ]],
             'access' => ['class' => AccessControl::class, 'rules' => [[
                 'allow' => true, 'roles' => ['otiz.manage'],
+                'matchCallback' => static fn(): bool => Yii::$app->canonicalAccess->checkAccess(
+                    (int) Yii::$app->user->id,
+                    'access.administer'
+                ),
             ]], 'denyCallback' => function (): void {
                 if (Yii::$app->user->isGuest) {
                     Yii::$app->user->setReturnUrl(str_contains(Yii::$app->request->pathInfo,'quarantine')?'/pilot/otiz/reconciliation/quarantine':'/pilot/otiz/reconciliation');
@@ -113,6 +117,6 @@ final class OtizEvidenceController extends PilotController
     private function now():string{return(new \DateTimeImmutable('now',new \DateTimeZone('Europe/Moscow')))->format('Y-m-d\TH:i:sP');}
     private function seeOther(string$p):Response{$r=Yii::$app->response;$r->statusCode=303;$r->headers->set('Location',$p);return$r;}
     private function page():int{return max(1,(int)Yii::$app->request->get('page',1));}private function oneOf(string$n,array$a):string{$v=(string)Yii::$app->request->get($n,'');return in_array($v,$a,true)?$v:'';}
-    private function e(string$v):string{return htmlspecialchars($v,ENT_QUOTES|ENT_HTML5,'UTF-8');}private function nav():string{return'<nav><a href="/pilot/otiz">Объекты</a> <a href="/pilot/otiz/reconciliation">Сверка свидетельств</a> <a href="/pilot/otiz/reconciliation/quarantine">Quarantine</a> <a href="/pilot/otiz/active-baselines">Active baselines</a> <a href="/pilot/otiz/historical-replay">Historical replay</a></nav>';}
+    private function e(string$v):string{return htmlspecialchars($v,ENT_QUOTES|ENT_HTML5,'UTF-8');}
     private function pageHtml(string$title,string$body):string{return'<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>'.$this->e($title).'</title></head><body>'.$body.'</body></html>';}
 }

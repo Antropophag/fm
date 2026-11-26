@@ -144,11 +144,17 @@ remains unperformed; no merge/main push/deployment/dev-prod import authorized.
 - [x] 8.1 Root contract/test matrix и RED:21 field mapping, ignored values, old values/history/report retention, pending package guard, dates later/no duplicates, Z, capacity counts.
 - [x] 8.2 Planner-required independent Gate3 и separate sol/low production executor.
 - [x] 8.3 Focused/architecture checks, independent exact-source final review.
-- [ ] 8.4 Corporate identity verification, commit/push PR307, новый full exact-source GitHubCI; ready handoff без merge/deploy/live import.
+- [x] 8.4 Corporate identity verification, commit/push PR307, новый full exact-source GitHubCI; ready handoff без merge/deploy/live import.
 
 - [x] 8.5 Root A14/tests и independent Gate3 для main reconciliation; separate executor сохраняет40/41, добавляет address42; root объединяет frontier consumers. Полный final/CI только после merge origin/main в branch, без переписывания истории.
 
 ## 9. Owner-authorized home deployment26.11
-- [ ] 9.1 Root A15/tests and independent Gate3 for current main43→address44.
+- [x] 9.1 Root A15/tests and independent Gate3 for current main43→address44.
 - [ ] 9.2 Separate production integration, preserved history, focused checks/final review/new exact-source CI in PR307.
 - [ ] 9.3 Verify current home bytes/state, backup, deploy exact candidate safely, validate health/schema/CLI/no data loss; no actual import or paid calls.
+
+26.11.2026 home continuation: Gate3 v23 APPROVED; root spec/tests07de0f33,
+main2ea60f1 integration сохраняет историю. По последнему owner identity contract
+для GitHub используется Antropophag <antropophag@gmail.com>; прежние corporate
+commits не переписываются. Предыдущий CI45722428139 SUCCESS относится к31761d34,
+новый44 candidate требует собственный CI. Реальные imports/paid/PR merge запрещены.

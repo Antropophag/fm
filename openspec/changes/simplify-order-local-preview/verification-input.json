@@ -1,0 +1,113 @@
+{
+  "change": "simplify-order-local-preview",
+  "planned_paths": [
+    "app/YiiRuntime/Views/object-card.php",
+    "app/YiiRuntime/Views/selection.php",
+    "app/YiiRuntime/Views/original.php",
+    "app/YiiRuntime/Models/OriginalMetadata.php",
+    "app/YiiRuntime/Controllers/OriginalController.php",
+    "app/AssignmentOrderComposition/AssignmentOrderTemplateApplication.php",
+    "app/InstallationProcess/ProductionPilotMigrationCatalogue.php",
+    "specs/ORDER-LOCAL-PREVIEW-001.md",
+    "app/EquipmentReclamation/EquipmentReclamations.php",
+    "app/InstallationProcess/EquipmentReclamationSchemaMigration.php",
+    "app/Otiz/ReclamationDeadline.php",
+    "app/Otiz/MariaDbNativePremiumInputs.php",
+    "specs/RECLAMATION-DELAY-001.md",
+    "app/RuntimeRestore/RuntimeRecovery.php",
+    "app/RuntimeRestore/RuntimeRecoverySchemaV42.php",
+    "app/RuntimeRestore/RuntimeRecoverySchemaV43.php",
+    "app/InstallationProcess/AssignmentOrderOriginalStartSchemaMigration.php",
+    "tests/Runtime/order_reclamation_schema_001_test.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "ORDER-LOCAL-PREVIEW-001",
+      "acceptance_id": "local-flow",
+      "spec_path": "specs/ORDER-LOCAL-PREVIEW-001.md",
+      "seam": "Yii selection/template/upload/history",
+      "tests": [
+        "tests/Yii2/order_local_preview_001_test.php"
+      ]
+    },
+    {
+      "spec_id": "RECLAMATION-DELAY-001",
+      "acceptance_id": "additive-delay",
+      "spec_path": "specs/RECLAMATION-DELAY-001.md",
+      "seam": "EquipmentReclamations + native deadline operands + Yii card",
+      "tests": [
+        "tests/Yii2/equipment_reclamation_001_test.php",
+        "tests/Otiz/reclamation_deadline_001_test.php",
+        "tests/Otiz/reclamation_inputs_001_test.php"
+      ]
+    },
+    {
+      "spec_id": "RECLAMATION-DELAY-001",
+      "acceptance_id": "schema-recovery-frontier",
+      "spec_path": "specs/RECLAMATION-DELAY-001.md",
+      "seam": "canonical migrations, deep readiness and backup/restore",
+      "tests": [
+        "tests/Runtime/order_reclamation_schema_001_test.php",
+        "tests/Runtime/runtime_recovery_001_test.php",
+        "tests/Runtime/runtime_jobs_recovery_001_test.php",
+        "tests/Runtime/runtime_recovery_forward_update_001_test.php",
+        "tests/Runtime/production_schema_frontier_001_test.php"
+      ]
+    },
+    {
+      "spec_id": "ORDER-LOCAL-PREVIEW-001",
+      "acceptance_id": "metadata-bounds",
+      "spec_path": "specs/ORDER-LOCAL-PREVIEW-001.md",
+      "seam": "OriginalMetadata strict HTTP metadata",
+      "tests": [
+        "tests/Yii2/order_local_preview_metadata_001_test.php"
+      ]
+    },
+    {
+      "spec_id": "ORDER-LOCAL-PREVIEW-001",
+      "acceptance_id": "pdf-contract",
+      "spec_path": "specs/ORDER-LOCAL-PREVIEW-001.md",
+      "seam": "production PDF renderer and extracted document text",
+      "tests": [
+        "tests/InstallationProcess/mikryukova_order_pdf_001_test.php",
+        "tests/InstallationProcess/production_pdf_assignment_order_renderer_test.php"
+      ]
+    },
+    {
+      "spec_id": "ORDER-LOCAL-PREVIEW-001",
+      "acceptance_id": "admin-diagnostics",
+      "spec_path": "specs/ORDER-LOCAL-PREVIEW-001.md",
+      "seam": "Yii diagnostics GET/POST and ordinary OTIZ permission boundary",
+      "tests": [
+        "tests/Yii2/yii2_otiz_evidence_reads_001_test.php"
+      ]
+    },
+    {
+      "spec_id": "ORDER-LOCAL-PREVIEW-001",
+      "acceptance_id": "card-presentation",
+      "spec_path": "specs/ORDER-LOCAL-PREVIEW-001.md",
+      "seam": "real object-card sections and available actions",
+      "tests": [
+        "tests/Yii2/yii2_object_card_presentation_001_test.php"
+      ]
+    },
+    {
+      "spec_id": "RECLAMATION-DELAY-001",
+      "acceptance_id": "saved-workbook",
+      "spec_path": "specs/RECLAMATION-DELAY-001.md",
+      "seam": "export of saved financial deadline inputs",
+      "tests": [
+        "tests/Otiz/mikryukova_workbook_001_test.php"
+      ]
+    },
+    {
+      "spec_id": "ORDER-LOCAL-PREVIEW-001",
+      "acceptance_id": "review-card-corrections",
+      "spec_path": "specs/ORDER-LOCAL-PREVIEW-001.md",
+      "seam": "real authorized object-card GET, Documents state controls and unavailable deadline evidence",
+      "tests": [
+        "tests/Yii2/order_review_corrections_001_test.php"
+      ]
+    }
+  ]
+}

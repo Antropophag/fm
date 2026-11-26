@@ -44,7 +44,7 @@ try {
     $card = $fixture->request('GET', '/pilot/objects/4512', [], $cookies);
     $check($card['status'] === 200, 'card GET');
     $body = $card['body'];
-    foreach (['Сроки и готовность','Команда','Документы','История','role="tablist"','role="tab"','role="tabpanel"','data-shlz-tabs','shlz-document-row','shlz-document-row__visual','shlz-document-row__title','shlz-document-row__meta','shlz-document-row__actions','/pilot/assets/shlz-file-types/file-pdf-default.svg','/pilot/assets/shlz-icons/download.svg','Регистрационный номер','Табельный','Уволен','Готовность оборудования','Первое грузоместо','Полная отгрузка','Источник','1С ERP','Последнее успешное обновление','Синхронизация ещё не выполнялась'] as $text) {
+    foreach (['Сроки и готовность','Команда','Документы','История','role="tablist"','role="tab"','role="tabpanel"','data-shlz-tabs','shlz-document-row','shlz-document-row__visual','shlz-document-row__title','shlz-document-row__meta','shlz-document-row__actions','/pilot/assets/shlz-file-types/file-pdf-default.svg','/pilot/assets/shlz-icons/download.svg','Регистрационный номер','Табельный','Уволен','Оборудование','Первое грузоместо','Полная отгрузка'] as $text) {
         $check(str_contains($body, $text), 'rendered ' . $text);
     }
     foreach (['legacy_fmonitor','position_snapshot','workforce_source','Статус не указан'] as $text) {
@@ -95,12 +95,12 @@ try {
         }
         return false;
     };
-    foreach ([['Плановое начало','01.10.2026'],['Плановое завершение','01.12.2026'],['Монтажное дело','Готов к открытию'],['Оригинал распоряжения','Принят']] as [$label, $value]) {
+    foreach ([['Начало','01.10.2026'],['Завершение','01.12.2026'],['Монтажное дело','Готов к открытию'],['Оригинал распоряжения','Загружен']] as [$label, $value]) {
         $check($fact($label, $value), 'readiness pair ' . $label . '=' . $value);
     }
-    $check($xpath->query('//*[@id="object-panel-readiness"]//div[dt="Плановое завершение"]/dd//div[contains(@class,"fm2-finish-certificate")]')->length===1, 'deadline certificate is under planned finish');
+    $check($xpath->query('//*[@id="object-panel-readiness"]//section[@aria-labelledby="deadline-transfer-title"]//a[contains(@href,"deadline-certificates") and not(ancestor::dd)]')->length===1, 'deadline action is grouped with transfer outside fact cells');
     $panelText = $panel ? trim($panel->textContent) : '';
-    $check(str_contains($panelText, 'Готовность оборудования') && substr_count($panelText, 'неизвестно') >= 4, 'readiness exposes three unknown equipment dates and unknown successful sync');
+    $check(str_contains($panelText, 'Оборудование') && substr_count($panelText, 'Не указан') >= 3, 'readiness preserves unknown equipment dates without sync diagnostics');
     $check(!str_contains($panelText, 'Фактическое начало'), 'absent factual start is not invented');
     foreach (['Этажность','Грузоподъёмность, кг','Скорость, м/с'] as $label) {
         $check(!str_contains($panelText, $label), 'readiness excludes passport fact ' . $label);
@@ -131,6 +131,7 @@ try {
     $liftTypeRow = $passport === null ? null : $xpath->query('.//div[contains(concat(" ",normalize-space(@class)," ")," fm2-fact ")][dt[normalize-space()="Тип лифта"] and preceding-sibling::div]', $passport);
     $check($liftTypeRow !== null && $liftTypeRow->length === 1, 'lift type uses ordinary divided fact row');
     $check(!str_contains($passportText, 'Очередность'), 'passport excludes work sequence');
+    foreach (['Синхронизация ещё не выполнялась','Синхронизация завершилась ошибкой до первого успешного обновления','Источник — 1С ERP','пользователь ID'] as $technicalCopy) $check(!str_contains($body, $technicalCopy), 'ordinary card hides diagnostic copy ' . $technicalCopy);
     foreach (['>40<','>41<','>44<','>39<'] as $rawCode) $check(!str_contains($body, $rawCode), 'technical raw code hidden ' . $rawCode);
     $workspaceNode = $xpath->query('//*[contains(concat(" ",normalize-space(@class)," ")," fm2-object-workspace ")]')->item(0);
     $check($workspaceNode !== null, 'workspace exists');
@@ -146,7 +147,7 @@ try {
     $check(preg_match('~shlz-document-row.*?file-pdf-default\.svg.*?Подписанный оригинал\.pdf.*?shlz-document-row__meta.*?href="/pilot/objects/4512/~s', $body) === 1, 'document icon available filename metadata href');
     $documentsPanel = $xpath->query('//*[@id="object-panel-documents"]')->item(0);
     $check($documentsPanel !== null, 'documents panel exists');
-    foreach (['История оригинала' => '/originals/history', 'Исправить оригинал' => '/originals/submit'] as $actionLabel => $hrefSuffix) {
+    foreach (['История оригинала' => '/originals/history', 'Заменить скан' => '/originals/submit'] as $actionLabel => $hrefSuffix) {
         $actions = $documentsPanel === null ? null : $xpath->query(
             './/a[contains(concat(" ",normalize-space(@class)," ")," shlz-button ") and normalize-space()="' . $actionLabel . '" and contains(@href,"' . $hrefSuffix . '")]',
             $documentsPanel,
@@ -162,7 +163,7 @@ try {
     $readerCookies = [];
     $fixture->login($readerCookies, 95);
     $restricted = $fixture->request('GET', '/pilot/objects/4512', [], $readerCookies);
-    foreach (['open_confirmed','Изменить состав','Исправить оригинал','Закрепить'] as $control) {
+    foreach (['open_confirmed','Изменить состав','Заменить скан','Закрепить'] as $control) {
         $check(!str_contains($restricted['body'], $control), 'read-only hides ' . $control);
     }
     $directory = (string) file_get_contents($fixture->root . '/app/YiiRuntime/Views/installers.php');

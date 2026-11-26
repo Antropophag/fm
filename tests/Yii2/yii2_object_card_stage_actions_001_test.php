@@ -37,7 +37,7 @@ try {
             continue;
         }
         $body = $card['body'];
-        foreach (['Состав сохранён. Ожидается подписанный оригинал', 'Монтажник 7001', 'Загрузить подписанный оригинал', 'Загрузить оригинал', 'Подписанный оригинал ожидается'] as $text) {
+        foreach (['Загрузить оригинал для ФН81', 'Монтажник 7001', 'Загрузить оригинал', 'подписанный PDF ещё не загружен'] as $text) {
             $check(true, str_contains($body, $text), 'pending copy ' . $text);
         }
         $check(1, substr_count($body, 'class="fm2-next-action"'), 'one primary action');
@@ -52,10 +52,10 @@ try {
     $check(303, $fixture->login($reader, 95)['status'], 'reader login');
     $restricted = $fixture->request('GET', '/pilot/objects/4512', [], $reader);
     $check(200, $restricted['status'], 'reader sees pending state');
-    foreach (['Состав сохранён. Ожидается подписанный оригинал', 'Монтажник 7001', 'Подписанный оригинал ожидается'] as $text) {
+    foreach (['Загрузить оригинал для ФН81', 'Монтажник 7001', 'подписанный PDF ещё не загружен'] as $text) {
         $check(true, str_contains($restricted['body'], $text), 'reader state ' . $text);
     }
-    foreach (['Загрузить оригинал', '/assignment-orders/81/originals/submit', 'Открыть работы'] as $forbidden) {
+    foreach (['/assignment-orders/81/originals/submit', 'Открыть работы'] as $forbidden) {
         $check(false, str_contains($restricted['body'], $forbidden), 'reader has no command ' . $forbidden);
     }
     $check(1, substr_count($restricted['body'], 'class="fm2-next-action"'), 'reader one informative primary block');
@@ -66,7 +66,7 @@ try {
     foreach (['Готов к открытию', 'Вернуться к оригиналу', 'Подписанный оригинал.pdf'] as $text) {
         $check(true, str_contains($ready['body'], $text), 'ready behavior preserved ' . $text);
     }
-    foreach (['Состав сохранён. Ожидается подписанный оригинал', 'Подписанный оригинал ожидается'] as $text) {
+    foreach (['Загрузить оригинал для ФН81', 'подписанный PDF ещё не загружен'] as $text) {
         $check(false, str_contains($ready['body'], $text), 'ready excludes pending copy ' . $text);
     }
     $readyReader = $fixture->request('GET', '/pilot/objects/4512', [], $reader);
@@ -74,13 +74,14 @@ try {
     $check(false, str_contains($readyReader['body'], 'name="action" value="open_confirmed"') || str_contains($readyReader['body'], 'Открыть работы</button>'), 'restricted opening command absent');
     $check(1, substr_count($readyReader['body'], 'class="fm2-next-action"'), 'restricted opening one block');
 
-    $metadata=array_replace($fixture->metadata($manager,'22222222-2222-4222-8222-000000000002'),['mode'=>'correction','documentDate'=>'2026-09-02','rootOriginalId'=>$legacyOriginal->rootOriginalId(),'targetRevisionId'=>$legacyOriginal->currentRevisionId(),'expectedCurrentRevisionId'=>$legacyOriginal->currentRevisionId(),'correctionReason'=>'Дата приложения подтверждена']);
-    $check(201,$fixture->upload($manager,$metadata)['status'],'correction with signed date opens legacy original');
+    $legacyRequest=(string)$fixture->rows('fm2_assignment_order_original_revisions')[0]['request_id'];$fixture->insert($fixture->p.'fm2_assignment_order_original_starts',['request_id'=>$legacyRequest,'installation_case_id'=>6101,'object_id'=>4512,'assignment_order_id'=>81,'actor_user_id'=>18,'mode'=>'initial','document_date'=>'2026-09-01','appendix_start_date'=>'2026-09-02','external_document_number'=>'FIXTURE-1C-DO','pdf_sha256'=>str_repeat('a',64),'byte_size'=>327,'semantic_fingerprint'=>str_repeat('b',64),'created_at_utc'=>'2026-09-01 09:00:00.000000']);
+    $metadata=array_replace($fixture->metadata($manager,'22222222-2222-4222-8222-000000000002'),['mode'=>'correction','appendixStartDate'=>'2026-09-02','externalDocumentNumber'=>'FIXTURE-1C-DO','rootOriginalId'=>$legacyOriginal->rootOriginalId(),'targetRevisionId'=>$legacyOriginal->currentRevisionId(),'expectedCurrentRevisionId'=>$legacyOriginal->currentRevisionId(),'correctionReason'=>'Заменён ошибочный скан']);
+    $check(201,$fixture->upload($manager,$metadata,FMonitor2\Tests\Support\OriginalStartFixture::otherPdf())['status'],'correction preserves signed metadata and uses distinct scan bytes');
     $check(303, $fixture->selection($manager, '44444444-4444-4444-8444-000000000001', [7002], 'new_order', 1)['status'], 'prepare later order while work is open');
     $duringBefore = $fixture->facts();
     $duringWork = $fixture->request('GET', '/pilot/objects/4512', [], $manager);
     $check(200, $duringWork['status'], 'opened card with pending replacement');
-    foreach (['Действующая бригада', 'Монтажник 7001', 'Ожидающий состав', 'Монтажник 7002'] as $text) {
+    foreach (['Действующая бригада', 'Монтажник 7001', 'Распоряжение ФН82 без оригинала', 'Монтажник 7002'] as $text) {
         $check(true, str_contains($duringWork['body'], $text), 'applied and pending are separate ' . $text);
     }
     $check(true, str_contains($duringWork['body'], '/assignment-orders/82/originals/submit'), 'later pending order upload href');

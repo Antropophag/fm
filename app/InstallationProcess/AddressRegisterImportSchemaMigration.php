@@ -46,7 +46,7 @@ final class AddressRegisterImportSchemaMigration
         foreach(self::DDL as $name=>$ddl){$table=$prefix.$name;if(self::exists($db,$table))continue;$args=$name==='fm2_address_import_payload_chunks'?[$table,'fk_ari_'.substr(hash('sha256',$table),0,24),$prefix.'fm2_address_import_packages']:(substr_count($ddl,'%s')===2?[$table,$prefix.'fm2_address_import_packages']:[$table]);$db->query(vsprintf($ddl,$args));$created[]=$name;}
         $db->query("INSERT IGNORE INTO `{$prefix}fm2_address_import_ids`(allocation_id,object_id) SELECT id,id FROM `{$prefix}fm_maintable`");
         self::assertCompatible($db,$prefix);
-        return ['applied'=>$created!==[],'schemaVersion'=>42,'tablesCreated'=>$created];
+        return ['applied'=>$created!==[],'schemaVersion'=>44,'tablesCreated'=>$created];
     }
     public static function assertCompatible(\mysqli $db,string $prefix):void{self::validPrefix($prefix);foreach(array_keys(self::DDL)as$name)self::assertTable($db,$prefix,$name);}
     private static function assertTable(\mysqli$db,string$prefix,string$name):void

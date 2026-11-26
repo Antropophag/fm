@@ -15,7 +15,7 @@ export const enhanceDatePickers = (root = document) => {
     const host = document.createElement('div');
     host.className = 'fm2-date-picker';
     (field || nativeDate).before(host);
-    new DatePickerController(host, {
+    const picker = new DatePickerController(host, {
       mode: 'single',
       label,
       calendarLabel: `Календарь: ${label}`,
@@ -29,6 +29,8 @@ export const enhanceDatePickers = (root = document) => {
       readOnly: nativeDate.readOnly,
       locale: 'ru-RU',
     });
+    const explicitForm = nativeDate.getAttribute('form');
+    if (explicitForm) { picker.field.formInput.setAttribute('form', explicitForm); picker.field.input.setAttribute('form', explicitForm); }
     nativeDate.dataset.nativeDateName = nativeDate.name;
     nativeDate.removeAttribute('name');
     nativeDate.disabled = true;

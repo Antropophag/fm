@@ -7,7 +7,7 @@ $f=null;
 try {
     $f=new PaymentHoldFixture();$s=$f->owner;
     assertSameValue(true,method_exists($s,'holdObjectPayments'),'INTENDED_RED: object hold public owner');
-    foreach([1,2]as$run){$m=\FMonitor2\InstallationProcess\CanonicalMigrationApplication::run($f->base->db,$f->p,\FMonitor2\InstallationProcess\ProductionPilotMigrationCatalogue::migrations());assertSameValue([0,42],[$m['exitCode'],$m['result']['schemaVersion']??null],'canonical payment-control schema/repeat');}
+    foreach([1,2]as$run){$m=\FMonitor2\InstallationProcess\CanonicalMigrationApplication::run($f->base->db,$f->p,\FMonitor2\InstallationProcess\ProductionPilotMigrationCatalogue::migrations());assertSameValue([0,44],[$m['exitCode'],$m['result']['schemaVersion']??null],'canonical payment-control schema/repeat');}
     foreach(['fm2_otiz_object_payment_hold_events','fm2_otiz_payment_allocations']as$table){$ddl=$f->db->createCommand('SHOW CREATE TABLE '.$f->p.$table)->queryOne();assertSameValue(true,str_contains(implode(' ',$ddl),'CHECK'),'schema protects monetary/hold domain values');}
     $a=$f->accepted();$id=$a['calculationId'];$rev=$a['revision'];
     $saved=$f->db->createCommand('SELECT projection_json FROM '.$f->p.'fm2_otiz_calculation_revisions WHERE id=:id',[':id'=>$id])->queryScalar();

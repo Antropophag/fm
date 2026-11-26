@@ -19,11 +19,38 @@ $instant = static function (string $value): string {
 $size = static fn(int $bytes): string => $bytes < 1024 ? $bytes . ' Б' : number_format($bytes / 1024, $bytes < 10240 ? 1 : 0, ',', ' ') . ' КиБ';
 ViewSupport::begin($this, 'История оригинала', $identity);
 ?>
-<nav class="fm2-breadcrumb" aria-label="Хлебные крошки"><a class="fm2-breadcrumb-link" href="/pilot/objects">Объекты монтажа</a><span aria-hidden="true">/</span><a class="fm2-breadcrumb-link" href="/pilot/objects/<?= $objectId ?>"><?= Html::encode($registrationNumber !== '' ? $registrationNumber : 'Регистрационный номер не указан') ?> · <?= Html::encode($address) ?><?= $entrance !== '' ? ' · Подъезд ' . Html::encode($entrance) : '' ?> · <?= Html::encode($factoryNumber !== '' ? 'Заводской номер: ' . $factoryNumber : 'Заводской номер не указан') ?></a><span aria-hidden="true">/</span><span aria-current="page">История оригинала</span></nav>
-<div class="fm2-page-header fm2-order-heading"><div><h1>История оригинала</h1><p>Распоряжение · версия <?= (int) $history['orderVersion'] ?>. Все принятые редакции сохранены.</p></div><span class="fm2-result-count"><?= (int) $history['totalRevisions'] ?> редакций</span></div>
-<section class="fm2-order-surface"><header><div class="fm2-order-object"><strong><?= Html::encode($registrationNumber !== '' ? $registrationNumber : 'Регистрационный номер не указан') ?></strong><span><?= Html::encode($address) ?><?= $entrance !== '' ? ' · Подъезд ' . Html::encode($entrance) : '' ?></span><small><?= Html::encode($factoryNumber !== '' ? 'Заводской номер: ' . $factoryNumber : 'Заводской номер не указан') ?></small><small>Распоряжение № <?= $orderId ?> · текущий контекст объекта</small></div></header><div class="shlz-document-list fm2-order-documents">
-    <?php foreach ($history['revisions'] as $revision): $current = $revision['revisionId'] === $history['currentRevisionId']; ?>
-        <article class="shlz-document-row"><div><a class="shlz-link" href="<?= $base ?>/<?= Html::encode($revision['revisionId']) ?>/download">Подписанный оригинал.pdf</a><strong>Редакция <?= (int) $revision['revisionNumber'] ?><?= $current ? ' · текущая' : '' ?></strong><p>Дата распоряжения: <time datetime="<?= Html::encode($revision['documentDate']) ?>"><?= Html::encode((new DateTimeImmutable($revision['documentDate']))->format('d.m.Y')) ?></time></p><p>Дата начала работ по распоряжению: <?php if (is_string($revision['appendixStartDate']) && $revision['appendixStartDate'] !== ''): ?><time datetime="<?= Html::encode($revision['appendixStartDate']) ?>"><?= Html::encode((new DateTimeImmutable($revision['appendixStartDate']))->format('d.m.Y')) ?></time><?php else: ?>Не зафиксирована<?php endif ?></p><?php if ($revision['correctionReason']): ?><p>Причина исправления: <?= Html::encode($revision['correctionReason']) ?></p><?php endif ?></div><small>Принял: <?= Html::encode($revision['actorName'] ?? ('пользователь ID ' . $revision['actorUserId'])) ?><br><time datetime="<?= Html::encode($revision['uploadedAt']) ?>"><?= $instant($revision['uploadedAt']) ?></time> МСК<br><?= Html::encode($size((int) $revision['byteSize'])) ?></small></article>
-    <?php endforeach ?>
-</div><footer class="fm2-order-actions"><a class="shlz-link" href="/pilot/objects/<?= $objectId ?>">К карточке объекта</a><a class="shlz-link" href="<?= $base ?>/submit">К форме оригинала</a></footer></section>
+<nav class="fm2-breadcrumb" aria-label="Хлебные крошки">
+    <a class="fm2-breadcrumb-link" href="/pilot/objects">Объекты</a><span aria-hidden="true">/</span>
+    <a class="fm2-breadcrumb-link" href="/pilot/objects/<?= $objectId ?>"><?= Html::encode($registrationNumber !== '' ? $registrationNumber : 'Регномер не указан') ?></a><span aria-hidden="true">/</span>
+    <span aria-current="page">История оригинала</span>
+</nav>
+<div class="fm2-original-history">
+    <header class="fm2-original-history__header">
+        <div><h1>История оригинала ФН<?= $orderId ?></h1><p>Версия распоряжения <?= (int) $history['orderVersion'] ?> · Редакций: <?= (int) $history['totalRevisions'] ?></p></div>
+        <div class="fm2-original-history__context"><strong><?= Html::encode($address !== '' ? $address : 'Адрес не указан') ?><?= $entrance !== '' ? ' · подъезд ' . Html::encode($entrance) : '' ?></strong><span><?= Html::encode($registrationNumber !== '' ? $registrationNumber : 'Регномер не указан') ?> · <?= Html::encode($factoryNumber !== '' ? 'заводской № ' . $factoryNumber : 'заводской номер не указан') ?></span></div>
+    </header>
+
+    <section class="fm2-original-history__sheet" aria-label="Редакции подписанного оригинала">
+        <?php foreach ($history['revisions'] as $revision): $current = $revision['revisionId'] === $history['currentRevisionId']; ?>
+            <article class="fm2-original-history__revision">
+                <header>
+                    <div class="fm2-original-history__revision-heading"><h2>Редакция <?= (int) $revision['revisionNumber'] ?><?= $current ? ' · текущая' : '' ?></h2></div>
+                    <div class="shlz-file-row fm2-original-history__file">
+                        <span class="shlz-file-row__visual" aria-hidden="true"><img src="/pilot/assets/shlz-file-types/file-pdf-default.svg" alt=""></span>
+                        <span class="shlz-file-row__content"><a class="shlz-file-row__primary" href="<?= $base ?>/<?= Html::encode($revision['revisionId']) ?>/download" title="Подписанный оригинал.pdf">Подписанный оригинал.pdf</a><span class="shlz-file-row__meta">PDF · <?= Html::encode($size((int) $revision['byteSize'])) ?></span></span>
+                        <span class="shlz-file-row__actions"><a class="shlz-file-row__action" href="<?= $base ?>/<?= Html::encode($revision['revisionId']) ?>/download" aria-label="Скачать подписанный оригинал, редакция <?= (int) $revision['revisionNumber'] ?>"><img src="/pilot/assets/shlz-icons/download.svg" alt=""></a></span>
+                    </div>
+                </header>
+                <dl class="fm2-original-history__facts">
+                    <div><dt>Номер в 1С ДО</dt><dd><?= Html::encode((string) ($revision['externalDocumentNumber'] ?? 'Не указан')) ?></dd></div>
+                    <div><dt>Дата распоряжения</dt><dd><time datetime="<?= Html::encode($revision['documentDate']) ?>"><?= Html::encode((new DateTimeImmutable($revision['documentDate']))->format('d.m.Y')) ?></time></dd></div>
+                    <div><dt>Дата начала работ</dt><dd><?php if (is_string($revision['appendixStartDate']) && $revision['appendixStartDate'] !== ''): ?><time datetime="<?= Html::encode($revision['appendixStartDate']) ?>"><?= Html::encode((new DateTimeImmutable($revision['appendixStartDate']))->format('d.m.Y')) ?></time><?php else: ?>Не зафиксирована<?php endif ?></dd></div>
+                </dl>
+                <?php if ($revision['correctionReason']): ?><p class="fm2-original-history__reason"><strong>Причина замены скана</strong><span><?= Html::encode($revision['correctionReason']) ?></span></p><?php endif ?>
+                <footer><span>Загрузил: <?= Html::encode((string) ($revision['actorName'] ?? 'Пользователь недоступен')) ?></span><span><time datetime="<?= Html::encode($revision['uploadedAt']) ?>"><?= $instant($revision['uploadedAt']) ?></time> МСК</span></footer>
+            </article>
+        <?php endforeach ?>
+    </section>
+    <footer class="fm2-original-history__actions"><a class="shlz-link" href="/pilot/objects/<?= $objectId ?>">К объекту</a><a class="shlz-link" href="<?= $base ?>/submit">Заменить скан</a><a class="shlz-link" href="/pilot/objects/<?= $objectId ?>/assignment-order/selection">Новое распоряжение</a></footer>
+</div>
 <?php ViewSupport::end($this);
