@@ -1,0 +1,24 @@
+{
+  "change": "address-register-import-input-boundary-delta",
+  "planned_paths": [
+    "app/InstallationProcess/AddressRegisterImportApplication.php",
+    "app/InstallationProcess/AddressRegisterEvidenceReader.php",
+    "tests/InstallationProcess/address_register_import_reports_001_test.php",
+    "specs/ADDRESS-REGISTER-IMPORT-001.md",
+    "bin/fmonitor2-address-register.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A01-local-source,A10-strict-json,A09-complete-unknown-report",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "ProductionAddressRegisterImportFactory estimate and real CLI import-evidence/unknown COMMIT output",
+      "tests": [
+        "tests/InstallationProcess/address_register_import_reports_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/address_register_import_reports_001_test.php": "INTENDED_RED"
+      }
+    }
+  ]
+}

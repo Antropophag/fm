@@ -1,0 +1,22 @@
+{
+  "change": "address-register-import-yii-image-dependency-correction",
+  "planned_paths": [
+    "deploy/yii2/Dockerfile",
+    "tests/Yii2/yii2_preopening_package_001_test.py",
+    "specs/ADDRESS-REGISTER-IMPORT-001.md"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A11-yii-image-runtime-dependencies",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "standalone Yii production image composer platform requirements and native PDF runtime",
+      "tests": [
+        "tests/Yii2/yii2_preopening_package_001_test.py"
+      ],
+      "gate3_expected": {
+        "tests/Yii2/yii2_preopening_package_001_test.py": "INTENDED_RED"
+      }
+    }
+  ]
+}

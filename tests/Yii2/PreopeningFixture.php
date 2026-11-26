@@ -53,7 +53,7 @@ final class PreopeningFixture
         }
         // Complete credentials before the current frontier validates active identities.
         $current=FMonitor2\InstallationProcess\CanonicalMigrationApplication::run($this->db,$this->p,FMonitor2\InstallationProcess\ProductionPilotMigrationCatalogue::migrations());
-        assertSameValue([0,43],[$current['exitCode'],$current['result']['schemaVersion']??null],'canonical current preopening fixture');
+        assertSameValue([0,44],[$current['exitCode'],$current['result']['schemaVersion']??null],'canonical current preopening fixture');
         $permissions=[1=>['objects.read','assignment_order.prepare','assignment_order.original.read','installation.open','assignment_order.composition.apply'],2=>['objects.read','assignment_order.original.read'],4=>['objects.read','access.administer'],5=>['objects.read'],6=>['objects.read','assignment_order.original.read','otiz.manage'],7=>['objects.read','assignment_order.prepare','assignment_order.composition.select','assignment_order.original.read','assignment_order.original.upload','assignment_order.original.correct','installation.open']];
         foreach($permissions as$role=>$caps)foreach($caps as$cap)$this->insert($p.'fm2_pilot_role_permissions',['role_id'=>$role,'permission'=>$cap]);
         $payload=json_encode(['schemaVersion'=>'technical-object-detail-v1','objectId'=>4512,'fields'=>['floors'=>['raw'=>'9','display'=>'9'],'weight'=>['raw'=>'630','display'=>'630']]],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);

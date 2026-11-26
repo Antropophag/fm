@@ -1,0 +1,39 @@
+# ADDRESS-REGISTER-IMPORT-001 — independent corrective Gate 3 review v7
+
+- Date: `2026-11-19`
+- Reviewer: separately assigned `/root/import_test_delta_review` (`gpt-5.6-sol / low`)
+- Independence: reviewer authored none of the revised specification, OpenSpec artifacts, tests, fixtures, production implementation, or RED/GREEN evidence
+- Actual corrective test/spec author: root; production remains the separately authored source reviewed in final review v1
+- Prepared package: `/Users/antropophag/.local/share/fmonitor-2/delivery-harness/packages/20261119T180023Z-d96684e456/package.json`
+- Candidate source: `324fdf6087ab544d886b33290ffb7e707149e8f31ee9a8495bc21f07365883d5`
+- Executable source: `8fc0a55b011660a47f4b5fa33564f5f307e8d7bd86957157c4fcc7cd7202d249`
+- Snapshot: base `08ca8b18c2ce6678af9d6c3eb6e44edf5860ba56`, patch `/Users/antropophag/.local/share/fmonitor-2/delivery-harness/packages/20261119T180023Z-d96684e456/snapshot/source.patch`, SHA-256 `ffe31754929878fea6571d049d9551bb65a6a4c50ade66dc9c85dc8b2cc4da42`
+- Previous production source: `7693964344219e51744be1723f128ac9d200416072082189b8ea599c9775d31f`
+- Previous review: `reviews/code/ADDRESS-REGISTER-IMPORT-001-v1.md` — `CHANGES_REQUESTED`
+- Verdict: **CHANGES_REQUESTED**
+
+## Findings
+
+1. **BLOCKING — the advertised valid 19,994-row boundary fixture violates the existing identity contract.** In `tests/Runtime/address_register_import_restore_001_test.php:43-44`, `writeBoundary(19994, '1')` assigns every row the same `unom='70001'` and `entrance='1'`, while varying only registration number. A04 and the already approved identity tests require duplicate/contradictory source locations to be rejected; the current public prevalidation explicitly treats duplicate `unom|entrance` as `IDENTITY_CONFLICT`. The test nevertheless expects `ready`, 19,994 objects, and 639,808 report rows. A compliant implementation cannot satisfy both expectations, so this case would pressure the executor to weaken identity protection or special-case the capacity test. **Correction:** generate 19,994 distinct valid source identities, for example unique UNOM values with one shared address/house response so the scenario still proves offline cached capacity without 19,994 provider calls. Keep row 20,001 on a genuinely uncached address and retain the before-provider assertion. Re-run the reconstructed RED and verify the failure is the missing streaming/chunk behavior rather than identity validation or fixture setup.
+
+2. **BLOCKING — the new sensitive persistence family lacks independent schema expectations.** `specs/ADDRESS-REGISTER-IMPORT-001.md:111` requires `fm2_address_import_payload_chunks` to have exact columns, a four-column primary key, package foreign key with `RESTRICT`, JSON/checksum/size validation, no AUTO_INCREMENT, bounded payloads, and fail-closed readiness. `tests/InstallationProcess/address_register_import_schema_001_test.php:12` only checks that the table exists and appears in recovery inventory. The existing drift probes cover package budget type, object uniqueness, operation foreign key, and engine; they never inspect or corrupt the new table. An implementation with nullable/wrong types, missing key parts, `CASCADE`, no JSON/size/checksum protection, or an extra AUTO_INCREMENT could pass the submitted test. This is a schema/data-durability change and the contract itself requires independent literal expectations. **Correction:** add independent assertions for the complete payload table column/type/null/default tuple, ordered primary/secondary keys, package FK target and `ON UPDATE/DELETE RESTRICT`, engine/collation, JSON and hard-size/checksum constraints, and absence of AUTO_INCREMENT; add semantic-drift cases proving both `apply` and `assertCompatible` reject incompatible pre-existing payload tables without DDL repair or creation of missing siblings. Update the 113-table/60-AUTO_INCREMENT frontier consumers from these independent expectations and retain the real backup/restore case.
+
+No other blocking or non-blocking findings.
+
+## Prior final-review findings and corrective coverage
+
+- **F1, CLI unknown commit exit:** test coverage is suitable. `tests/InstallationProcess/address_register_import_reports_001_test.php` drives the unchanged real CLI/factory/application/store through a test-only MySQL wire proxy. The proxy forwards the real `COMMIT`, consumes a successful server ACK, closes before forwarding it, records exactly one commit, and exposes the current `69` versus required `75` failure. A fresh process then replays the same operation and checks zero duplicate facts. No production fault hook, canned outcome, environment bypass, or alternate store is introduced.
+- **F2, capacity/memory/packet failure:** the 2,668-row/667-address scenario is suitable. It fixes the production PHP limit at 256 MiB and MariaDB packet at 16 MiB, requires 85,376 complete field rows, 667 first-preview fake calls, atomic apply, streamed CSV/full JSON, backup/restore row hashes, report and replay without the input file, and cached repeat with zero calls. The separate 512 MiB child only validates an already written JSON artifact and does not raise application limits. The upper-bound fixture remains blocked by finding 1.
+- **R1, rollback report counters:** coverage is suitable. The late audit fault still proves all business and preparation payload facts roll back, and now independently requires actual published created/updated/filled/replaced counters to be zero rather than retaining preview mutation counts.
+
+## Contract and design review
+
+The capacity correction keeps the observable import capability while replacing the failed eager representation. The unpublished v40 frontier moves coherently to seven families and 113 tables/60 AUTO_INCREMENT. Immutable chunk generations, compact published pointers, `RESTRICT` history, bounded SQL payloads, streaming workbook scan/hash/JSON/CSV/evidence, chunk-independent preview hash framing, and atomic applied-generation publication address both final-review capacity failures without raising memory or packet limits. Complete external JSON remains ordinary arrays; internal nested values may be immutable repeatable iterable/countable/array-access sequences. `SKIPPED_EMPTY` makes all 32 B:AG fields observable without changing mutation counters or clearing values.
+
+The design preserves authorization, target/principal checks, paid-call ordering, append-only history, operation replay, report semantics, and backup/restore. It correctly rejects truncation, aggregation, history deletion, incomplete generation publication, and production-only fault hooks. The new internal seams are included in the verification input and ADR 0005 records the ownership consequence. Subject to the two test findings, the corrective scope is coherent and does not defer a requirement.
+
+## Verification evidence
+
+The snapshot was restored and its patch digest checked. `git diff --check` passed. PHP syntax and supplied file hashes pass for the four changed intended-RED tests and the commit proxy. The package binds all ten mapped commands to exact source `324fdf6087ab544d886b33290ffb7e707149e8f31ee9a8495bc21f07365883d5`: six preserved tests are `GREEN`; concurrency is `INTENDED_RED` on nonzero failed-apply counters; schema is `INTENDED_RED` on the absent payload table; reports is `INTENDED_RED` on real CLI exit `69` versus `75`; runtime restore is `INTENDED_RED` at the absent payload inventory. These are truthful retrospective corrections against unchanged production source, but the early schema/runtime failures do not validate the unexecuted downstream schema and upper-bound expectations.
+
+No full local suite, live provider call, source import, deployment, or commit was performed. Gate 3 remains **CHANGES_REQUESTED** until both findings are corrected and the complete candidate receives a new independent verdict.

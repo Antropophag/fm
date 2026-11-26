@@ -23,9 +23,9 @@ $tests = [
     assertSameValue(null,$new['external_document_number'],'historical number stays unknown');
     assertSameValue(true,Start::isCompleteCompatible($db,$p),'v39 accepts valid additive42');
     $result=Runner::run($db,$p,Catalogue::migrations());
-    assertSameValue([0,43],[$result['exitCode'],$result['result']['schemaVersion']??null],'canonical upgrade reaches43');
+    assertSameValue([0,44],[$result['exitCode'],$result['result']['schemaVersion']??null],'canonical upgrade reaches44');
     $before=$f->allState();$again=Runner::run($db,$p,Catalogue::migrations());
-    assertSameValue([0,43,[]],[$again['exitCode'],$again['result']['schemaVersion']??null,$again['result']['appliedVersions']??null],'43 replay');
+    assertSameValue([0,44,[]],[$again['exitCode'],$again['result']['schemaVersion']??null,$again['result']['appliedVersions']??null],'current44 replay');
     assertSameValue($before,$f->allState(),'replay changes no facts or schema');
  },
  'deep readiness requires external number' => static function(Database $f): void {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/app/YiiRuntime/Commands/SchemaMigrateController.php';
 require_once dirname(__DIR__, 2) . '/app/YiiRuntime/Commands/LocalRuntimeController.php';
 require_once dirname(__DIR__, 2) . '/app/YiiRuntime/Commands/CaseImportController.php';
+require_once dirname(__DIR__, 2) . '/app/YiiRuntime/Commands/AddressRegisterController.php';
 require_once dirname(__DIR__, 2) . '/app/YiiRuntime/Commands/LegacyImportController.php';
 require_once dirname(__DIR__, 2) . '/app/YiiRuntime/Commands/WorkforceSyncController.php';
 require_once dirname(__DIR__, 2) . '/app/YiiRuntime/Commands/BitrixOrderDocumentLinksSyncController.php';
@@ -22,6 +23,7 @@ return yii\helpers\ArrayHelper::merge(require __DIR__ . '/common.php', [
         'schema-migrate' => FMonitor2\YiiRuntime\Commands\SchemaMigrationCommand::class,
         'local-runtime' => FMonitor2\YiiRuntime\Commands\LocalRuntimeController::class,
         'case-import' => FMonitor2\YiiRuntime\Commands\CaseImportCommand::class,
+        'address-register' => FMonitor2\YiiRuntime\Commands\AddressRegisterController::class,
         'legacy-import' => FMonitor2\YiiRuntime\Commands\LegacyImportController::class,
         'workforce-sync' => FMonitor2\YiiRuntime\Commands\WorkforceSyncController::class,
         'bitrix-order-document-links-sync' => FMonitor2\YiiRuntime\Commands\BitrixOrderDocumentLinksSyncController::class,

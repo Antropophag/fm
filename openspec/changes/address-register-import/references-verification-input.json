@@ -1,0 +1,23 @@
+{
+  "change": "address-register-import-reference-normalization-delta",
+  "planned_paths": [
+    "app/InstallationProcess/ObjectDetailsReferenceCatalogue.php",
+    "app/InstallationProcess/AddressRegisterImportApplication.php",
+    "tests/InstallationProcess/address_register_import_integration_001_test.php",
+    "specs/ADDRESS-REGISTER-IMPORT-001.md"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A02-A06-reference-normalization",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "parser and ProductionAddressRegisterImportFactory preview/apply/report with existing reference catalogue",
+      "tests": [
+        "tests/InstallationProcess/address_register_import_integration_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/address_register_import_integration_001_test.php": "INTENDED_RED"
+      }
+    }
+  ]
+}

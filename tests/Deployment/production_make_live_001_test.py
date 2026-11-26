@@ -197,7 +197,7 @@ test "$(cat /tmp/project/vendor/retained-sentinel)" = sentinel
         assert backup.is_dir(),'explicit backup destination must be published'
         manifests=list(backup.rglob('manifest.json'))
         canonical=[json.loads(m.read_text()) for m in manifests if json.loads(m.read_text()).get('formatVersion')=='fmonitor-runtime-backup-v1']
-        assert len(canonical)==1 and canonical[0]['database']['schemaVersion']==43
+        assert len(canonical)==1 and canonical[0]['database']['schemaVersion']==44
         assert canonical[0]['deferred']==[]
         make('start',cfg,timeout=300)
         # Restore collision cannot overwrite this source.

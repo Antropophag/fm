@@ -849,7 +849,8 @@
         "app/InstallationProcess/MariaDbObjectDetailsEditPermissionProvisioning.php",
         "app/InstallationProcess/MariaDbObjectDetailsEditStore.php",
         "app/InstallationProcess/MariaDbObjectDetailsEdits.php",
-        "app/InstallationProcess/ProductionObjectDetailsEditFactory.php"
+        "app/InstallationProcess/ProductionObjectDetailsEditFactory.php",
+        "app/InstallationProcess/MariaDbObjectDetailsMutation.php"
       ],
       "verifiers": [
         "tests/InstallationProcess/object_details_editing_mariadb_001_test.php",
@@ -1090,6 +1091,39 @@
         "tests/Yii2/yii2_otiz_decisions_001_test.php"
       ],
       "consumers": []
+    },
+    {
+      "name": "address-register-import",
+      "patterns": [
+        "app/InstallationProcess/AddressRegister*.php",
+        "app/InstallationProcess/ProductionAddressRegisterImportFactory.php",
+        "app/YiiRuntime/Commands/AddressRegisterController.php",
+        "app/YiiRuntime/AddressRegisterImportConsole.php",
+        "bin/fmonitor2-address-register.php",
+        "app/InstallationProcess/MariaDbAddressRegisterImport*.php",
+        "app/RuntimeRestore/RuntimeRecoverySchemaV44.php"
+      ],
+      "verifiers": [
+        "tests/InstallationProcess/address_register_import_cli_001_test.php",
+        "tests/InstallationProcess/address_register_import_parser_001_test.php",
+        "tests/InstallationProcess/address_register_import_provider_001_test.php",
+        "tests/InstallationProcess/address_register_import_integration_001_test.php",
+        "tests/InstallationProcess/pilot_case_import_001_test.php",
+        "tests/InstallationProcess/object_details_editing_mariadb_001_test.php",
+        "tests/InstallationProcess/address_register_import_concurrency_001_test.php",
+        "tests/InstallationProcess/address_register_import_schema_001_test.php",
+        "tests/InstallationProcess/address_register_import_economy_001_test.php",
+        "tests/InstallationProcess/address_register_import_manual_001_test.php",
+        "tests/InstallationProcess/address_register_import_reports_001_test.php",
+        "tests/Runtime/address_register_import_restore_001_test.php",
+        "tests/InstallationProcess/address_register_import_identity_001_test.php"
+      ],
+      "consumers": [
+        "canonical-migration-frontier",
+        "object-details-editing",
+        "yii-object-read-presentation",
+        "address-register"
+      ]
     }
   ],
   "full_argv": [

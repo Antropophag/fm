@@ -51,6 +51,7 @@ final class ProductionPilotMigrationCatalogue
             41=>OtizPaymentControlSchemaMigration::class,
             42=>AssignmentOrderOriginalExternalNumberSchemaMigration::class,
             43=>EquipmentReclamationSchemaMigration::class,
+            44=>AddressRegisterImportSchemaMigration::class,
         ];
     }
 }

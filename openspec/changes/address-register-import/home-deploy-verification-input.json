@@ -1,0 +1,40 @@
+{
+  "change": "address-register-import-home44",
+  "planned_paths": [
+    "app/InstallationProcess/AddressRegisterImportSchemaMigration.php",
+    "app/InstallationProcess/ProductionPilotMigrationCatalogue.php",
+    "app/RuntimeRestore/RuntimeRecovery.php",
+    "app/RuntimeRestore/RuntimeRecoverySchemaV42.php",
+    "app/RuntimeRestore/RuntimeRecoverySchemaV44.php",
+    "app/Runtime/MariaDbRuntimeReadiness.php",
+    ".quality-graph/verification-policy.json",
+    "specs/ADDRESS-REGISTER-IMPORT-001.md",
+    "tests/Support/AddressRegisterPredecessorFixture.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A15-schema44",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "public canonical migration43→44 and full backup/restore with populated predecessors",
+      "tests": [
+        "tests/InstallationProcess/address_register_import_schema_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/address_register_import_schema_001_test.php": "INTENDED_RED"
+      }
+    },
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A15-restore44",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "public canonical migration43→44 and full backup/restore with populated predecessors",
+      "tests": [
+        "tests/Runtime/address_register_import_restore_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Runtime/address_register_import_restore_001_test.php": "INTENDED_RED"
+      }
+    }
+  ]
+}

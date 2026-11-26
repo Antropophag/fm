@@ -1,0 +1,178 @@
+{
+  "change": "address-register-import",
+  "planned_paths": [
+    "app/InstallationProcess/AddressRegisterImportApplication.php",
+    "app/InstallationProcess/ProductionAddressRegisterImportFactory.php",
+    "app/InstallationProcess/AddressRegisterImportSchemaMigration.php",
+    "app/InstallationProcess/ProductionPilotMigrationCatalogue.php",
+    "app/InstallationProcess/MariaDbEffectiveObjectDetails.php",
+    "app/InstallationProcess/MariaDbObjectDetailsEditStore.php",
+    "app/InstallationProcess/MariaDbYiiObjectQueue.php",
+    "app/YiiRuntime/Commands/AddressRegisterController.php",
+    "bin/fmonitor2-address-register.php",
+    "config/yii/console.php",
+    "deploy/runtime/Dockerfile",
+    "specs/ADDRESS-REGISTER-IMPORT-001.md",
+    ".quality-graph/verification-policy.json",
+    "tools/verification/suites.tsv",
+    "app/RuntimeRestore/RuntimeRecoverySchemaV40.php",
+    "app/RuntimeRestore/RuntimeRecovery.php",
+    "app/InstallationProcess/MariaDbYiiObjectCard.php",
+    "tests/Support/CurrentProductionSchemaContract.php",
+    "tools/delivery/Dockerfile.runtime.in",
+    "app/InstallationProcess/MariaDbAddressRegisterImportStore.php",
+    "app/InstallationProcess/MariaDbObjectDetailsMutation.php",
+    "app/InstallationProcess/ObjectDetailsFieldRegistry.php",
+    "app/InstallationProcess/ObjectDetailsReferenceCatalogue.php",
+    "app/InstallationProcess/AddressRegisterWorkbook.php",
+    "app/InstallationProcess/AddressRegisterAddressProvider.php",
+    "app/InstallationProcess/AddressRegisterAddressValidation.php",
+    "app/InstallationProcess/AddressRegisterDadataProvider.php",
+    "app/InstallationProcess/AddressRegisterProviderFailure.php",
+    "composer.json",
+    "composer.lock",
+    "Dockerfile",
+    "tools/delivery/Dockerfile.pilot.in",
+    "tools/delivery/Dockerfile.test.in",
+    "tools/verification/Dockerfile.test",
+    "tools/architecture/baseline.json",
+    "docs/adr/0005-address-register-import-owner.md",
+    "docs/operations/current-delivery-goal.md",
+    "app/Runtime/MariaDbRuntimeReadiness.php",
+    "bin/fmonitor2-yii.php",
+    "deploy/dependencies/direct-dist-sha256.json",
+    "docs/operations/address-register-import.md",
+    "app/InstallationProcess/MariaDbAddressRegisterImportPrincipal.php",
+    "app/InstallationProcess/AddressRegisterPayloadSequence.php",
+    "app/InstallationProcess/AddressRegisterResultWriter.php",
+    "app/InstallationProcess/AddressRegisterPreviewHasher.php",
+    "app/InstallationProcess/MariaDbAddressRegisterImportPayloads.php",
+    "app/InstallationProcess/AddressRegisterPayloadWriter.php",
+    "app/InstallationProcess/AddressRegisterEvidenceReader.php",
+    "app/InstallationProcess/AddressRegisterEvidenceSpool.php",
+    "app/InstallationProcess/AddressRegisterIdentityLookup.php",
+    "app/RuntimeRestore/RuntimeRecoverySchemaV42.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A01",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "CLI address-register and ProductionAddressRegisterImportFactory public application",
+      "tests": [
+        "tests/InstallationProcess/address_register_import_cli_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/address_register_import_cli_001_test.php": "GREEN"
+      }
+    },
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A02,A13-fields21",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "CLI address-register and ProductionAddressRegisterImportFactory public application",
+      "tests": [
+        "tests/InstallationProcess/address_register_import_parser_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/address_register_import_parser_001_test.php": "INTENDED_RED"
+      }
+    },
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A03",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "CLI address-register and ProductionAddressRegisterImportFactory public application",
+      "tests": [
+        "tests/InstallationProcess/address_register_import_provider_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/address_register_import_provider_001_test.php": "GREEN"
+      }
+    },
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A04,A05,A06,A07,A08,A09,A10,A11",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "CLI address-register and ProductionAddressRegisterImportFactory public application",
+      "tests": [
+        "tests/InstallationProcess/address_register_import_integration_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/address_register_import_integration_001_test.php": "GREEN"
+      }
+    },
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A08,A09-concurrency",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "CLI address-register and ProductionAddressRegisterImportFactory public application",
+      "tests": [
+        "tests/InstallationProcess/address_register_import_concurrency_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/address_register_import_concurrency_001_test.php": "GREEN"
+      }
+    },
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A11-schema,A14-main42",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "CLI address-register and ProductionAddressRegisterImportFactory public application",
+      "tests": [
+        "tests/InstallationProcess/address_register_import_schema_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/address_register_import_schema_001_test.php": "INTENDED_RED"
+      }
+    },
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A12-economy",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "CLI address-register and ProductionAddressRegisterImportFactory public application",
+      "tests": [
+        "tests/InstallationProcess/address_register_import_economy_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/address_register_import_economy_001_test.php": "GREEN"
+      }
+    },
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A10-reports,A13-fields21",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "CLI address-register and ProductionAddressRegisterImportFactory public application",
+      "tests": [
+        "tests/InstallationProcess/address_register_import_reports_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/address_register_import_reports_001_test.php": "INTENDED_RED"
+      }
+    },
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A11-restore,A12-capacity,A14-main42",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "CLI address-register and ProductionAddressRegisterImportFactory public application",
+      "tests": [
+        "tests/Runtime/address_register_import_restore_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Runtime/address_register_import_restore_001_test.php": "INTENDED_RED"
+      }
+    },
+    {
+      "spec_id": "ADDRESS-REGISTER-IMPORT-001",
+      "acceptance_id": "A04-identity",
+      "spec_path": "specs/ADDRESS-REGISTER-IMPORT-001.md",
+      "seam": "CLI address-register and ProductionAddressRegisterImportFactory public application",
+      "tests": [
+        "tests/InstallationProcess/address_register_import_identity_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/InstallationProcess/address_register_import_identity_001_test.php": "INTENDED_RED"
+      }
+    }
+  ]
+}
