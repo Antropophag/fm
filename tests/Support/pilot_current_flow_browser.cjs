@@ -137,19 +137,18 @@ async function verifyTemplateDownload(page, context) {
 async function uploadAndCorrect(page) {
   await page.getByRole('link', { name: 'Загрузить оригинал', exact: true }).click();
   await page.locator('input[name="original"]').setInputFiles(path.join(artifactRoot, 'original.pdf'));
-  await fillDate(page, 'documentDate', '2026-09-07');
+  await page.locator('input[name="externalDocumentNumber"]').fill('1C-DO-PRODUCTION-001');
   await fillDate(page, 'appendixStartDate', '2026-09-07');
-  await page.locator('input[name="compositionConfirmed"]').check();
   await page.getByRole('button', { name: 'Загрузить оригинал', exact: true }).click();
   await page.waitForURL('**/pilot/objects/4512');
   if (await page.getByText('Загрузите распоряжение', { exact: false }).count()) throw new Error('Accepted original hidden after return');
 
   await page.goto(`${base}/pilot/objects/4512/assignment-orders/81/originals/submit`);
-  await page.locator('input[name="original"]').setInputFiles(path.join(artifactRoot, 'original.pdf'));
-  await fillDate(page, 'documentDate', '2026-09-06');
-  await page.locator('input[name="correctionReason"]').fill('Синтетическое исправление даты');
-  await page.locator('input[name="compositionConfirmed"]').check();
-  await page.getByRole('button', { name: 'Исправить оригинал', exact: true }).click();
+  await page.locator('input[name="original"]').setInputFiles(path.join(artifactRoot, 'replacement.pdf'));
+  if (await page.locator('input[type="hidden"][name="appendixStartDate"]').inputValue() !== '2026-09-07') throw new Error('Replacement changed signed start');
+  if (await page.locator('input[type="hidden"][name="externalDocumentNumber"]').inputValue() !== '1C-DO-PRODUCTION-001') throw new Error('Replacement changed external number');
+  await page.locator('input[name="correctionReason"]').fill('Синтетическая замена ошибочного скана');
+  await page.getByRole('button', { name: 'Заменить скан', exact: true }).click();
   await page.waitForURL('**/pilot/objects/4512');
   if (await page.getByText('Применить состав', { exact: false }).count()) throw new Error('Separate apply UI returned');
 }
@@ -157,7 +156,7 @@ async function uploadAndCorrect(page) {
 async function verifyOriginalDownload(page, context) {
   const href = await page.locator('a[href*="/originals/"][href$="/download"]').first().getAttribute('href');
   if (!href) throw new Error('Current original download link missing');
-  const expected = fs.readFileSync(path.join(artifactRoot, 'original.pdf'));
+  const expected = fs.readFileSync(path.join(artifactRoot, 'replacement.pdf'));
   const get = await context.request.get(`${base}${href}`);
   const bytes = await get.body();
   const head = await context.request.head(`${base}${href}`);

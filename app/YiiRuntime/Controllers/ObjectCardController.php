@@ -11,6 +11,8 @@ use FMonitor2\InstallationProcess\ControlEngineerAssignmentCommand;
 use FMonitor2\IdentityAccess\MariaDbYiiLocalIdentityStore;
 use FMonitor2\InspectionEvidence\MariaDbYiiChecklist;
 use FMonitor2\DeadlineTransferCertificate\{DeadlineTransferCertificates, MariaDbDeadlineCertificatePageQuery};
+use FMonitor2\EquipmentReclamation\EquipmentReclamations;
+use FMonitor2\Otiz\{ContractualReplacementPeriod,ReclamationDeadline};
 use Yii;
 use yii\filters\VerbFilter;
 use yii\web\Response;
@@ -44,6 +46,7 @@ final class ObjectCardController extends PreopeningController
             $canAssignEngineer=$this->processCap('control_engineer.assign');
             $canOpen=$this->cap('installation.open');
             $canReadDeadlineCertificate=$this->cap('deadline_certificate.read');
+            $canWriteReclamation=$this->cap('deadline_certificate.write');
             if(Yii::$app->request->getIsGet()||Yii::$app->request->getIsHead())ReadOnlySession::release();
             $card = InstallationProcessFactory::card(
                 Yii::$app->db,
@@ -61,6 +64,7 @@ final class ObjectCardController extends PreopeningController
             $completionQuery = new MariaDbYiiCompletionQuery(Yii::$app->db, (string) getenv('FMONITOR_PROCESS_TABLE_PREFIX'));
             $completion = $completionQuery->read($id);
             $deadlineCertificate = null;
+            $reclamations=null;$reclamationDeadline=null;
             if ($canReadDeadlineCertificate) {
                 $deadlineResources = new PreopeningResources(Yii::$app->db);
                 try {
@@ -82,6 +86,17 @@ final class ObjectCardController extends PreopeningController
                     } catch (\DomainException $error) {
                         if ($error->getMessage() === 'FORBIDDEN') throw $error;
                         throw new \RuntimeException('Deadline certificate evidence unavailable.', 0, $error);
+                    }
+                    try {
+                        $reclamationService=new EquipmentReclamations($deadlineResources->db,$deadlineResources->prefix,static fn():string=>gmdate('Y-m-d\TH:i:s\Z'));
+                        $reclamations=$reclamationService->read($actor,(int)$deadlineObject['caseId']);
+                        $normativeDeadline=null;
+                        if(is_string($card['actualStartDate']??null)&&is_string($card['plannedStartDate']??null)&&is_string($card['plannedFinishDate']??null))try{$norm=ContractualReplacementPeriod::fromContractDates($card['plannedStartDate'],$card['plannedFinishDate']);$normativeDeadline=ContractualReplacementPeriod::allowanceFinish($card['actualStartDate'],$norm);}catch(\Throwable){}
+                        $certificateEvidence=$deadlineService->currentEvidence((int)$deadlineObject['caseId']);
+                        if($normativeDeadline!==null||$certificateEvidence!==null)$reclamationDeadline=ReclamationDeadline::resolve($normativeDeadline,$certificateEvidence,$reclamations);
+                    } catch (\DomainException $error) {
+                        if ($error->getMessage() === 'FORBIDDEN') throw $error;
+                        throw new \RuntimeException('Reclamation deadline evidence unavailable.', 0, $error);
                     }
                 } finally {
                     $deadlineResources->close();
@@ -105,6 +120,7 @@ final class ObjectCardController extends PreopeningController
                 'completion' => $completion,
                 'canReadDeadlineCertificate' => $canReadDeadlineCertificate,
                 'deadlineCertificate' => $deadlineCertificate,
+                'reclamations'=>$reclamations,'reclamationDeadline'=>$reclamationDeadline,'canWriteReclamation'=>$canWriteReclamation,
                 'initialTab' => Yii::$app->request->get('tab') === 'team' ? 'team' : 'readiness',
                 // Completion capabilities are not yet in the canonical RBAC registry; grants() is the existing exact active-grant read seam.
                 'canRecordPto' => $card['completionWritable'] && $identityStore->grants($actor, 'installation.completion.pto.record'),

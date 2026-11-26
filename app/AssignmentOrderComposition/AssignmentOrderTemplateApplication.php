@@ -2,4 +2,4 @@
 declare(strict_types=1);
 namespace FMonitor2\AssignmentOrderComposition;
 interface AssignmentOrderTemplateApplication
-{ public function generateAssignmentOrderTemplate(int $caseId,int $orderId,int $actorId): array; }
+{ public function generateAssignmentOrderTemplate(int $caseId,int $orderId,int $actorId,?string $appendixStartDate=null): array; public function downloadLastAssignmentOrderTemplate(int $caseId,int $orderId,int $actorId):array; }

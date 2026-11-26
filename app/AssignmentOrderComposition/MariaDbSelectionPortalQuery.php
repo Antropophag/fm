@@ -40,12 +40,12 @@ final readonly class MariaDbSelectionPortalQuery implements AssignmentOrderSelec
                 $ids=$s->rows('SELECT DISTINCT u.user_id FROM '.$s->table('fm2_pilot_users').' u JOIN '.$s->table('fm2_pilot_user_roles').' ur ON ur.user_id=u.user_id JOIN '.$s->table('fm2_pilot_roles')." r ON r.role_id=ur.role_id WHERE u.status=1 AND BINARY u.activation_state='active' AND r.status=1 AND BINARY r.code='construction_control_engineer' ORDER BY u.user_id");
                 foreach($ids as $row){$e=$directory->findEngineerSnapshot(MariaDbSelectionSql::number($row['user_id']));if($e===null)throw new \RuntimeException();$engineers[]=$e;}
                 return ['status'=>'found','reasonCode'=>null,'caseId'=>$id,'objectId'=>$objectId,'object'=>$object,
-                    'selectionRevision'=>$latest?->selectionRevision??0,'latest'=>$summary,'installers'=>$installers,'engineers'=>$engineers,'lastTemplateDate'=>null];
+                    'selectionRevision'=>$latest?->selectionRevision??0,'latest'=>$summary,'installers'=>$installers,'engineers'=>$engineers,'lastTemplateDate'=>null,'lastTemplateAppendixStartDate'=>null,'lastTemplateAvailable'=>false];
             });
             if($result['status']==='found'){$assignment=(new I\MariaDbControlEngineerAssignmentReader($this->sql->db,$this->sql->prefix))->read($objectId);if($assignment['status']==='unavailable')throw new \RuntimeException();$result['currentAssignment']=$assignment;}
             if($result['status']==='found'&&$result['latest']!==null){
                 $date=ProductionAssignmentOrderTemplateFactory::dateReader($this->sql->db,$this->sql->prefix)->find($result['caseId'],$result['latest']['orderId']);
-                if($date['status']==='unavailable')throw new \RuntimeException();$result['lastTemplateDate']=$date['date'];
+                if($date['status']==='unavailable')throw new \RuntimeException();$result['lastTemplateDate']=$date['date'];$result['lastTemplateAppendixStartDate']=$date['appendixStartDate']??null;$result['lastTemplateAvailable']=(bool)($date['artifactAvailable']??false);
             }
             return $result;
         }catch(\Throwable){return ['status'=>'failed','reasonCode'=>'dependency_unavailable'];}

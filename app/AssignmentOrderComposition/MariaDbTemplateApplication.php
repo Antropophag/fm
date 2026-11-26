@@ -2,11 +2,11 @@
 declare(strict_types=1);
 namespace FMonitor2\AssignmentOrderComposition;
 
-/** One public owner for generation and its append-only audit; never stores PDF bytes. */
+/** One public owner for generation and its append-only event with persisted PDF bytes. */
 final readonly class MariaDbTemplateApplication implements AssignmentOrderTemplateApplication
 {
     public function __construct(private MariaDbSelectionSql $sql,private SelectionClock $clock,private \Closure $render) {}
-    public function generateAssignmentOrderTemplate(int $caseId,int $orderId,int $actorId):array
+    public function generateAssignmentOrderTemplate(int $caseId,int $orderId,int $actorId,?string $appendixStartDate=null):array
     {
         if(min($caseId,$orderId,$actorId)<1)return AssignmentOrderTemplateResult::failure('rejected','invalid_command');
         $authority=(new MariaDbSelectionFacts($this->sql))->authorize(new UserId($actorId),SelectionCapability::SELECT);
@@ -27,10 +27,10 @@ final readonly class MariaDbTemplateApplication implements AssignmentOrderTempla
             $blocked=SelectionEligibility::caseReason($case->payload);if($blocked!==null){$status='rejected';$reason=$blocked->value;throw new \RuntimeException();}
             $instant=$this->clock->now();
             if($instant->status!==SelectionLookupStatus::FOUND||$instant->payload===null||!SelectionScalar::utc($instant->payload->utcRfc3339Seconds))throw new \RuntimeException();
-            $at=$instant->payload;$date=SelectionScalar::selectionDate($at);$input=$reader->input($source,$date);
+            $at=$instant->payload;$date=SelectionScalar::selectionDate($at);$input=$reader->input($source,$date);$appendixStartDate??=$input['installationObjectSnapshot']['plannedStartDate']??null;if(!is_string($appendixStartDate)||!SelectionScalar::date($appendixStartDate)){$status='rejected';$reason='invalid_appendix_start_date';throw new \RuntimeException();}$input['appendixStartDate']=$appendixStartDate;
             $reason='render_failure';$bytes=AssignmentOrderTemplateResult::pdf(($this->render)($input));if($bytes===null)throw new \RuntimeException();
             $reason='persistence_failure';$h=$source['header'];
-            $payload=['assignmentOrderId'=>$orderId,'assignmentOrderVersion'=>$source['version'],'compositionIdentity'=>$h['composition_identity'],'compositionSha256'=>$h['composition_sha256'],'templateDate'=>$date];
+            $payload=['assignmentOrderId'=>$orderId,'assignmentOrderVersion'=>$source['version'],'compositionIdentity'=>$h['composition_identity'],'compositionSha256'=>$h['composition_sha256'],'templateDate'=>$date,'appendixStartDate'=>$appendixStartDate,'artifactBase64'=>base64_encode($bytes),'artifactSha256'=>hash('sha256',$bytes)];
             $this->sql->insert('fm2_process_events',['installation_case_id'=>$caseId,'event_type'=>'assignment_order_template_generated','occurred_at'=>$at->utcRfc3339Seconds,'actor_user_id'=>$actorId,'payload_json'=>SelectionScalar::json($payload)]);
             try{$this->sql->generatedId();}catch(\OverflowException){$reason='allocation_capacity_exhausted';throw new \RuntimeException();}
             $commitAttempted=true;if(!$this->sql->db->commit())throw new \RuntimeException();$owned=false;
@@ -40,5 +40,12 @@ final readonly class MariaDbTemplateApplication implements AssignmentOrderTempla
             if($commitAttempted||!$released)return AssignmentOrderTemplateResult::failure('failed','persistence_outcome_unknown');
             return AssignmentOrderTemplateResult::failure($status,$reason);
         }
+    }
+    public function downloadLastAssignmentOrderTemplate(int$caseId,int$orderId,int$actorId):array
+    {
+        if(min($caseId,$orderId,$actorId)<1)return AssignmentOrderTemplateResult::failure('rejected','invalid_command');
+        $authority=(new MariaDbSelectionFacts($this->sql))->authorize(new UserId($actorId),SelectionCapability::SELECT);
+        if($authority->status!==SelectionAuthorizationStatus::ALLOWED)return AssignmentOrderTemplateResult::failure($authority->status===SelectionAuthorizationStatus::DENIED?'rejected':'failed',$authority->status===SelectionAuthorizationStatus::DENIED?'authorization_denied':'dependency_unavailable');
+        try{return$this->sql->snapshot(function()use($caseId,$orderId){$source=(new MariaDbTemplateSource($this->sql))->load($caseId,$orderId);if($source===null)return AssignmentOrderTemplateResult::failure('rejected','order_not_found');$rows=$this->sql->rows('SELECT payload_json FROM '.$this->sql->table('fm2_process_events').' WHERE installation_case_id=? AND BINARY event_type=? ORDER BY id DESC',[$caseId,'assignment_order_template_generated']);foreach($rows as$row){$p=json_decode($row['payload_json'],true,512,JSON_THROW_ON_ERROR);if(($p['assignmentOrderId']??null)!==$orderId)continue;$bytes=base64_decode((string)($p['artifactBase64']??''),true);if(!is_string($bytes)||!hash_equals((string)($p['artifactSha256']??''),hash('sha256',$bytes)))throw new \RuntimeException();return AssignmentOrderTemplateResult::generated($orderId,(string)$p['templateDate'],$bytes);}return AssignmentOrderTemplateResult::failure('rejected','template_not_found');});}catch(\Throwable){return AssignmentOrderTemplateResult::failure('failed','dependency_unavailable');}
     }
 }

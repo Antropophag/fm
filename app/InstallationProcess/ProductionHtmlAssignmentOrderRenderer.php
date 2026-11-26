@@ -17,8 +17,8 @@ final class ProductionHtmlAssignmentOrderRenderer
         $entrance = $this->escape((string) $object['entrance']);
         $registrationNumber = $this->escape((string) $object['objectRegistrationNumber']);
         $plannedStart = $this->escape($this->displayDate((string) $object['plannedStartDate']));
+        $actualStart = $this->escape($this->displayDate((string) ($input['appendixStartDate'] ?? '')));
         $plannedFinish = $this->escape($this->displayDate((string) $object['plannedFinishDate']));
-        $period='';if(isset($object['contractStartDate'],$object['contractFinishDate'],$object['normativePeriodDays'])){$actual=($object['actualStartDate']??null)===null?'Начало работ не подтверждено':$this->displayDate((string)$object['actualStartDate']);$period='<section><h2>Нормативный период замены</h2><p>'.$this->displayDate((string)$object['contractStartDate']).' — '.$this->displayDate((string)$object['contractFinishDate']).'; '.(int)$object['normativePeriodDays'].' календарных дней. Фактическое начало: '.$this->escape($actual).'. Основание срока: Договорный норматив.</p></section>'."\n";}
         $organizationType = $this->escape($this->organizationLabel((string) $input['organizationType']));
         $engineer = $input['controlEngineer'];
         $engineerName = $this->escape((string) $engineer['fullName']);
@@ -30,7 +30,7 @@ final class ProductionHtmlAssignmentOrderRenderer
             $installerPosition = $this->escape((string) $installer['position']);
             $installerStatus = $this->escape((string) $installer['status']);
             $installerSource = $this->escape((string) $installer['source']);
-            $appendixRows[] = "<tr><td>{$address}; подъезд/секция {$entrance}; рег. номер {$registrationNumber}</td><td>{$plannedStart}–{$plannedFinish}</td><td>{$installerTabId} — {$installerName} — {$installerPosition}</td><td>{$installerStatus}; источник {$installerSource}</td><td>{$engineerName} — {$engineerPosition}</td></tr>";
+            $appendixRows[] = "<tr><td>{$address}; подъезд/секция {$entrance}; рег. номер {$registrationNumber}</td><td>{$plannedStart}</td><td>{$actualStart}</td><td>{$plannedFinish}</td><td>{$installerTabId} — {$installerName} — {$installerPosition}</td><td>{$installerStatus}; источник {$installerSource}</td><td>{$engineerName} — {$engineerPosition}</td></tr>";
         }
         $appendixRows = implode("\n", $appendixRows);
 
@@ -54,7 +54,7 @@ final class ProductionHtmlAssignmentOrderRenderer
 <dt>Форма организации труда</dt><dd>{$organizationType}</dd>
 <dt>Инженер строительного контроля</dt><dd>{$engineerName} — {$engineerPosition}</dd>
 </dl>
-{$period}</main>
+</main>
 </body>
 </html>
 HTML;
@@ -66,13 +66,13 @@ HTML;
 <head>
 <meta charset="utf-8">
 <title>Приложение к проекту распоряжения</title>
-<style>@page{size:A4 landscape;margin:14mm}body{font:12px/1.35 Arial,sans-serif;color:#111}h1{font-size:18px;margin:0 0 14px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #333;padding:6px;vertical-align:top;text-align:left}th{font-weight:700;background:#eee}@media print{body{print-color-adjust:exact}}</style>
+<style>@page{size:A4 landscape;margin:14mm}body{font:12px/1.35 Arial,sans-serif;color:#111}h1{font-size:18px;margin:0 0 14px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #333;padding:6px;vertical-align:middle;text-align:center}th{font-weight:700;background:#eee}@media print{body{print-color-adjust:exact}}</style>
 </head>
 <body>
 <main>
 <h1>Приложение к проекту распоряжения</h1>
-{$period}<table>
-<thead><tr><th>Объект</th><th>Плановые даты</th><th>Монтажник</th><th>Кадровый факт</th><th>Инженер строительного контроля</th></tr></thead>
+<table>
+<thead><tr><th>Объект</th><th>Дата начала работ</th><th>Фактическая дата начала работ</th><th>Дата завершения работ</th><th>Монтажник</th><th>Кадровый факт</th><th>Инженер строительного контроля</th></tr></thead>
 <tbody>{$appendixRows}</tbody>
 </table>
 </main>
@@ -102,6 +102,7 @@ HTML;
             && is_int($input['assignmentOrderVersion'])
             && $input['assignmentOrderVersion'] > 0
             && $this->isDate($input['assignmentOrderDate'] ?? null)
+            && (!array_key_exists('appendixStartDate', $input) || $this->isDate($input['appendixStartDate']))
             && in_array($input['organizationType'] ?? null, ['individual', 'brigade'], true)
             && is_array($object)
             && $this->isNonblankString($object['address'] ?? null)

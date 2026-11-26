@@ -9,6 +9,7 @@ try {
     assertSameValue('selected',$f->base->selection->app()->selectAssignmentOrderComposition(FMonitor2\Tests\Support\SelectionNativeFixture::command())->status()->value,'native selection setup');
     $original=$f->nativeOriginal();
     assertSameValue('accepted',$original->status()->value,'native original setup');
+    $originalRequest=(string)$f->rows('fm2_assignment_order_original_revisions')[0]['request_id'];$f->db->query("INSERT INTO {$f->p}fm2_assignment_order_original_starts(request_id,installation_case_id,object_id,assignment_order_id,actor_user_id,mode,document_date,appendix_start_date,external_document_number,pdf_sha256,byte_size,semantic_fingerprint,created_at_utc) VALUES('{$originalRequest}',6101,4512,81,18,'initial','2026-09-01','2026-09-02','FIXTURE-1C-DO','".str_repeat('a',64)."',327,'".str_repeat('b',64)."','2026-09-01 09:00:00.000000')");
     $f->start();$cookies=[];$f->login($cookies);
     $card=$f->request('GET','/pilot/objects/4512',[],$cookies);
     assertSameValue(200,$card['status'],'INTENDED_RED authorized Yii card');
@@ -17,7 +18,7 @@ try {
     foreach([
         [$base.'/assignment-order/selection','DELETE','GET, HEAD, POST'],
         [$base.'/assignment-order/installers?q=7001&page=1','POST','GET, HEAD'],
-        [$order.'/template','GET','POST'],
+        [$order.'/template','DELETE','POST'],
         [$order.'/originals/submit','POST','GET, HEAD'],
         [$order.'/originals','GET','POST'],
         [$order.'/originals/history','POST','GET, HEAD'],
@@ -50,7 +51,7 @@ try {
             }
             foreach([$base.'/assignment-order/selection',$order.'/template',$base.'/execution'] as $route)
                 assertSameValue($change==='inactive-role'?403:303,$f->form($route,['_csrf'=>$csrf,'actorId'=>'97'],$session)['status'],'revoked command admission '.$change);
-            $rawMetadata=['csrfToken'=>$csrf,'requestId'=>'22222222-2222-4222-8222-000000000097','mode'=>'initial','documentDate'=>'2026-09-01','appendixStartDate'=>'2026-09-02','compositionConfirmed'=>true,'rootOriginalId'=>null,'targetRevisionId'=>null,'expectedCurrentRevisionId'=>null,'correctionReason'=>null,'originalFilename'=>'signed.pdf'];
+            $rawMetadata=['csrfToken'=>$csrf,'requestId'=>'22222222-2222-4222-8222-000000000097','mode'=>'initial','appendixStartDate'=>'2026-09-02','externalDocumentNumber'=>'1C-DO-AUTH','rootOriginalId'=>null,'targetRevisionId'=>null,'expectedCurrentRevisionId'=>null,'correctionReason'=>null,'originalFilename'=>'signed.pdf'];
             $raw=$f->request('POST',$order.'/originals',[],$session,['Content-Type: application/pdf','X-CSRF-Token: '.$csrf,'X-FMonitor-Original: '.base64_encode(json_encode($rawMetadata,JSON_THROW_ON_ERROR))],FMonitor2\Tests\Support\SelectedOriginalFixture::pdf());assertSameValue($change==='inactive-role'?403:303,$raw['status'],'revoked raw upload admission');
             assertSameValue($before,$f->facts(),'revocation changes no process facts');
             assertSameValue($files,$f->base->privateFiles(),'revocation preserves private bytes');
@@ -85,7 +86,7 @@ try {
             } elseif($permission==='installation.open')$result=$f->upload($cookies,$f->metadata($cookies));
             else {
                 $metadata=$f->metadata($cookies,'22222222-2222-4222-8222-000000000090');
-                if($permission==='assignment_order.original.correct')$metadata=array_replace($metadata,['mode'=>'correction','documentDate'=>'2026-09-02','rootOriginalId'=>$original->rootOriginalId(),'targetRevisionId'=>$original->currentRevisionId(),'expectedCurrentRevisionId'=>$original->currentRevisionId(),'correctionReason'=>'Проверка прав']);
+                if($permission==='assignment_order.original.correct')$metadata=array_replace($metadata,['mode'=>'correction','rootOriginalId'=>$original->rootOriginalId(),'targetRevisionId'=>$original->currentRevisionId(),'expectedCurrentRevisionId'=>$original->currentRevisionId(),'correctionReason'=>'Проверка прав']);
                 $result=$f->upload($cookies,$metadata);
             }
             assertSameValue(403,$result['status'],'write requires exact capability '.$permission);assertSameValue($before,$f->facts(),'write denial zero facts');assertSameValue($files,$f->base->privateFiles(),'write denial zero files');
@@ -96,8 +97,8 @@ try {
         assertSameValue(200,$f->request('GET',$route,[],$manager)['status'],'builtin manager admitted '.$route);
     // Automatic opening requires upload plus open, without standalone apply/select grants.
     $f->db->query("DELETE FROM {$f->p}fm2_pilot_role_permissions WHERE role_id=1 AND permission IN('assignment_order.composition.select','assignment_order.composition.apply')");
-    $metadata=array_replace($f->metadata($cookies,'22222222-2222-4222-8222-000000000002'),['mode'=>'correction','documentDate'=>'2026-09-02','rootOriginalId'=>$original->rootOriginalId(),'targetRevisionId'=>$original->currentRevisionId(),'expectedCurrentRevisionId'=>$original->currentRevisionId(),'correctionReason'=>'Подписанная дата приложения']);
-    assertSameValue(201,$f->upload($cookies,$metadata)['status'],'upload and open capabilities admit compound command');
+    $metadata=array_replace($f->metadata($cookies,'22222222-2222-4222-8222-000000000002'),['mode'=>'correction','rootOriginalId'=>$original->rootOriginalId(),'targetRevisionId'=>$original->currentRevisionId(),'expectedCurrentRevisionId'=>$original->currentRevisionId(),'correctionReason'=>'Подписанная дата приложения']);
+    $compound=$f->upload($cookies,$metadata,FMonitor2\Tests\Support\OriginalStartFixture::otherPdf());assertSameValue(201,$compound['status'],'upload and open capabilities admit scan replacement command '.$compound['body']);
     assertSameValue('18',$f->rows('fm2_installation_cases')[0]['opened_by_user_id'],'session uploader owns opening');
     $before=$f->facts();assertSameValue(410,$f->form($base.'/execution',$opening,$cookies)['status'],'manual opening retired');assertSameValue($before,$f->facts(),'retired opening no facts');
     $f->noLegacy();

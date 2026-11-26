@@ -34,7 +34,8 @@ final class AssignmentOrderOriginalStartSchemaMigration
             ['request_id','char(36)','NO','ascii_bin'],['installation_case_id','bigint(20) unsigned','NO',null],['object_id','bigint(20) unsigned','NO',null],['assignment_order_id','bigint(20) unsigned','NO',null],['actor_user_id','bigint(20) unsigned','NO',null],['mode','varchar(20)','NO','ascii_bin'],['document_date','date','NO',null],['appendix_start_date','date','NO',null],['pdf_sha256','char(64)','NO','ascii_bin'],['byte_size','int(10) unsigned','NO',null],['semantic_fingerprint','char(64)','NO','ascii_bin'],['created_at_utc','datetime(6)','NO',null],
         ];
         $actual=array_map(static fn(array$r):array=>[$r['COLUMN_NAME'],strtolower($r['COLUMN_TYPE']),$r['IS_NULLABLE'],$r['COLLATION_NAME']],$rows);
-        if($actual!==$expected)return'conflict';
+        $extended=$expected;array_splice($extended,8,0,[['external_document_number','varchar(255)','YES','utf8mb4_unicode_ci']]);
+        if($actual!==$expected&&$actual!==$extended)return'conflict';
         $s=$db->prepare('SELECT INDEX_NAME,NON_UNIQUE,GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) cols FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? GROUP BY INDEX_NAME,NON_UNIQUE ORDER BY INDEX_NAME');$s->execute([$table]);$indexes=$s->get_result()->fetch_all(MYSQLI_ASSOC);$s->close();
         $map=[];foreach($indexes as$r)$map[$r['INDEX_NAME']]=[(int)$r['NON_UNIQUE'],$r['cols']];
         if(($map['PRIMARY']??null)!==[0,'request_id']||($map['ix_original_start_order']??null)!==[1,'assignment_order_id,created_at_utc']||($map['ix_original_start_fingerprint']??null)!==[1,'semantic_fingerprint'])return'conflict';

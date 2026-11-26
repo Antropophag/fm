@@ -43,14 +43,14 @@ $expectedAppendixBytes = <<<'HTML'
 <head>
 <meta charset="utf-8">
 <title>Приложение к проекту распоряжения</title>
-<style>@page{size:A4 landscape;margin:14mm}body{font:12px/1.35 Arial,sans-serif;color:#111}h1{font-size:18px;margin:0 0 14px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #333;padding:6px;vertical-align:top;text-align:left}th{font-weight:700;background:#eee}@media print{body{print-color-adjust:exact}}</style>
+<style>@page{size:A4 landscape;margin:14mm}body{font:12px/1.35 Arial,sans-serif;color:#111}h1{font-size:18px;margin:0 0 14px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #333;padding:6px;vertical-align:middle;text-align:center}th{font-weight:700;background:#eee}@media print{body{print-color-adjust:exact}}</style>
 </head>
 <body>
 <main>
 <h1>Приложение к проекту распоряжения</h1>
 <table>
-<thead><tr><th>Объект</th><th>Плановые даты</th><th>Монтажник</th><th>Кадровый факт</th><th>Инженер строительного контроля</th></tr></thead>
-<tbody><tr><td>Москва, ул. Примерная, д. 10; подъезд/секция 2; рег. номер 77-000123</td><td>05.10.2026–20.12.2026</td><td>1042 — Иванов Иван Иванович — Электромеханик по лифтам</td><td>employed; источник one_c_zup_via_bitrix</td><td>Петров Пётр Петрович — Инженер строительного контроля</td></tr></tbody>
+<thead><tr><th>Объект</th><th>Дата начала работ</th><th>Фактическая дата начала работ</th><th>Дата завершения работ</th><th>Монтажник</th><th>Кадровый факт</th><th>Инженер строительного контроля</th></tr></thead>
+<tbody><tr><td>Москва, ул. Примерная, д. 10; подъезд/секция 2; рег. номер 77-000123</td><td>05.10.2026</td><td>—</td><td>20.12.2026</td><td>1042 — Иванов Иван Иванович — Электромеханик по лифтам</td><td>employed; источник one_c_zup_via_bitrix</td><td>Петров Пётр Петрович — Инженер строительного контроля</td></tr></tbody>
 </table>
 </main>
 </body>
@@ -142,7 +142,7 @@ assertSameValue([
         ],
         'artifacts' => [
             ['type' => 'order', 'filename' => 'assignment-order-v1.html', 'mediaType' => 'text/html', 'size' => 1093, 'sha256' => '682749a063958eb102f5b184c4dfe6c21a009f77932b3b68b3b92e340adf4928'],
-            ['type' => 'appendix', 'filename' => 'assignment-order-v1-appendix.html', 'mediaType' => 'text/html', 'size' => 1262, 'sha256' => 'da33d58efd35c6211d850446ee9f159526c9ba779fbdd9355b68ac35806ee3ac'],
+            ['type' => 'appendix', 'filename' => 'assignment-order-v1-appendix.html', 'mediaType' => 'text/html', 'size' => 1405, 'sha256' => 'a3a037a7d7f56424418d9fe37a3f972cc26ad70f14e14f8cf41d249f91743bb7'],
         ],
     ]],
     'assignments' => [
@@ -164,7 +164,7 @@ assertSameValue([
             'organizationType' => 'individual',
             'artifactSha256' => [
                 'order' => '682749a063958eb102f5b184c4dfe6c21a009f77932b3b68b3b92e340adf4928',
-                'appendix' => 'da33d58efd35c6211d850446ee9f159526c9ba779fbdd9355b68ac35806ee3ac',
+                'appendix' => 'a3a037a7d7f56424418d9fe37a3f972cc26ad70f14e14f8cf41d249f91743bb7',
             ],
         ],
     ]],

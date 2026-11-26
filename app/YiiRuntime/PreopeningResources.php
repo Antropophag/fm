@@ -55,7 +55,8 @@ final class PreopeningResources
         $application = C\ProductionAssignmentOrderCompositionFactory::create($this->db, $this->connect(...), $this->prefix);
         return (new C\SelectionResultSerializer())->serialize($application->selectAssignmentOrderComposition($command));
     }
-    public function template(int$case,int$order,int$actor):array{return C\ProductionAssignmentOrderTemplateFactory::create($this->db,$this->prefix)->generateAssignmentOrderTemplate($case,$order,$actor);}
+    public function template(int$case,int$order,int$actor,string$appendixStartDate):array{return C\ProductionAssignmentOrderTemplateFactory::create($this->db,$this->prefix)->generateAssignmentOrderTemplate($case,$order,$actor,$appendixStartDate);}
+    public function lastTemplate(int$case,int$order,int$actor):array{return C\ProductionAssignmentOrderTemplateFactory::create($this->db,$this->prefix)->downloadLastAssignmentOrderTemplate($case,$order,$actor);}
     public function submission():O\AssignmentOrderOriginalSubmissionQuery{return O\ProductionAssignmentOrderOriginalSubmissionFactory::create($this->db,$this->prefix);}
     public function originalAccess():O\AssignmentOrderOriginalAccessQuery
     {
@@ -77,6 +78,11 @@ final class PreopeningResources
     public function originalStartQuery(): C\MariaDbOriginalStartQuery
     {
         return C\ProductionOriginalStartQueryFactory::create($this->db, $this->prefix);
+    }
+    public function pilotUserDisplayNames(array$userIds):array
+    {
+        if($this->yiiDb===null)throw new \RuntimeException('Yii database connection required for user display names.');
+        return(new I\MariaDbPilotUserDisplayNameQuery($this->yiiDb,$this->prefix))->find($userIds);
     }
     public function close():void{$this->db->close();}
 }

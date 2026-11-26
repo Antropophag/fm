@@ -3,7 +3,7 @@ declare(strict_types=1);
 require dirname(__DIR__).'/bootstrap.php';require __DIR__.'/PreopeningFixture.php';
 // ACTUAL-START-FROM-ORDER-001: real HTTP partial/retry, invalid input, and legacy read-only history.
 function oshMetadata(PreopeningFixture$f,array&$cookies,int$n=1):array{
-    return ['csrfToken'=>$f->token($cookies),'requestId'=>sprintf('17171717-1717-4717-8717-%012d',$n),'mode'=>'initial','documentDate'=>'2026-09-01','appendixStartDate'=>'2030-10-09','compositionConfirmed'=>true,'rootOriginalId'=>null,'targetRevisionId'=>null,'expectedCurrentRevisionId'=>null,'correctionReason'=>null,'originalFilename'=>'signed.pdf'];
+    return ['csrfToken'=>$f->token($cookies),'requestId'=>sprintf('17171717-1717-4717-8717-%012d',$n),'mode'=>'initial','appendixStartDate'=>'2030-10-09','externalDocumentNumber'=>'1C-DO-START','rootOriginalId'=>null,'targetRevisionId'=>null,'expectedCurrentRevisionId'=>null,'correctionReason'=>null,'originalFilename'=>'signed.pdf'];
 }
 $f=new PreopeningFixture(dirname(__DIR__,2));try{
     $f->start();$cookies=[];assertSameValue(303,$f->login($cookies)['status'],'login');assertSameValue(303,$f->selection($cookies)['status'],'selection');
@@ -34,8 +34,7 @@ $f=new PreopeningFixture(dirname(__DIR__,2));try{
     $history=$f->request('GET','/pilot/objects/4512/assignment-orders/81/originals/history',[],$cookies);
     assertSameValue(200,$history['status'],'legacy original history stays readable');assertSameValue(true,str_contains($history['body'],'Не зафиксирована'),'legacy missing date is explicit unknown');
     $form=$f->request('GET','/pilot/objects/4512/assignment-orders/81/originals/submit',[],$cookies);
-    assertSameValue(200,$form['status'],'legacy correction form is readable');
-    assertSameValue(1,preg_match('/name="appendixStartDate"[^>]*value=""/',$form['body']),'legacy missing date never substituted from plan');
+    assertSameValue(409,$form['status'],'legacy original without signed metadata cannot be scan-corrected');
     echo "PASS original-start legacy history unknown date\n";
 }finally{$f->close();}
 

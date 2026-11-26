@@ -45,10 +45,14 @@ final class OriginalHistoryController extends PreopeningController
             $startHistory = $resources->originalStartQuery()->readHistory($id, $orderId);
             if ($startHistory['status'] === 'unavailable') return $this->status(503, true);
             $dates = [];
-            foreach ($startHistory['rows'] as $row) $dates[$row['revisionId']] = $row['appendixStartDate'];
+            $numbers = [];
+            foreach ($startHistory['rows'] as $row) { $dates[$row['revisionId']] = $row['appendixStartDate']; $numbers[$row['revisionId']] = $row['externalDocumentNumber']; }
             $history = $result->page->metadata();
+            $actorNames=$resources->pilotUserDisplayNames(array_column($history['revisions'],'actorUserId'));
             foreach ($history['revisions'] as &$row) {
                 $row['appendixStartDate'] = $dates[$row['revisionId']] ?? null;
+                $row['externalDocumentNumber'] = $numbers[$row['revisionId']] ?? null;
+                $row['actorName']=$actorNames[(int)$row['actorUserId']]??'Пользователь недоступен';
             }
             unset($row);
             return $this->render('@app/app/YiiRuntime/Views/original-history', ['objectIdentity' => $resources->originalObjectIdentity($id), 'identity' => Yii::$app->user->identity, 'history' => $history]);

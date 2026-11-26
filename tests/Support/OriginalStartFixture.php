@@ -25,6 +25,7 @@ final class OriginalStartFixture
             $this->db->query("UPDATE start_fm_maintable SET workdatestart='2026-08-21' WHERE id=4512");
             \assertSameValue(true, class_exists(I\AssignmentOrderOriginalStartSchemaMigration::class), 'INTENDED_RED: original appendix date migration is absent');
             I\AssignmentOrderOriginalStartSchemaMigration::apply($this->db, self::PREFIX);
+            I\AssignmentOrderOriginalExternalNumberSchemaMigration::apply($this->db, self::PREFIX);
             $this->clock = new class implements C\SelectionClock {
                 public function now(): C\SelectionInstantLookup { return C\SelectionInstantLookup::found(new C\SelectionInstant('2026-09-05T10:00:00Z')); }
             };

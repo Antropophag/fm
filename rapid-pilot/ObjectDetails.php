@@ -69,7 +69,7 @@ final class RapidPilotObjectDetails
     private static function read(int $objectId): ?array
     {
         $prefix = getenv('FMONITOR_PROCESS_TABLE_PREFIX');
-        if (!is_string($prefix) || preg_match('/^[A-Za-z0-9_]+$/D', $prefix) !== 1) return self::unavailableDetails('Проекция технических данных поколения недоступна.');
+        if (!is_string($prefix) || preg_match('/^[A-Za-z0-9_]+$/D', $prefix) !== 1) return self::unavailableDetails('Технические данные недоступны.');
         try {
             $db = new mysqli(
                 getenv('FMONITOR_DB_HOST') ?: '127.0.0.1',
@@ -82,14 +82,14 @@ final class RapidPilotObjectDetails
             $statement->bind_param('i', $objectId);
             $statement->execute();
             $row = $statement->get_result()->fetch_assoc();
-            if (!is_array($row)) return self::unavailableDetails('Проекция технических данных для объекта недоступна.');
+            if (!is_array($row)) return self::unavailableDetails('Технические данные объекта недоступны.');
             $payload = json_decode((string) $row['payload_json'], true, flags: JSON_THROW_ON_ERROR);
-            if(!is_array($payload))return self::unavailableDetails('Проекция технических данных повреждена.');
+            if(!is_array($payload))return self::unavailableDetails('Технические данные недоступны.');
             $team=$db->prepare("SELECT oi.installer_tab_id,oi.fio_snapshot,oi.employment_status_snapshot,w.employment_status FROM `{$prefix}fm2_order_installers` oi JOIN `{$prefix}fm2_assignment_orders` o ON o.id=oi.assignment_order_id JOIN `{$prefix}fm2_installation_cases` c ON c.id=o.installation_case_id LEFT JOIN `{$prefix}fm2_workforce_catalog` w ON w.installer_tab_id=oi.installer_tab_id WHERE c.legacy_installation_object_id=? AND o.version_no=(SELECT MAX(latest.version_no) FROM `{$prefix}fm2_assignment_orders` latest WHERE latest.installation_case_id=c.id) AND oi.change_action<>'release' ORDER BY oi.installer_tab_id");$team->bind_param('i',$objectId);$team->execute();$installers=$team->get_result()->fetch_all(MYSQLI_ASSOC);
             $history=$db->prepare("SELECT o.version_no,o.kind,o.status,o.order_date,o.registration_number,o.prepared_at,a.artifact_type,a.filename,a.byte_size FROM `{$prefix}fm2_assignment_orders` o JOIN `{$prefix}fm2_installation_cases` c ON c.id=o.installation_case_id LEFT JOIN `{$prefix}fm2_order_artifacts` a ON a.assignment_order_id=o.id WHERE c.legacy_installation_object_id=? ORDER BY o.version_no DESC,FIELD(a.artifact_type,'signed_original','order','appendix'),a.artifact_type");$history->bind_param('i',$objectId);$history->execute();$documents=$history->get_result()->fetch_all(MYSQLI_ASSOC);$db->close();
             return $payload + ['objectId'=>$objectId,'capturedAt' => (string) $row['captured_at'],'installers'=>$installers,'assignmentDocuments'=>$documents];
         } catch (Throwable) {
-            return self::unavailableDetails('Проекция технических данных поколения недоступна.');
+            return self::unavailableDetails('Технические данные недоступны.');
         }
     }
 

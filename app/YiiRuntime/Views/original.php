@@ -5,7 +5,7 @@ declare(strict_types=1);
 use FMonitor2\YiiRuntime\ViewSupport;
 use yii\helpers\Html;
 
-$title = $current ? 'Исправить оригинал' : 'Загрузить оригинал';
+$title = $current ? 'Заменить скан' : 'Загрузить оригинал';
 $path = '/pilot/objects/' . (int) $objectId . '/assignment-orders/' . (int) $orderId . '/originals';
 $display = static fn(mixed $value): string => is_string($value) ? trim($value) : '';
 $registrationNumber = $display($objectIdentity['registrationNumber'] ?? null);
@@ -14,11 +14,17 @@ $entrance = $display($objectIdentity['entrance'] ?? null);
 $factoryNumber = $display($objectIdentity['factoryNumber'] ?? null);
 $persistedAppendixStartDate = $current ? $display($current['appendixStartDate'] ?? null) : '';
 $appendixStartDate = $current ? $persistedAppendixStartDate : $display($suggestedAppendixStartDate ?? ($plannedStartDate ?? ''));
+$externalDocumentNumber = $current ? $display($current['externalDocumentNumber'] ?? null) : '';
+$appendixStartHelp = $current && $persistedAppendixStartDate === '' ? 'В сохранённой редакции дата не была зафиксирована. Для изменения реквизитов создайте новое распоряжение.' : ($current ? 'Дата сохранённой редакции.' : (($suggestedAppendixFromTemplate ?? false) ? 'Дата из шаблона. Сверьте с подписанным оригиналом.' : 'Предложена плановая дата. Сверьте её с подписанным оригиналом.'));
+$currentDocumentDate = $current ? (new DateTimeImmutable((string) $current['documentDate']))->format('d.m.Y') : '';
 ViewSupport::begin($this, $title, $identity);
 ?>
-<nav class="fm2-breadcrumb" aria-label="Хлебные крошки"><a class="fm2-breadcrumb-link" href="/pilot/objects">Объекты монтажа</a><span aria-hidden="true">/</span><a class="fm2-breadcrumb-link" href="/pilot/objects/<?= (int) $objectId ?>"><?= Html::encode($registrationNumber !== '' ? $registrationNumber : 'Регистрационный номер не указан') ?> · <?= Html::encode($address) ?><?= $entrance !== '' ? ' · Подъезд ' . Html::encode($entrance) : '' ?> · <?= Html::encode($factoryNumber !== '' ? 'Заводской номер: ' . $factoryNumber : 'Заводской номер не указан') ?></a><span aria-hidden="true">/</span><span aria-current="page"><?= $title ?></span></nav>
-<div class="fm2-page-header fm2-order-heading"><div><h1><?= $title ?></h1><p>Проверьте выбранный состав и приложите оформленный документ.</p></div></div>
-<form class="fm2-order-form" action="<?= $path ?>" data-original-upload-form data-return-url="/pilot/objects/<?= (int) $objectId ?>">
+<nav class="fm2-breadcrumb" aria-label="Хлебные крошки">
+    <a class="fm2-breadcrumb-link" href="/pilot/objects">Объекты</a><span aria-hidden="true">/</span>
+    <a class="fm2-breadcrumb-link" href="/pilot/objects/<?= (int) $objectId ?>"><?= Html::encode($registrationNumber !== '' ? $registrationNumber : 'Регномер не указан') ?></a><span aria-hidden="true">/</span>
+    <span aria-current="page">Оригинал</span>
+</nav>
+<form class="fm2-original-workflow" action="<?= $path ?>" data-original-upload-form data-return-url="/pilot/objects/<?= (int) $objectId ?>">
     <?= Html::hiddenInput('csrfToken', $csrf) ?>
     <?= Html::hiddenInput('requestId', ViewSupport::uuid()) ?>
     <?= Html::hiddenInput('mode', $mode) ?>
@@ -26,15 +32,41 @@ ViewSupport::begin($this, $title, $identity);
     <?= Html::hiddenInput('targetRevisionId', $current['revisionId'] ?? '') ?>
     <?= Html::hiddenInput('expectedCurrentRevisionId', $current['revisionId'] ?? '') ?>
     <?php if (!$current): ?><?= Html::hiddenInput('correctionReason', '') ?><?php endif ?>
-    <fieldset class="fm2-order-surface" data-original-fields disabled>
-        <header><div class="fm2-order-object"><strong><?= Html::encode($registrationNumber !== '' ? $registrationNumber : 'Регистрационный номер не указан') ?></strong><span><?= Html::encode($address) ?><?= $entrance !== '' ? ' · Подъезд ' . Html::encode($entrance) : '' ?></span><small><?= Html::encode($factoryNumber !== '' ? 'Заводской номер: ' . $factoryNumber : 'Заводской номер не указан') ?></small><small>Распоряжение · версия <?= (int) ($orderVersion ?? 0) ?></small></div></header>
-        <?php if ($current): ?><div class="fm2-order-current"><div><strong>Принятый оригинал · редакция <?= (int) $current['revisionNumber'] ?></strong><span>Дата распоряжения: <?= Html::encode($current['documentDate']) ?></span><span>Дата начала работ: <?= $persistedAppendixStartDate !== '' ? Html::encode($persistedAppendixStartDate) : 'Не зафиксирована' ?></span><small>Предыдущий файл и даты сохранятся в истории.</small></div><a class="shlz-link" href="<?= $path ?>/history">История и PDF</a></div><?php endif ?>
-        <section class="fm2-order-upload" aria-labelledby="signed-original"><div class="fm2-order-section-head"><div><h2 id="signed-original">Подписанный оригинал</h2><p>Загрузите один PDF-файл и укажите дату, напечатанную в документе.</p></div><span class="shlz-status shlz-status--blue">До 20 МиБ</span></div><label class="fm2-file-drop" data-file-drop><input type="file" name="original" accept="application/pdf,.pdf" required><img src="/pilot/assets/shlz-icons/cloud-upload.svg" data-shlz-icon="cloud-upload" alt=""><span><strong><u>Выберите</u> или перетащите сюда файл</strong><small data-file-name>PDF, не более 20 МиБ</small></span></label></section>
-        <section class="fm2-order-team"><div class="fm2-order-section-head"><div><h2>Выбранный состав</h2><p><?= Html::encode(implode(', ', array_column($composition['installers'], 'fullName'))) ?></p></div></div><?php foreach ($composition['installers'] as $installer): ?><div class="fm2-object-installer"><strong><?= Html::encode($installer['fullName']) ?></strong><span>Табельный № <?= Html::encode((string) ($installer['tabId'] ?? 'Не указан')) ?></span></div><?php endforeach ?><p class="fm2-order-engineer-line"><strong>Инженер строительного контроля</strong><span><?= Html::encode($composition['engineer']['fullName']) ?></span></p></section>
-        <section class="fm2-order-team fm2-original-details"><label class="shlz-field"><span class="shlz-field__label">Дата распоряжения</span><span class="shlz-field__control"><input class="shlz-input" type="date" name="documentDate" value="<?= Html::encode($suggestedDocumentDate) ?>" required></span><span class="shlz-field__secondary">Проверьте дату, напечатанную в оригинале.</span></label><label class="shlz-field"><span class="shlz-field__label">Дата начала работ по распоряжению</span><span class="shlz-field__control"><input class="shlz-input" type="date" name="appendixStartDate" value="<?= Html::encode($appendixStartDate) ?>" required></span><span class="shlz-field__secondary"><?= $current && $persistedAppendixStartDate === '' ? 'В ранее принятой редакции дата не была зафиксирована. Укажите её только по подписанному оригиналу; плановая дата не подставляется.' : ($current ? 'Сохранённая дата принятой редакции. Сверьте её с подписанным оригиналом.' : 'Предложена плановая дата. Обязательно сверьте её с приложением к подписанному оригиналу.') ?></span></label><?php if ($current): ?><label class="shlz-field"><span class="shlz-field__label">Причина исправления</span><span class="shlz-field__control"><input class="shlz-input" name="correctionReason" maxlength="500" required></span><span class="shlz-field__secondary">Кратко укажите, почему выпускается новая редакция.</span></label><?php endif ?><label class="shlz-choice"><input class="shlz-checkbox" type="checkbox" name="compositionConfirmed" required><span>Подтверждаю соответствие оригинала выбранному составу и дате начала работ</span></label><p>После принятия оригинала работы откроются сразу, в том числе при будущей дате начала.</p></section>
-        <footer class="fm2-order-actions"><a class="shlz-link" href="/pilot/objects/<?= (int) $objectId ?>/assignment-order/selection">К составу</a><button class="shlz-button shlz-button--primary" type="submit" data-original-submit><?= $title ?></button></footer>
+    <header class="fm2-original-workflow__header">
+        <div><h1><?= $title ?></h1><p>Распоряжение ФН<?= (int) $orderId ?> · версия <?= (int) ($orderVersion ?? 0) ?></p></div>
+        <div class="fm2-original-workflow__context"><strong><?= Html::encode($address !== '' ? $address : 'Адрес не указан') ?><?= $entrance !== '' ? ' · подъезд ' . Html::encode($entrance) : '' ?></strong><span><?= Html::encode($registrationNumber !== '' ? $registrationNumber : 'Регномер не указан') ?> · <?= Html::encode($factoryNumber !== '' ? 'заводской № ' . $factoryNumber : 'заводской номер не указан') ?></span></div>
+    </header>
+    <fieldset class="fm2-original-workflow__sheet" data-original-fields disabled>
+        <?php if ($current): ?><div class="fm2-original-workflow__revision"><span><strong>Текущая редакция <?= (int) $current['revisionNumber'] ?> · от <?= Html::encode($currentDocumentDate) ?></strong></span><a class="shlz-link" href="<?= $path ?>/history">История и PDF</a></div><?php endif ?>
+
+        <section class="fm2-original-workflow__crew" aria-labelledby="original-crew-title">
+            <h2 id="original-crew-title">Состав распоряжения</h2>
+            <div class="fm2-original-workflow__people">
+                <?php foreach ($composition['installers'] as $installer): ?><div><strong><?= Html::encode($installer['fullName']) ?></strong><span>Табельный № <?= Html::encode((string) ($installer['tabId'] ?? 'Не указан')) ?></span></div><?php endforeach ?>
+            </div>
+            <div class="fm2-original-workflow__engineer"><span>Инженер строительного контроля</span><strong><?= Html::encode($composition['engineer']['fullName']) ?></strong></div>
+        </section>
+
+        <section class="fm2-original-workflow__document" aria-labelledby="signed-original">
+            <div class="fm2-original-workflow__section-head"><h2 id="signed-original">Файл и реквизиты</h2><span>PDF · до 20 МиБ</span></div>
+            <label class="fm2-file-drop fm2-original-workflow__drop" data-file-drop><input type="file" name="original" accept="application/pdf,.pdf" required><img src="/pilot/assets/shlz-icons/cloud-upload.svg" data-shlz-icon="cloud-upload" alt=""><span><strong><u>Выберите</u> или перетащите PDF</strong><small data-file-name>Файл не выбран</small></span></label>
+            <div class="fm2-original-workflow__fields">
+                <?php if ($current): ?>
+                    <?= Html::hiddenInput('externalDocumentNumber',$externalDocumentNumber) ?><?= Html::hiddenInput('appendixStartDate',$appendixStartDate) ?>
+                    <div class="fm2-original-workflow__fixed-field"><span>Номер в 1С ДО</span><strong><?= Html::encode($externalDocumentNumber !== '' ? $externalDocumentNumber : 'Не зафиксирован') ?></strong></div>
+                    <div class="fm2-original-workflow__fixed-field"><span>Дата начала работ</span><strong><?= Html::encode($appendixStartDate !== '' ? (new DateTimeImmutable($appendixStartDate))->format('d.m.Y') : 'Не зафиксирована') ?></strong></div>
+                <?php else: ?>
+                    <label class="shlz-field"><span class="shlz-field__label">Номер в 1С ДО</span><span class="shlz-field__control"><input class="shlz-input" name="externalDocumentNumber" maxlength="255" value="<?= Html::encode($externalDocumentNumber) ?>" required></span></label>
+                    <label class="shlz-field"><span class="shlz-field__label">Дата начала работ</span><span class="shlz-field__control"><input class="shlz-input" type="date" name="appendixStartDate" value="<?= Html::encode($appendixStartDate) ?>" aria-describedby="appendix-start-help" required></span></label>
+                    <p class="fm2-original-workflow__field-help" id="appendix-start-help"><?= Html::encode($appendixStartHelp) ?></p>
+                <?php endif ?>
+                <?php if ($current): ?><label class="shlz-field fm2-original-workflow__reason"><span class="shlz-field__label">Причина замены скана</span><span class="shlz-field__control"><input class="shlz-input" name="correctionReason" maxlength="500" required></span></label><?php endif ?>
+            </div>
+        </section>
+
+        <footer class="fm2-original-workflow__actions"><div><a class="shlz-link" href="/pilot/objects/<?= (int) $objectId ?>/assignment-order/selection">К составу</a><p><?= $current ? 'Только другой скан того же документа. Для изменения реквизитов или состава создайте новое распоряжение.' : 'После загрузки откроется карточка объекта.' ?></p></div><button class="shlz-button shlz-button--primary" type="submit" data-original-submit><?= $title ?></button></footer>
     </fieldset>
-    <aside class="fm2-order-helper"><div class="fm2-order-helper-icon" aria-hidden="true"><img src="/pilot/assets/shlz-icons/plus-alt-2.svg" data-shlz-icon="plus-alt-2" alt=""></div><div><h2>После загрузки</h2><p>После успешного ответа откроется карточка объекта. При обрыве связи файл и данные останутся в форме для безопасного повтора.</p></div><a class="shlz-link" href="/pilot/objects/<?= (int) $objectId ?>">К карточке объекта</a></aside>
-    <noscript><p role="alert">Для загрузки оригинала включите JavaScript и обновите страницу.</p></noscript><div class="fm2-original-status" role="status" aria-live="polite"><progress data-original-progress max="100" value="0" hidden></progress><p data-original-status></p></div>
+    <noscript><p role="alert">Для загрузки оригинала включите JavaScript и обновите страницу.</p></noscript>
+    <div class="fm2-original-status" role="status" aria-live="polite"><progress data-original-progress max="100" value="0" hidden></progress><p data-original-status></p></div>
 </form>
 <?php ViewSupport::end($this);

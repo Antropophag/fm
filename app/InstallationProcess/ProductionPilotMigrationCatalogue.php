@@ -49,6 +49,8 @@ final class ProductionPilotMigrationCatalogue
             39=>AssignmentOrderOriginalStartSchemaMigration::class,
             40=>EmailFirstPasswordRecoverySchemaMigration::class,
             41=>OtizPaymentControlSchemaMigration::class,
+            42=>AssignmentOrderOriginalExternalNumberSchemaMigration::class,
+            43=>EquipmentReclamationSchemaMigration::class,
         ];
     }
 }

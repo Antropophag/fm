@@ -11,18 +11,33 @@ final class ProductionPdfAssignmentOrderRenderer
         $this->validateInput($input);
         $this->loadTcpdf();
 
-        $version=(int)$input['assignmentOrderVersion'];
+        $version=(int)$input['assignmentOrderVersion'];$internalNumber='ФН'.(int)($input['assignmentOrderId']??$version);
         $object=$input['installationObjectSnapshot'];
         $engineer=$input['controlEngineer'];
         $date=$this->displayDate((string)$input['assignmentOrderDate']);
 
-        $pdf=new class('P','mm','A4',true,'UTF-8',false) extends \TCPDF {public function __construct(...$arguments){parent::__construct(...$arguments);$this->tcpdflink=false;$this->ZoomMode='passive';}};
+        $pdf=new class('P','mm','A4',true,'UTF-8',false) extends \TCPDF {
+            public string $internalDocumentNumber='';
+            public function __construct(...$arguments){parent::__construct(...$arguments);$this->tcpdflink=false;$this->ZoomMode='passive';}
+            public function Footer():void
+            {
+                // Anchor to the physical sheet, independently of body margins/orientation.
+                $padding=$this->getCellPaddings();
+                $this->setCellPaddings(0,0,0,0);
+                $this->SetXY($this->getPageWidth()-62,$this->getPageHeight()-12);
+                $this->SetFont('dejavusanscondensed','',7.5);
+                $this->SetTextColor(96,96,96);
+                $this->Cell(50,4,'FMonitor · '.$this->internalDocumentNumber,0,0,'R');
+                $this->setCellPaddings($padding['L'],$padding['T'],$padding['R'],$padding['B']);
+            }
+        };
+        $pdf->internalDocumentNumber=$internalNumber;
         $pdf->SetCreator('FMonitor 2.0');
         $pdf->SetAuthor('АО «Щербинский лифтостроительный завод»');
         $pdf->SetTitle('Распоряжение о закреплении монтажников');
         $pdf->SetSubject('Распоряжение о закреплении монтажников за объектом монтажа');
         $pdf->setPrintHeader(false);
-        $pdf->setPrintFooter(false);
+        $pdf->setPrintFooter(true);
         $pdf->SetMargins(30,15,15);
         $pdf->SetAutoPageBreak(true,18);
         $pdf->setFontSubsetting(true);
@@ -56,7 +71,6 @@ final class ProductionPdfAssignmentOrderRenderer
         ];
         $this->writeClauses($pdf,$items);
 
-        $pdf->AddPage('P','A4');
         $pdf->SetFont('dejavusanscondensed','',10.8);
         $this->writeClauses($pdf,[
             ['5.','Производителя работ, указанного в Перечне:',0],
@@ -76,7 +90,8 @@ final class ProductionPdfAssignmentOrderRenderer
         $pdf->Ln(4);
         $pdf->SetFont('dejavusanscondensed','',10.8);
         $pdf->MultiCell(0,5.8,'Приложение к распоряжению: 1. Перечень монтажников лифтового оборудования, объектов и производителей работ. Количество объектов — 1; количество монтажников — '.count($input['installers']).'.',0,'L',false,1);
-        $pdf->SetY(238);
+        if($pdf->GetY()+30>$pdf->getPageHeight()-$pdf->getBreakMargin())$pdf->AddPage('P','A4');
+        $pdf->Ln(12);
         $pdf->SetFont('dejavusanscondensed','B',9.7);
         $pdf->MultiCell(92,5.1,"Директор по работе с региональными\nоператорами капитального ремонта\nАлексеева К.О.",0,'L',false,0);
         $pdf->SetFont('dejavusanscondensed','',9.7);
@@ -86,12 +101,11 @@ final class ProductionPdfAssignmentOrderRenderer
         $pdf->SetMargins(8,8,8);
         $pdf->SetY(8);
         $pdf->SetFont('dejavusanscondensed','',6.4);
-        $pdf->MultiCell(0,3.4,'Приложение 1 к распоряжению № ________ от '.$date."\n".'«О закреплении монтажников лифтового оборудования за объектами и назначении ответственных производителей работ»',0,'R',false,1);
+        $pdf->MultiCell(0,3.4,'Приложение 1 к распоряжению № ____________ от '.$date."\n".'«О закреплении монтажников лифтового оборудования за объектами и назначении ответственных производителей работ»',0,'R',false,1);
         $pdf->Ln(2);
         $pdf->SetFont('dejavusanscondensed','B',8.5);
         $pdf->Cell(0,5,'Перечень монтажников лифтового оборудования, объектов и производителей работ',0,1,'C');
         $pdf->Ln(2);
-        if(isset($object['contractStartDate'],$object['contractFinishDate'],$object['normativePeriodDays'])){$pdf->SetFont('dejavusanscondensed','B',7.4);$pdf->Cell(0,4,'Нормативный период замены',0,1,'L');$pdf->SetFont('dejavusanscondensed','',7);$actual=($object['actualStartDate']??null)===null?'Начало работ не подтверждено':$this->displayDate($object['actualStartDate']);$pdf->MultiCell(0,4,'Начало по договору: '.$this->displayDate($object['contractStartDate']).' · Окончание по договору: '.$this->displayDate($object['contractFinishDate']).' · '.(int)$object['normativePeriodDays'].' календарных дней · Фактическое начало: '.$actual.' · Основание срока: Договорный норматив,',0,'L',false,1);$pdf->Ln(1);}
         $this->renderAppendixTable($pdf,$input,$object,$engineer);
         $pdf->Ln(5);
         $pdf->SetFont('dejavusanscondensed','',7);
@@ -126,11 +140,16 @@ final class ProductionPdfAssignmentOrderRenderer
         foreach($clauses as $index=>[$number,$text,$level]){
             $nextLevel=$index<$last?$clauses[$index+1][2]:-1;
             $compactAfter=$nextLevel>$level||($level>0&&$nextLevel===$level);
-            $this->writeClause($pdf,$number,$text,$level,$compactAfter?0.35:1.6);
+            $keepNextHeight=0.0;
+            if($nextLevel>$level){
+                $nextWidth=210-15-(30+$nextLevel*8)-($nextLevel===2?15:($nextLevel===1?12:8));
+                $keepNextHeight=max(5.8,$pdf->getStringHeight($nextWidth,$clauses[$index+1][1]));
+            }
+            $this->writeClause($pdf,$number,$text,$level,$compactAfter?0.35:1.6,$keepNextHeight);
         }
     }
 
-    private function writeClause(\TCPDF $pdf,string $number,string $text,int $level,float $gapAfter):void
+    private function writeClause(\TCPDF $pdf,string $number,string $text,int $level,float $gapAfter,float $keepNextHeight=0.0):void
     {
         $left=30+($level*8);
         $numberWidth=$level===2?15:($level===1?12:8);
@@ -138,6 +157,11 @@ final class ProductionPdfAssignmentOrderRenderer
         $textWidth=210-15-$textX;
         $lineHeight=5.8;
         $y=$pdf->GetY();
+        $needed=max($lineHeight,$pdf->getStringHeight($textWidth,$text))+$gapAfter+$keepNextHeight;
+        if($y+$needed>$pdf->getPageHeight()-$pdf->getBreakMargin()){
+            $pdf->AddPage('P','A4');
+            $y=$pdf->GetY();
+        }
         $pdf->SetXY($left,$y);
         $pdf->MultiCell($numberWidth,$lineHeight,$number,0,'L',false,0);
         $pdf->SetXY($textX,$y);
@@ -147,7 +171,7 @@ final class ProductionPdfAssignmentOrderRenderer
 
     private function renderAppendixTable(\TCPDF $pdf,array $input,array $object,array $engineer):void
     {
-        $widths=array_map(static fn(int $percent):float=>281*$percent/100,[3,9,12,6,7,16,5,7,7,7,6,8,7]);
+        $widths=array_map(static fn(int $percent):float=>281*$percent/100,[3,8,11,5,8,12,5,5,7,8,7,6,8,7]);
         $x0=8.0;$y=$pdf->GetY();$top=12.0;$lower=10.0;$full=$top+$lower;
         $headers=["№\nп/п",'Должность','Фамилия, имя, отчество','Таб. №',"Форма\nорганизации\nтруда"];
         $pdf->SetFont('dejavusanscondensed','B',6.8);
@@ -157,17 +181,17 @@ final class ProductionPdfAssignmentOrderRenderer
         $this->tableCell($pdf,$x,$y+$top,$widths[5],$lower,'Адрес','C','M');
         $this->tableCell($pdf,$x+$widths[5],$y+$top,$widths[6],$lower,'Подъезд','C','M');
         $x+=$widths[5]+$widths[6];
-        foreach([[7,'Рег. номер'],[8,"Дата начала\nработ"],[9,"Дата завершения\nработ"],[10,"Статус\nработника"]] as [$index,$label]){$this->tableCell($pdf,$x,$y,$widths[$index],$full,$label,'C','M');$x+=$widths[$index];}
-        $this->tableCell($pdf,$x,$y,$widths[11]+$widths[12],$top,'Данные о закреплённом за объектом и монтажниками производителе работ','C','M');
-        $this->tableCell($pdf,$x,$y+$top,$widths[11],$lower,'Должность','C','M');
-        $this->tableCell($pdf,$x+$widths[11],$y+$top,$widths[12],$lower,'ФИО','C','M');
+        foreach([[7,'Рег. номер'],[8,"Дата начала\nработ"],[9,"Фактическая\nдата начала\nработ"],[10,"Дата завершения\nработ"],[11,"Статус\nработника"]] as [$index,$label]){$this->tableCell($pdf,$x,$y,$widths[$index],$full,$label,'C','M');$x+=$widths[$index];}
+        $this->tableCell($pdf,$x,$y,$widths[12]+$widths[13],$top,'Данные о закреплённом за объектом и монтажниками производителе работ','C','M');
+        $this->tableCell($pdf,$x,$y+$top,$widths[12],$lower,'Должность','C','M');
+        $this->tableCell($pdf,$x+$widths[12],$y+$top,$widths[13],$lower,'ФИО','C','M');
 
         $pdf->SetFont('dejavusanscondensed','',6.8);$y+=$full;$number=1;
         foreach(($input['documentInstallers']??$input['installers']) as $installer){
-            $values=[(string)$number++,'Монтажник лифтового оборудования',(string)$installer['fullName'],str_pad((string)$installer['tabId'],6,'0',STR_PAD_LEFT),$this->organizationLabel((string)$input['organizationType']),(string)$object['address'],(string)$object['entrance'],(string)$object['objectRegistrationNumber'],$this->displayDate((string)$object['plannedStartDate']),$this->displayDate((string)$object['plannedFinishDate']),(string)($installer['workStatus']??'Работа'),(string)$engineer['position'],(string)$engineer['fullName']];
+            $values=[(string)$number++,'Монтажник лифтового оборудования',(string)$installer['fullName'],str_pad((string)$installer['tabId'],6,'0',STR_PAD_LEFT),$this->organizationLabel((string)$input['organizationType']),(string)$object['address'],(string)$object['entrance'],(string)$object['objectRegistrationNumber'],$this->displayDate((string)$object['plannedStartDate']),$this->displayDate((string)($input['appendixStartDate']??'')),$this->displayDate((string)$object['plannedFinishDate']),(string)($installer['workStatus']??'Работа'),(string)$engineer['position'],(string)$engineer['fullName']];
             $rowHeight=12.0;
             foreach($values as $index=>$value)$rowHeight=max($rowHeight,$pdf->getNumLines($value,$widths[$index]-2)*3.7+2);
-            $x=$x0;foreach($values as $index=>$value){$this->tableCell($pdf,$x,$y,$widths[$index],$rowHeight,$value,'L','T');$x+=$widths[$index];}$y+=$rowHeight;
+            $x=$x0;foreach($values as $index=>$value){$this->tableCell($pdf,$x,$y,$widths[$index],$rowHeight,$value,'C','M');$x+=$widths[$index];}$y+=$rowHeight;
         }
         $pdf->SetY($y);
     }
@@ -190,8 +214,8 @@ final class ProductionPdfAssignmentOrderRenderer
     private function validateInput(array $input): void
     {
         $object=$input['installationObjectSnapshot']??null;$installers=$input['installers']??null;$documentInstallers=$input['documentInstallers']??$installers;$engineer=$input['controlEngineer']??null;
-        $valid=isset($input['assignmentOrderVersion'])&&is_int($input['assignmentOrderVersion'])&&$input['assignmentOrderVersion']>0
-            &&$this->isDate($input['assignmentOrderDate']??null)&&in_array($input['organizationType']??null,['individual','brigade'],true)
+        $valid=isset($input['assignmentOrderVersion'])&&(!isset($input['assignmentOrderId'])||(is_int($input['assignmentOrderId'])&&$input['assignmentOrderId']>0))&&is_int($input['assignmentOrderVersion'])&&$input['assignmentOrderVersion']>0
+            &&(!array_key_exists('appendixStartDate',$input)||$this->isDate($input['appendixStartDate']))&&$this->isDate($input['assignmentOrderDate']??null)&&in_array($input['organizationType']??null,['individual','brigade'],true)
             &&is_array($object)&&$this->nonblank($object['address']??null)&&$this->nonblank($object['entrance']??null)&&$this->nonblank($object['objectRegistrationNumber']??null)&&(array_key_exists('plannedStartDate',$object)&&($object['plannedStartDate']===null||$this->isDate($object['plannedStartDate'])))&&(array_key_exists('plannedFinishDate',$object)&&($object['plannedFinishDate']===null||$this->isDate($object['plannedFinishDate'])))&&(!array_key_exists('contractStartDate',$object)||($this->isDate($object['contractStartDate']??null)&&$this->isDate($object['contractFinishDate']??null)&&is_int($object['normativePeriodDays']??null)&&$object['normativePeriodDays']>0&&array_key_exists('actualStartDate',$object)&&($object['actualStartDate']===null||$this->isDate($object['actualStartDate']))))
             &&is_array($installers)&&array_is_list($installers)&&$installers!==[]&&$this->validInstallers($installers)
             &&is_array($documentInstallers)&&array_is_list($documentInstallers)&&$documentInstallers!==[]&&$this->validDocumentInstallers($documentInstallers)

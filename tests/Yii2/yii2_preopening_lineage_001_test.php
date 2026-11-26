@@ -49,16 +49,16 @@ foreach([false,true] as $correct) {
         $response=$f->upload($cookies,$metadata);assertSameValue(201,$response['status'],'initial compound upload');$original=json_decode($response['body'],true,512,JSON_THROW_ON_ERROR);
         $applications=$f->rows('fm2_assignment_order_applications');$oldOriginals=$f->rows('fm2_assignment_order_original_revisions');$firstCase=$f->rows('fm2_installation_cases')[0];
         if($correct){
-            $metadata=array_replace($metadata,['requestId'=>'22222222-2222-4222-8222-000000000002','mode'=>'correction','documentDate'=>'2026-09-02','rootOriginalId'=>$original['rootOriginalId'],'targetRevisionId'=>$original['currentRevisionId'],'expectedCurrentRevisionId'=>$original['currentRevisionId'],'correctionReason'=>'Уточнение даты документа']);
-            $response=$f->upload($cookies,$metadata);assertSameValue(201,$response['status'],'correction applies automatically');
-            $before=$f->facts();$stale=array_replace($metadata,['requestId'=>'22222222-2222-4222-8222-000000000003','documentDate'=>'2026-09-03']);$rejected=$f->upload($cookies,$stale);assertSameValue(409,$rejected['status'],'stale correction target rejected');
+            $metadata=array_replace($metadata,['requestId'=>'22222222-2222-4222-8222-000000000002','mode'=>'correction','rootOriginalId'=>$original['rootOriginalId'],'targetRevisionId'=>$original['currentRevisionId'],'expectedCurrentRevisionId'=>$original['currentRevisionId'],'correctionReason'=>'Замена ошибочного скана']);
+            $response=$f->upload($cookies,$metadata,FMonitor2\Tests\Support\OriginalStartFixture::otherPdf());assertSameValue(201,$response['status'],'scan replacement applies automatically');
+            $before=$f->facts();$stale=array_replace($metadata,['requestId'=>'22222222-2222-4222-8222-000000000003']);$rejected=$f->upload($cookies,$stale);assertSameValue(409,$rejected['status'],'stale correction target rejected');
             assertSameValue($oldOriginals[0],$f->rows('fm2_assignment_order_original_revisions')[0],'stale target preserves original');
         }
         $after=$f->rows('fm2_assignment_order_applications');assertSameValue($correct?2:1,count($after),'only correction adds application');assertSameValue($applications[0],$after[0],'prior application immutable');
         assertSameValue($oldOriginals[0],$f->rows('fm2_assignment_order_original_revisions')[0],'prior original immutable');if($correct)assertSameValue('reapplication',$after[1]['kind'],'explicit reapplication lineage');
         foreach(['actual_start_date','opened_at','opened_by_user_id']as$key)assertSameValue($firstCase[$key],$f->rows('fm2_installation_cases')[0][$key],'opening immutable '.$key);
         assertSameValue(['working','2026-09-03','18'],array_map(static fn($key)=>$f->rows('fm2_installation_cases')[0][$key],['process_state','actual_start_date','opened_by_user_id']),'durable opening');
-        $before=$f->facts();assertSameValue(200,$f->upload($cookies,$metadata)['status'],'exact compound replay');assertSameValue($before,$f->facts(),'replay immutable');$f->noLegacy();
+        $before=$f->facts();$replayBytes=$correct?FMonitor2\Tests\Support\OriginalStartFixture::otherPdf():null;assertSameValue(200,$f->upload($cookies,$metadata,$replayBytes)['status'],'exact compound replay');assertSameValue($before,$f->facts(),'replay immutable');$f->noLegacy();
         // Opening attribution is a durable fact, not an inference from the most recent eight events.
         $openedAt=$f->rows('fm2_installation_cases')[0]['opened_at'];
         for ($i = 0; $i < 9; $i++) {
@@ -78,9 +78,12 @@ foreach([false,true] as $correct) {
     } finally {if($f instanceof PreopeningFixture)$f->close();}
 }
 $f=null;try{
- $f=new PreopeningFixture(dirname(__DIR__,2));$f->start();$cookies=[];$f->login($cookies);$f->selection($cookies);$raw=$f->nativeOriginal();$metadata=array_replace($f->metadata($cookies,'22222222-2222-4222-8222-000000000080'),['mode'=>'correction','documentDate'=>'2026-09-02','rootOriginalId'=>$raw->rootOriginalId(),'targetRevisionId'=>$raw->currentRevisionId(),'expectedCurrentRevisionId'=>$raw->currentRevisionId(),'correctionReason'=>'Stale selection']);
+ $f=new PreopeningFixture(dirname(__DIR__,2));$f->start();$cookies=[];$f->login($cookies);$f->selection($cookies);$raw=$f->nativeOriginal();$metadata=array_replace($f->metadata($cookies,'22222222-2222-4222-8222-000000000080'),['mode'=>'correction','rootOriginalId'=>$raw->rootOriginalId(),'targetRevisionId'=>$raw->currentRevisionId(),'expectedCurrentRevisionId'=>$raw->currentRevisionId(),'correctionReason'=>'Stale selection']);
+ // Setup a signed-document binding for the lower-level native original while keeping this case unopened.
+ $revision=$f->rows('fm2_assignment_order_original_revisions')[0];
+ $f->insert($f->p.'fm2_assignment_order_original_starts',['request_id'=>$revision['request_id'],'installation_case_id'=>6101,'object_id'=>4512,'assignment_order_id'=>81,'actor_user_id'=>18,'mode'=>'initial','document_date'=>$revision['document_date'],'appendix_start_date'=>'2026-09-02','external_document_number'=>'FIXTURE-1C-DO','pdf_sha256'=>$revision['pdf_sha256'],'byte_size'=>(int)$revision['byte_size'],'semantic_fingerprint'=>str_repeat('b',64),'created_at_utc'=>'2026-09-01 09:00:00.000000']);
  assertSameValue(303,$f->selection($cookies,'11111111-1111-4111-8111-000000000080',[7002],'new_order',1)['status'],'intervening selected order');
- $priorApplications=$f->rows('fm2_assignment_order_applications');$priorCases=$f->rows('fm2_installation_cases');$result=$f->upload($cookies,$metadata);assertSameValue(503,$result['status'],'superseded upload cannot open current selection');$pending=json_decode($result['body'],true,512,JSON_THROW_ON_ERROR);assertSameValue(['pending','target_not_current'],[$pending['status'],$pending['reasonCode']],'stale selection preserves accepted PDF with explicit pending reason');
+ $priorApplications=$f->rows('fm2_assignment_order_applications');$priorCases=$f->rows('fm2_installation_cases');$result=$f->upload($cookies,$metadata,FMonitor2\Tests\Support\OriginalStartFixture::otherPdf());assertSameValue(503,$result['status'],'superseded upload cannot open current selection');$pending=json_decode($result['body'],true,512,JSON_THROW_ON_ERROR);assertSameValue(['pending','target_not_current'],[$pending['status'],$pending['reasonCode']],'stale selection preserves accepted PDF with explicit pending reason');
  assertSameValue($priorApplications,$f->rows('fm2_assignment_order_applications'),'stale selection not applied');assertSameValue($priorCases,$f->rows('fm2_installation_cases'),'stale selection cannot open');$f->noLegacy();
 }finally{if($f instanceof PreopeningFixture)$f->close();}
 echo "PASS: HTTP upload lineage, stale original and reapplication\n";

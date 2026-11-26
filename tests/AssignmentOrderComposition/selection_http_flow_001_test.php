@@ -38,7 +38,7 @@ try {
     assertSameValue((string)strlen($pdf['body']),$pdf['headers']['content-length']??null,'exact PDF length');assertSameValue(true,str_starts_with($pdf['body'],'%PDF-'),'real PDF');
     assertSameValue(true,str_starts_with($pdf['headers']['content-disposition']??'','inline;'),'template opens inline instead of triggering a download');assertSameValue(true,str_contains($pdf['headers']['content-disposition']??'',"filename*=UTF-8''"),'RFC5987 inline filename');
     TemplateGenerationFixture::pdfMarker($pdf['body'],'Монтажник 7002');TemplateGenerationFixture::pdfMarker($pdf['body'],'Инженер теста');
-    assertSameValue(['status'=>'found','date'=>$today],C\ProductionAssignmentOrderTemplateFactory::dateReader($native->db)->find(4512,82),'authorized HTTP generated date');
+    assertSameValue(['status'=>'found','date'=>$today,'appendixStartDate'=>'2026-10-05','artifactAvailable'=>true],C\ProductionAssignmentOrderTemplateFactory::dateReader($native->db)->find(4512,82),'authorized HTTP generated artifact metadata');
     A::rowsPreserved($prePdf,$native->rows(),['fm2_process_events']);assertSameValue($files,$f->original->privateFiles(),'PDF not stored');
     assertSameValue(true,str_contains($f->request('GET',A::PATH)['body'],$today),'last generation date visible');
     $pdf2=$f->request('POST','/pilot/objects/4512/assignment-orders/82/template',http_build_query(['csrfToken'=>$f->csrf]));assertSameValue(200,$pdf2['status'],'repeated PDF');

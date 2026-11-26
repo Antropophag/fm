@@ -26,7 +26,13 @@ foreach ($views as $view) $check(is_file($root . '/app/YiiRuntime/Views/' . $vie
 $css = (string) file_get_contents($root . '/app/YiiRuntime/Assets/pilot.css');
 $selection = (string) file_get_contents($root . '/app/YiiRuntime/Views/selection.php');
 $snapshot = (string) file_get_contents($root . '/app/YiiRuntime/Views/otiz-snapshot.php');
-$check(preg_match('/<\/div>\s*<dialog class="shlz-modal fm2-selection-modal"/u', $selection) === 1, 'fixture proves dialog is a picker sibling');
+$dialogPosition = strpos($selection, '<dialog class="shlz-modal fm2-selection-modal"');
+$pickerPosition = strpos($selection, 'data-selection-picker');
+$formEnd = strrpos($selection, '</form>');
+$check(is_int($dialogPosition) && is_int($pickerPosition) && is_int($formEnd)
+    && $pickerPosition < $formEnd && $formEnd < $dialogPosition
+    && str_contains(substr($selection, $dialogPosition), 'data-installer-dialog'),
+    'workflow dialog uses public modal outside the submitting form');
 $check(!str_contains($css, '[data-selection-picker] .fm2-selection-modal'), 'V03 actual sibling dialog owns responsive rules');
 $check(!str_contains($css, '.fm2-shell:has(.fm2-otiz)'), 'V05 subject page does not own global shell geometry');
 $check(str_contains($snapshot, '<dialog class="shlz-modal fm2-otiz-payment-dialog"'), 'V04 payment confirmation uses public modal element');

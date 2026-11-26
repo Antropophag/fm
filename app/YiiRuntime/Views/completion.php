@@ -44,7 +44,7 @@ $renderHistory = static function (string $type, array $fact): void {
             <div><strong><?= $row['version'] === 0 ? 'Исходная запись' : 'Исправление ' . (int) $row['version'] ?></strong>
                 <span>Дата: <?= Html::encode($row['date']) ?><?php if ($type === 'declaration'): ?> · Реквизиты: <?= Html::encode($row['details']) ?><?php endif ?></span>
                 <?php if ($row['reason'] !== null): ?><span>Причина: <?= Html::encode($row['reason']) ?></span><?php endif ?>
-                <small><?= Html::encode($row['actorName']) ?> · ID <?= (int) $row['actorId'] ?> · <time datetime="<?= Html::encode($row['recordedAt']) ?>"><?= Html::encode($row['recordedAt']) ?></time></small>
+                <small><?= Html::encode($row['actorName']) ?> · <time datetime="<?= Html::encode($row['recordedAt']) ?>"><?= Html::encode($row['recordedAt']) ?></time></small>
             </div>
         </li>
     <?php endforeach ?></ol></details><?php
