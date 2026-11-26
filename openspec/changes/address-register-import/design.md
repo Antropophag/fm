@@ -234,3 +234,12 @@ Preserve upstream stops plus importer provenance, shared registry/card/readiness
 and all verification consumers. Root resolves tests/spec/docs; separate executor
 resolves production/policy. Gate3 then focused combined-schema/restore/adjacent,
 final independent review and exact CI; no main push, real migration or deploy.
+
+## Home dev integration after main43
+Owner26.11 authorized home deployment. Preserve main2ea60f1d migrations42/43
+and append address44 (119 tables/65 AI). A15 owns upgraded acceptance; root
+seeds nonempty external number/reclamation plus predecessor facts/AI and retains
+full restore. Separate executor resolves production; root resolves frontier
+tests/policy, fresh Gate3/final/CI before deployment. Preserve home state/WIP
+and backups, use existing home compose route; no actual import/paid calls,
+PR merge/main push or corporate deploy. No unrelated feature redesign.

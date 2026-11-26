@@ -290,3 +290,26 @@ password token hash, request timestamps, OTIZ hold reason and12345-cent allocati
 with valid parents). Four predecessor sequences have gaps beyond retained IDs.
 Exact rows/DDL/next-ID comparisons cover upgrade, migration replay, public full
 backup/restore and importer replay. Empty inventories alone are insufficient.
+
+## A15: домашний dev после main43 —26.11.2026
+
+Owner разрешил deployment инструмента на домашний dev. Main2ea60f1d уже содержит
+42 AssignmentOrderOriginalExternalNumberSchemaMigration и43 EquipmentReclamationSchemaMigration.
+Эти опубликованные владельцы, их readiness и определения recovery42/43 SHALL
+сохраняться; адресный импорт SHALL добавляться как44. Актуальный combined
+frontier —119 tables/65 AUTO_INCREMENT; A14/v42 остаётся историей раннего кандидата.
+Порядок canonical1..44, upgrade43→44 и повтор не меняют прежние rows/DDL/AI.
+Непустой строковый external_document_number, запись рекламации с ненулевым
+delay_days и пять прежних password/OTIZ families со sequence gaps SHALL
+сохраняться точно после миграции, replay и public backup/restore.
+Длительности/21-field mapping/identity/reports/economy не меняются.
+
+Deployment SHALL использовать точный independently reviewed CI-green combined
+source, сохранять checkout/container WIP, существующий env/secrets, data/state
+и текущие функции распоряжений/рекламаций. До mutation нужны private backup и
+проверенный путь восстановления. Применяются только нужные аддитивные migrations
+через владельцев; старые receipt gaps не фабрикуются и не выдают полный canonical
+preflight заGREEN. После — health/readiness, CLI availability,21fields, schema
+совместимость и неизменность доменных строк/старой истории, без реального импорта,
+платной ДаДата, отправки тестовых писем или создания процессных фактов.
+Запускаются только ранее работавшие сервисы. Корпоративный production не затронут.

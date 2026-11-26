@@ -147,3 +147,8 @@ remains unperformed; no merge/main push/deployment/dev-prod import authorized.
 - [ ] 8.4 Corporate identity verification, commit/push PR307, новый full exact-source GitHubCI; ready handoff без merge/deploy/live import.
 
 - [x] 8.5 Root A14/tests и independent Gate3 для main reconciliation; separate executor сохраняет40/41, добавляет address42; root объединяет frontier consumers. Полный final/CI только после merge origin/main в branch, без переписывания истории.
+
+## 9. Owner-authorized home deployment26.11
+- [ ] 9.1 Root A15/tests and independent Gate3 for current main43→address44.
+- [ ] 9.2 Separate production integration, preserved history, focused checks/final review/new exact-source CI in PR307.
+- [ ] 9.3 Verify current home bytes/state, backup, deploy exact candidate safely, validate health/schema/CLI/no data loss; no actual import or paid calls.

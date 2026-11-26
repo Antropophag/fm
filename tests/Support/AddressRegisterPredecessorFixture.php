@@ -1,18 +1,20 @@
 <?php
 declare(strict_types=1);
 
-/** Literal v40/v41 fixture data; never derives expectations from production manifests. */
+/** Literal v40–v43 fixture data; never derives expectations from production manifests. */
 final class AddressRegisterPredecessorFixture
 {
     private const TABLES = [
         'fm2_password_events', 'fm2_password_recovery_requests', 'fm2_password_recovery_attempts',
         'fm2_otiz_object_payment_hold_events', 'fm2_otiz_payment_allocations',
+        'fm2_assignment_order_original_starts', 'fm2_equipment_reclamations',
     ];
     private const NEXT = [
         'fm2_password_events' => 920001,
         'fm2_password_recovery_attempts' => 920002,
         'fm2_otiz_object_payment_hold_events' => 920003,
         'fm2_otiz_payment_allocations' => 920004,
+        'fm2_equipment_reclamations' => 920005,
     ];
 
     public static function seed(mysqli $db, string $p, int $objectId): array
@@ -28,6 +30,13 @@ final class AddressRegisterPredecessorFixture
         $db->query("INSERT INTO {$p}fm2_otiz_payment_facts(id,calculation_id,amount_cents,payment_date,created_at) VALUES(910012,910010,12345,'2026-11-24','2026-11-24T10:00:00Z')");
         $db->query("INSERT INTO {$p}fm2_otiz_object_payment_hold_events(id,object_id,revision,held,reason,actor_user_id,created_at) VALUES(910003,$objectId,1,1,'Historical hold sentinel',99992,'2026-11-24T10:00:00Z')");
         $db->query("INSERT INTO {$p}fm2_otiz_payment_allocations(id,payment_id,obligation_id,amount_cents) VALUES(910004,910012,910011,12345)");
+        $caseId = $db->query("SELECT id FROM {$p}fm2_installation_cases WHERE legacy_installation_object_id=$objectId LIMIT 1")->fetch_column();
+        if ($caseId === null || $caseId === false) {
+            $caseId = 990044;
+            $db->query("INSERT INTO {$p}fm2_installation_cases(id,legacy_installation_object_id,process_state,created_at,updated_at,lock_version) VALUES($caseId,$objectId,'needs_assignment_order','2026-11-24T10:00:00Z','2026-11-24T10:00:00Z',1)");
+        }
+        $db->query("INSERT INTO {$p}fm2_assignment_order_original_starts(request_id,installation_case_id,object_id,assignment_order_id,actor_user_id,mode,document_date,appendix_start_date,external_document_number,pdf_sha256,byte_size,semantic_fingerprint,created_at_utc) VALUES('44444444-4444-4444-8444-444444444444',$caseId,$objectId,910006,99992,'initial','2026-11-24','2026-11-25','ПЗЛД-SENTINEL-44',REPEAT('c',64),128,REPEAT('d',64),'2026-11-24 10:00:00.123456')");
+        $db->query("INSERT INTO {$p}fm2_equipment_reclamations(id,installation_case_id,actor_user_id,number,normalized_number_sha256,delay_days,request_id,request_fingerprint,recorded_at) VALUES(910005,$caseId,99992,'RECL-SENTINEL-44',SHA2('RECL-SENTINEL-44',256),7,'45454545-4545-4545-8545-454545454545',REPEAT('e',64),'2026-11-24 10:00:00.123456')");
         foreach (self::NEXT as $name => $next) $db->query("ALTER TABLE `{$p}{$name}` AUTO_INCREMENT=$next");
         $snapshot = self::snapshot($db, $p);
         foreach (self::TABLES as $name) assertSameValue(true, count($snapshot[$name]['rows']) > 0, 'populated predecessor '.$name);

@@ -1021,7 +1021,8 @@
         "app/YiiRuntime/AddressRegisterImportConsole.php",
         "bin/fmonitor2-address-register.php",
         "app/RuntimeRestore/RuntimeRecoverySchemaV42.php",
-        "app/InstallationProcess/MariaDbAddressRegisterImport*.php"
+        "app/InstallationProcess/MariaDbAddressRegisterImport*.php",
+        "app/RuntimeRestore/RuntimeRecoverySchemaV44.php"
       ],
       "verifiers": [
         "tests/InstallationProcess/address_register_import_cli_001_test.php",

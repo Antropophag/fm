@@ -1,3 +1,18 @@
+# Текущая задача — адресный импортёр на домашнем dev,26.11.2026
+
+Владелец разрешил выложить импортёр на домашний стенд. Read-only preflight:
+домашнийdev уже на2ea60f1d/main PR311, migrations42/43;31761d34 несовместим
+по номеру миграции. Сначала history-preserving integration main в PR307,
+address44/119tables/65AI, independent reviews и новый exact-source CI, затем
+backup и безопасный deployment на существующий dev без отката функций.
+Root — spec/tests/operations; separate sol/low executor — production.
+Реальные импорты, paid ДаДата, PR merge/main push и corporate deployment
+не разрешены. Source/PR/CI читать через harness; прежний CI не проверяет44.
+Evidence: ~/.local/share/fmonitor-2/address-register-import/dev-deploy-20261126/.
+История ниже сохранена.
+
+---
+
 # Адресный CLI21: готовый кандидат для нового CI —26.11.2026
 
 Gate3v22 и independent final code/architecture reviewv5 APPROVED без findings.

@@ -254,3 +254,13 @@ projection. Новые live migrations/deployments этой задачей не 
 - **WHEN** canonical migration обновляет совместимый v41 до42 и повторяется
 - **THEN** добавлены только семь address families, predecessor rows/DDL сохранены,
   replay идемпотентен; backup/restore включает118 tables/64 sequences
+
+### Requirement: Домашняя поставка после migrations42/43
+Система SHALL сохранять main42/43 и добавлять address44:119 tables/65 AI.
+Непустые external_document_number, рекламации, прежние факты и sequence gaps
+SHALL переживать upgrade/replay/backup/restore без изменений.
+
+#### Scenario: Поставка поверх работающего dev43
+- **WHEN** reviewed и CI-green combined candidate выкладывается с private backup
+- **THEN** текущие функции/данные/WIP/env сохранены, schema44 и CLI21 доступны,
+  health/readiness успешны, реального импорта и платных вызовов нет
