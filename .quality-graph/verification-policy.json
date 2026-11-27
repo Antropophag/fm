@@ -55,7 +55,11 @@
       "patterns": [
         "app/YiiRuntime/Assets/checklist-sw.js",
         "app/YiiRuntime/Assets/checklist.js",
-        "app/YiiRuntime/Assets/control-queue.js"
+        "app/YiiRuntime/Assets/control-queue.js",
+        "app/YiiRuntime/Assets/field-offline*",
+        "app/YiiRuntime/Assets/manifest.webmanifest",
+        "app/YiiRuntime/Assets/pwa-icon-192.png",
+        "app/YiiRuntime/Assets/pwa-icon-512.png"
       ],
       "tests": [
         "tests/Yii2/yii2_inspection_browser_001_test.php"
@@ -607,13 +611,21 @@
         "app/YiiRuntime/Assets/checklist.js",
         "app/YiiRuntime/Assets/pilot.css",
         "app/YiiRuntime/Views/checklist.php",
-        "app/YiiRuntime/Views/construction-control.php"
+        "app/YiiRuntime/Views/construction-control.php",
+        "app/InspectionEvidence/MariaDbYiiChecklistPhoto.php"
       ],
       "verifiers": [
         "tests/Yii2/yii2_construction_control_active_queue_001_test.php",
         "tests/Yii2/yii2_construction_control_preopening_001_test.php",
         "tests/Yii2/yii2_inspection_browser_001_test.php",
-        "tests/Yii2/yii2_inspection_journey_001_test.php"
+        "tests/Yii2/yii2_inspection_journey_001_test.php",
+        "tests/Yii2/reliable_field_offline_001_test.php",
+        "tests/Yii2/reliable_field_offline_browser_001_test.php",
+        "tests/Yii2/reliable_field_offline_worker_001_test.mjs",
+        "tests/Yii2/reliable_field_offline_recovery_001_test.mjs",
+        "tests/Yii2/yii2_checklist_operation_replay_001_test.php",
+        "tests/Yii2/yii2_checklist_photo_viewing_browser_001_test.php",
+        "tests/Yii2/yii2_construction_control_server_filtering_001_test.php"
       ],
       "consumers": []
     },
@@ -1228,7 +1240,8 @@
     "tests/Yii2/yii2_shlz_select_001_test.php": "browser",
     "tests/Yii2/yii2_user_access_001_test.php": "browser",
     "tests/Yii2/yii2_user_access_browser_001_test.php": "browser",
-    "tests/Yii2/yii2_user_access_edges_001_test.php": "browser"
+    "tests/Yii2/yii2_user_access_edges_001_test.php": "browser",
+    "tests/Yii2/yii2_construction_control_server_filtering_001_test.php": "browser"
   },
   "semantic_surfaces": [
     {

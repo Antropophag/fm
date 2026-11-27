@@ -39,7 +39,7 @@ trait MariaDbYiiChecklistMutation
     }$revision=$this->revision($caseId,true);
     if($base>$revision)
         {$this->rollback();
-    return['status'=>'conflict','revision'=>$revision];
+    return['status'=>'conflict','reason'=>'stale_revision','revision'=>$revision];
     }$item=null;
     $payload=[];
                 if($type==='item_installers_changed')
@@ -106,7 +106,7 @@ trait MariaDbYiiChecklistMutation
             $r=$owner->completeItem(new CompleteInspectionItem($actor,$caseId,(string)($o['clientOperationId']??''),(string)($o['deviceInstallationId']??''),(string)($o['deviceTime']??''),(int)($o['baseRevision']??-1),(int)($o['sectionId']??0),(int)($o['itemId']??0),array_map('intval',(array)($o['installerTabIds']??[]))));
             if($r->status==='INSPECTION_SCHEMA_UNAVAILABLE')throw new \RuntimeException();
     return['status'=>match($r->status)
-        {'ACCEPTED'=>'accepted','DUPLICATE'=>'duplicate','STALE_REVISION','OPERATION_PAYLOAD_CONFLICT'=>'conflict','ACTOR_NOT_AUTHORIZED'=>'forbidden',default=>'rejected'},'revision'=>$r->revision]+($r->status==='CASE_NOT_WORKING'&&$case['process_state']==='completed'?['reason'=>'case_not_working']:[]);
+        {'ACCEPTED'=>'accepted','DUPLICATE'=>'duplicate','STALE_REVISION','OPERATION_PAYLOAD_CONFLICT'=>'conflict','ACTOR_NOT_AUTHORIZED'=>'forbidden',default=>'rejected'},'revision'=>$r->revision]+match($r->status){'STALE_REVISION'=>['reason'=>'stale_revision'],'OPERATION_PAYLOAD_CONFLICT'=>['reason'=>'operation_payload_conflict'],default=>[]}+($r->status==='CASE_NOT_WORKING'&&$case['process_state']==='completed'?['reason'=>'case_not_working']:[]);
         }
         private function template(int$case,string$time):?array{$r=$this->one("SELECT a.template_snapshot_id snapshot_id,a.template_snapshot_version snapshot_version,a.template_content_sha256 content_sha256,t.valid_from,a.effective_at,t.snapshot_version current_version,t.content_sha256 current_hash FROM {$this->t('fm2_checklist_template_associations')} a JOIN {$this->t('fm2_checklist_template_snapshots')} t ON t.id=a.template_snapshot_id WHERE a.subject_kind='operational_case' AND a.subject_id=?",[(string)$case]);
     if(!$r||$r['snapshot_version']!==$r['current_version']||!hash_equals($r['content_sha256'],$r['current_hash']))return null;
@@ -115,8 +115,8 @@ trait MariaDbYiiChecklistMutation
         private function replay(string$id,int$objectId,int$actorId,string$device,string$type,int$section,array$o,?string$bytes):?array{
     $stored=$this->one("SELECT installation_case_id,device_installation_id,operation_type,section_id,item_id,actor_user_id,accepted_revision,payload_json FROM {$this->t('fm2_checklist_operations')} WHERE client_operation_id=?",[$id]);if($stored===null)return null;$case=$this->case($objectId,false);
     $matches=$case!==null&&(int)$stored['installation_case_id']===(int)$case['id']&&(string)$stored['operation_type']===$type&&(int)$stored['actor_user_id']===$actorId&&(string)$stored['device_installation_id']===$device&&(int)$stored['section_id']===$section;$expected=$this->replayPayload($type,$o);try{$payload=json_decode((string)$stored['payload_json'],true,32,JSON_THROW_ON_ERROR);}catch(\JsonException){$payload=null;}
-    $item=$o['itemId']??null;$expectedItem=in_array($type,['item_installers_changed','completion_retracted'],true)&&is_int($item)?$item:null;if(!$matches||$expected===null||!is_array($payload)||($stored['item_id']===null?null:(int)$stored['item_id'])!==$expectedItem||$this->replayPayload($type,$payload,true)!==$expected)return['status'=>'conflict'];
-    return!$this->replayValid($type,$o,$bytes)?['status'=>'rejected']:['status'=>'duplicate','revision'=>(int)$stored['accepted_revision']];}
+    $item=$o['itemId']??null;$expectedItem=in_array($type,['item_installers_changed','completion_retracted'],true)&&is_int($item)?$item:null;if(!$matches||$expected===null||!is_array($payload)||($stored['item_id']===null?null:(int)$stored['item_id'])!==$expectedItem||$this->replayPayload($type,$payload,true)!==$expected)return['status'=>'conflict','reason'=>'operation_payload_conflict'];
+    return!$this->replayValid($type,$o,$bytes)?['status'=>'rejected','reason'=>$type==='photo_uploaded'?'photo_invalid':'operation_rejected']:['status'=>'duplicate','revision'=>(int)$stored['accepted_revision']];}
         private function replayValid(string$type,array$o,?string$bytes):bool{
     if($type==='item_installers_changed'){$ids=$o['installerTabIds']??null;return is_array($ids)&&$ids!==[]&&count($ids)===count(array_unique(array_map('strval',$ids)));}if($type!=='photo_uploaded')return true;
     $mime=$o['mime']??null;$size=$o['size']??null;$sha=$o['sha256']??null;$name=$o['originalName']??null;$image=is_string($bytes)?@getimagesizefromstring($bytes):false;return is_string($bytes)&&in_array($mime,['image/jpeg','image/png','image/webp'],true)&&is_array($image)&&($image['mime']??null)===$mime&&is_int($size)&&$size>=1&&$size<=5242880&&strlen($bytes)===$size&&is_string($sha)&&preg_match('/^[a-f0-9]{64}$/D',$sha)===1&&hash_equals($sha,hash('sha256',$bytes))&&is_string($name)&&$name!==''&&mb_strlen($name)<=255&&preg_match('/[\x00-\x1f\x7f]/u',$name)!==1;}

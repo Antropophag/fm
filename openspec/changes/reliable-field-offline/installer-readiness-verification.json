@@ -1,0 +1,37 @@
+{
+  "change": "reliable-field-offline-installer-readiness",
+  "planned_paths": [
+    "tests/Yii2/installer_directory_browser.mjs"
+  ],
+  "lifecycle": {
+    "intent": "COMPACT_MAINTENANCE",
+    "issue": "PR #312 / CI 45980156516",
+    "change_kind": "APPLICATION_TEST_OR_REFACTOR",
+    "requirement_status": "CURRENT",
+    "semantic_change": "AGREED_ORDINARY_CHANGE",
+    "canonical_requirements": [
+      {
+        "path": "specs/YII2-INSTALLER-DIRECTORY-001.md"
+      }
+    ],
+    "executable_regression": "tests/Yii2/yii2_installer_directory_browser_001_test.php",
+    "sensitivity": {
+      "classification": "ORDINARY",
+      "boundaries": [
+        "browser-test-readiness"
+      ],
+      "rationale": "Only await existing public enhancement readiness before the unchanged strict installer-filter actions/assertions; no application, durability, rights, schema or CI admission behavior changes."
+    }
+  },
+  "acceptances": [
+    {
+      "spec_id": "YII2-INSTALLER-DIRECTORY-001",
+      "acceptance_id": "enhanced-filter-ready",
+      "spec_path": "specs/YII2-INSTALLER-DIRECTORY-001.md",
+      "seam": "Real Yii installer directory navigation/reset, enabled submitted filter value and exactly one accessible enhanced combobox",
+      "tests": [
+        "tests/Yii2/yii2_installer_directory_browser_001_test.php"
+      ]
+    }
+  ]
+}

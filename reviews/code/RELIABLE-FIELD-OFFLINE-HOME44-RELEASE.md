@@ -1,0 +1,11 @@
+# Домашняя сборка schema44 + надёжный offline — final review
+
+27.11.2026, APPROVED без findings независимым `/root/offline_gate_reviewer` (sol/low). Source `4a8a1778784e05527104505d050d619580e973e28d31d6e5c9a56c1fe63cd286`; package `20261127T130845Z-faa6f51a02`. Root выполняет только history-preserving composition и проверку; feature implementation принадлежит отдельным core/surface executors. Ровно два ожидаемых родителя: deployed `f6f67aeb533f8c7b688a8d904eb7a54b688bafe9` и reviewed feature `838d935af4da76d93eb7900b1416b8eec457f13a`.
+
+Все девять mapped checks GREEN без source drift, полный selected inventory14/14 GREEN: browser25/25, recovery17/17, worker/performance, protected HTTP/replay, mobile/inspection, completion/installer browsers, schema44, real-scale restore, architecture/global Pilot HTTP qualification. Тяжёлые browser consumers выполнялись последовательно. Initial missing vendor/autoload records сохранены как setup failures; exact locked Composer install не менял lock/source, subsequent proof загружает application именно из home-release worktree.
+
+Preservation:140 address paths byte-identical deployedf6,69 offline paths byte-identical feature838d; policy содержит обе стороны, suites — точное объединение684 строк без дублей. Объединены только объявленные policy/current-goal/suite paths; вся прежняя домашняя цель сохранена отдельно, остальные WIP worktrees не тронуты. Новой бизнес-логики, schema/transaction behavior и изменений корпоративного периметра нет.
+
+Primary evidence хранится вне checkout: `reliable-field-offline/home44/release/` — root/reviewer packages, `completed-focused-results.json`, `final-preservation.json`, `catalog-union.json`, initial setup и Composer logs. Feature approval/RED/failure lineage сохранены в его parent и review records.
+
+Approval относится к составу кода/spec/tests. Отдельно обязательны новый exact-source home CI и GREEN feature CI46002085458, новый immutable operator binding с точными parents/run IDs/events/helper hashes, независимый exact-artifact review, свежий read-only preflight и reviewed schema44 deployment phases. Старый operator binding неприменим. Live build/stop/backup/migration/cutover ещё не выполнялись. Hardware Android/FortiClient/iPhone остаётся UNKNOWN; реальные imports/paid providers/main merge/corporate deployment не разрешены.
