@@ -1,0 +1,70 @@
+{
+  "change": "add-object-general-photos",
+  "planned_paths": [
+    ".quality-graph/verification-policy.json",
+    "app/InspectionEvidence/MariaDbYiiChecklistMutation.php",
+    "app/YiiRuntime/Assets/checklist.js",
+    "app/YiiRuntime/Assets/field-offline-preparation.js",
+    "app/YiiRuntime/Assets/field-offline-store.js",
+    "app/YiiRuntime/Assets/field-offline.css",
+    "app/YiiRuntime/Views/checklist.php",
+    "app/YiiRuntime/Views/construction-control.php",
+    "app/YiiRuntime/WebResponse.php",
+    "public/help/index.html",
+    "public/help/user-guide.md",
+    "specs/OBJECT-GENERAL-PHOTOS-001.md",
+    "specs/RELIABLE-FIELD-OFFLINE-001.md",
+    "tests/Runtime/yii2_production_web_cutover_001_test.php",
+    "tests/Support/checklist_minimal_fixture.js",
+    "tests/Support/construction_control_server_filtering_browser.cjs",
+    "tests/Support/object_general_photos_browser.cjs",
+    "tests/Support/offline_indicator_browser.cjs",
+    "tests/Support/yii2_production_web_cutover_contract.php",
+    "tests/Yii2/construction_control_mobile_list_browser.mjs",
+    "tests/Yii2/inspection_browser.mjs",
+    "tests/Yii2/object_general_photos_001_test.php",
+    "tests/Yii2/object_general_photos_browser_001_test.php",
+    "tests/Yii2/offline_indicator_001_test.php",
+    "tests/Yii2/reliable_field_offline_browser.cjs",
+    "tests/Yii2/yii2_construction_control_server_filtering_001_test.php",
+    "tools/verification/suites.tsv"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "OBJECT-GENERAL-PHOTOS-001",
+      "acceptance_id": "A1-A3-public-HTTP-history-and-isolation",
+      "spec_path": "specs/OBJECT-GENERAL-PHOTOS-001.md",
+      "seam": "Public Yii checklist photo upload/read/operation",
+      "tests": [
+        "tests/Yii2/object_general_photos_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Yii2/object_general_photos_001_test.php": "GREEN"
+      }
+    },
+    {
+      "spec_id": "OBJECT-GENERAL-PHOTOS-001",
+      "acceptance_id": "A4-A6-browser-offline-gallery-recovery",
+      "spec_path": "specs/OBJECT-GENERAL-PHOTOS-001.md",
+      "seam": "Actual browser camera/file input, durable local queue and HTTP replay",
+      "tests": [
+        "tests/Yii2/object_general_photos_browser_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Yii2/object_general_photos_browser_001_test.php": "INTENDED_RED"
+      }
+    },
+    {
+      "spec_id": "OFFLINE-INDICATOR-001",
+      "acceptance_id": "compact-status-native-install-and-checklist-minimal",
+      "spec_path": "docs/operations/compact-offline-indicator-20261127.md",
+      "seam": "Rendered construction-control status with actual preparation script; browser manifest CSP admission; CHECKLIST-MINIMAL-001 real Yii checklist, routine pending versus recovery states and status colors",
+      "tests": [
+        "tests/Yii2/offline_indicator_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Yii2/offline_indicator_001_test.php": "GREEN"
+      }
+    }
+  ]
+}

@@ -28,7 +28,7 @@ const {chromium} = require(process.env.FMONITOR_TEST_PLAYWRIGHT_MODULE || path.r
     await page.addScriptTag({path: process.argv[3]});
     await page.addScriptTag({path: path.join(assets, 'field-offline-preparation.js')});
     await page.waitForFunction(() => document.querySelector('[data-object-id="5000"] [data-local-sync]')?.dataset.state === 'queued');
-    const rows = await page.locator('[data-control-row]').count(), total = (await page.locator('[data-result-count]').innerText()).trim();
+    const rows = await page.locator('[data-control-row]').count(), total = Number((await page.locator('[data-list-summary]').innerText()).match(/из\s+(\d+)/)?.[1]);
     await page.locator('[data-control-search]').fill('changed');
     await page.waitForTimeout(400);
     const changed = await page.evaluate(() => ({current: location.search, target: window.__submits.at(-1) || ''}));

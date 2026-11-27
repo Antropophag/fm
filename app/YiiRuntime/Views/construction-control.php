@@ -2,8 +2,7 @@
 <section class="fm2-control-queue" data-control-queue data-user-id="<?=(int)$identity->getId()?>">
 <header class="fm2-control-header">
 <div><h1>Стройконтроль</h1><p class="fm2-control-description">Объекты, закреплённые за инженерами, и актуальное состояние чек-листов.</p></div>
-<span data-result-count>
-<?=$pagination['total']?> объектов</span>
+<div class="fm2-control-header__status"><span data-offline-count>Подготовка оффлайн…</span><span class="fm2-offline-summary fm2-local-sync" data-offline-summary data-state="preparing" role="status" aria-live="polite" aria-label="Подготовка объектов для работы без сети" title="Подготовка объектов для работы без сети"><span class="fm2-visually-hidden">Подготовка объектов для работы без сети</span></span></div>
 </header>
 <form class="fm2-control-tools fm2-control-toolbar" method="get" action="/pilot/construction-control" data-control-filter-form>
 <label class="shlz-field fm2-control-search"><span class="shlz-field__label">Поиск объектов</span><span class="shlz-field__control"><img src="/pilot/assets/shlz-icons/search.svg" data-shlz-icon="search" alt=""><input class="shlz-input" type="search" name="query" value="<?=Html::encode($filters['query'])?>" data-control-search placeholder="Адрес, регистрационный или заводской номер"></span></label>
@@ -13,7 +12,6 @@
 </fieldset>
 <label class="shlz-choice fm2-completed-switch"><input class="shlz-checkbox" type="checkbox" name="completed" value="1" data-show-completed <?=$filters['completed']==='1'?'checked':''?>><span>Показывать завершённые</span></label><button class="shlz-button shlz-button--secondary" type="button" data-clear-filters>Сбросить фильтры</button></div>
 </form>
-<section class="fm2-offline-summary" data-offline-summary data-state="preparing" role="status" aria-live="polite"><div class="fm2-offline-summary__copy"><p data-offline-copy>Готовим объекты для работы без сети…</p><small data-offline-updated></small></div><div class="fm2-offline-summary__actions"><button class="shlz-button shlz-button--secondary" type="button" data-offline-retry hidden>Повторить подготовку</button><button class="shlz-button shlz-button--secondary" type="button" data-offline-install hidden>Установить приложение</button></div></section>
 <div class="fm2-control-surface shlz-table-wrap" tabindex="0" aria-label="Объекты стройконтроля"><table class="shlz-table fm2-control-table"><thead class="shlz-table__head"><tr class="shlz-table__row"><th class="shlz-table__cell" scope="col">Объект</th><th class="shlz-table__cell" scope="col">Последняя активность</th><th class="shlz-table__cell" scope="col"><span class="fm2-visually-hidden">Отгрузка и техническая документация</span></th><th class="shlz-table__cell" scope="col">Инженер</th><th class="shlz-table__cell" scope="col"><span class="fm2-visually-hidden">Открыть</span></th></tr></thead>
 <tbody>
 <?php foreach($objects as$o):$engineer=$o['controlEngineer'];$factoryNumber=trim((string)($o['factoryNumber']??''));$factoryLabel=$factoryNumber!==''&&$factoryNumber!=='0'?'Зав. № '.$factoryNumber:'Заводской номер не указан';$shipmentDate=$o['fullShipmentDate']??$o['firstShipmentDate']??null;$shipmentState=($o['fullShipmentDate']??null)!==null?'full':(($o['firstShipmentDate']??null)!==null?'partial':'unknown');$shipmentTitle=$shipmentState==='full'?'Полностью отгружен':($shipmentState==='partial'?'Частично отгружен':'Не известно');$shipmentLabel=$shipmentDate===null?$shipmentTitle:$shipmentTitle.', '.(new DateTimeImmutable((string)$shipmentDate))->format('d.m.Y');$plan=$o['inspectionPlan']??null;?>

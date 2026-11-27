@@ -1241,7 +1241,10 @@
     "tests/Yii2/yii2_user_access_001_test.php": "browser",
     "tests/Yii2/yii2_user_access_browser_001_test.php": "browser",
     "tests/Yii2/yii2_user_access_edges_001_test.php": "browser",
-    "tests/Yii2/yii2_construction_control_server_filtering_001_test.php": "browser"
+    "tests/Yii2/yii2_construction_control_server_filtering_001_test.php": "browser",
+    "tests/Yii2/offline_indicator_001_test.php": "browser",
+    "tests/Yii2/object_general_photos_001_test.php": "integration",
+    "tests/Yii2/object_general_photos_browser_001_test.php": "browser"
   },
   "semantic_surfaces": [
     {
