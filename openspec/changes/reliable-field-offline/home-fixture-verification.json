@@ -1,0 +1,54 @@
+{
+  "change": "reliable-field-offline-home-fixtures",
+  "planned_paths": [
+    "tests/Yii2/reliable_field_offline_browser.cjs",
+    "tests/Yii2/completion_document_register_browser.mjs"
+  ],
+  "lifecycle": {
+    "intent": "COMPACT_MAINTENANCE",
+    "issue": "PR #312 / home CI 45982432347",
+    "change_kind": "APPLICATION_TEST_OR_REFACTOR",
+    "requirement_status": "CURRENT",
+    "semantic_change": "AGREED_ORDINARY_CHANGE",
+    "canonical_requirements": [
+      {
+        "path": "specs/RELIABLE-FIELD-OFFLINE-001.md"
+      },
+      {
+        "path": "specs/YII2-COMPLETION-DOCUMENT-REGISTER-001.md"
+      },
+      {
+        "path": "openspec/changes/completion-document-register/specs/completion-document-register/spec.md"
+      }
+    ],
+    "executable_regression": "tests/Yii2/reliable_field_offline_browser_001_test.php",
+    "sensitivity": {
+      "classification": "ORDINARY",
+      "boundaries": [
+        "browser-fixture-transport",
+        "browser-receipt-readiness"
+      ],
+      "rationale": "Use a real same-size local oversized file rather than CDP base64 transport; await existing completion receipt before a fresh identical register read. No production, timeout, size limit, authorization, persistence, writer or CI admission change."
+    }
+  },
+  "acceptances": [
+    {
+      "spec_id": "RELIABLE-FIELD-OFFLINE-001",
+      "acceptance_id": "A6-native-file-rejection",
+      "spec_path": "specs/RELIABLE-FIELD-OFFLINE-001.md",
+      "seam": "Actual offline file chooser, case-specific rejection and no durable operation/blob effects for HEIC, corrupt PNG and40MiB+1 JPEG",
+      "tests": [
+        "tests/Yii2/reliable_field_offline_browser_001_test.php"
+      ]
+    },
+    {
+      "spec_id": "YII2-COMPLETION-DOCUMENT-REGISTER-001",
+      "acceptance_id": "accepted-writer-before-return",
+      "spec_path": "specs/YII2-COMPLETION-DOCUMENT-REGISTER-001.md",
+      "seam": "Existing object completion form accepted UI then fresh exact filtered register GET and server fact count",
+      "tests": [
+        "tests/Yii2/yii2_completion_document_register_browser_001_test.php"
+      ]
+    }
+  ]
+}

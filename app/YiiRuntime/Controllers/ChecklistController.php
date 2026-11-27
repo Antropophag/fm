@@ -22,7 +22,7 @@ final class ChecklistController extends PilotController
     public function behaviors():array{return['access'=>['class'=>AccessControl::class,'rules'=>[['allow'=>true,'roles'=>['@']]],'denyCallback'=>function():void{Yii::$app->user->setReturnUrl(Yii::$app->request->url);
 Yii::$app->response->statusCode=303;
 Yii::$app->response->headers->set('Location','/pilot/login');
-}],'verbs'=>['class'=>VerbFilter::class,'actions'=>['view'=>['GET','HEAD'],'control'=>['GET','HEAD'],'operation'=>['POST'],'photo'=>['POST'],'photo-read'=>['GET','HEAD'],'context'=>['GET','HEAD'],'queue'=>['GET','HEAD'],'inspection-plan'=>['POST']]]];
+}],'verbs'=>['class'=>VerbFilter::class,'actions'=>['view'=>['GET','HEAD'],'control'=>['GET','HEAD'],'operation'=>['POST'],'photo'=>['POST'],'photo-read'=>['GET','HEAD'],'context'=>['GET','HEAD'],'queue'=>['GET','HEAD'],'offline-manifest'=>['GET','HEAD'],'offline'=>['GET','HEAD'],'inspection-plan'=>['POST']]]];
 }
 
     public function beforeAction($action):bool{if(in_array($action->id,['operation','photo'],true))$this->enableCsrfValidation=false;
@@ -53,8 +53,8 @@ if($id===null)return$this->json(404,['status'=>'rejected']);
 try{$o=$this->owner();
 $a=$o->access($this->actor(),$id);
 if(!($a['exists']??false))return$this->json(404,['status'=>'rejected']);
-if(!($a['opened']??false)||!($a['roleAccess']??false)&&!($a['assigned']??false)&&!($a['itemComplete']??false))return$this->json(403,['status'=>'rejected']);
-return$this->json(200,['csrf'=>Yii::$app->request->csrfToken,'revision'=>$o->projection($id)['revision']]);
+if(!($a['opened']??false)||!($a['roleAccess']??false)&&!($a['assigned']??false)&&!($a['itemComplete']??false))return$this->json(403,['status'=>'rejected','reasonCode'=>'ACCESS_DENIED']);
+$projection=$this->projection($o,$id);return$this->json(200,['userId'=>$this->actor(),'csrf'=>Yii::$app->request->csrfToken,'revision'=>$projection['revision'],'projection'=>$projection]);
 } catch(\Throwable$error)
     {Yii::$app->response->headers->set('X-FMonitor-Error-ID',SafeRuntimeFailure::report($error,'checklist_controller'));return$this->json(503,['status'=>'retryable']);
 }}
@@ -102,11 +102,11 @@ if($id===null)return$this->json(404,['status'=>'rejected']);
 $request=Yii::$app->request;
 $length=$request->headers->get('Content-Length');
 $limit=$photo?5242880:32768;
-if(!is_string($length)||!ctype_digit($length)||(int)$length>$limit)return$this->json(413,['status'=>'rejected','message'=>'Размер операции превышает допустимый.']);
+if(!is_string($length)||!ctype_digit($length)||(int)$length>$limit)return$this->json(413,['status'=>'rejected','reasonCode'=>$photo?'PHOTO_INVALID':'OPERATION_REJECTED','message'=>'Размер операции превышает допустимый.']);
 $body=$request->rawBody;
 if(strlen($body)!==(int)$length)return$this->json(400,['status'=>'rejected']);
 $token=(string)$request->headers->get('X-FM2-CSRF');
-if($token===''||!Yii::$app->request->validateCsrfToken($token))return$this->json(400,['status'=>'rejected']);
+if($token===''||!Yii::$app->request->validateCsrfToken($token))return$this->json(400,['status'=>'rejected','reasonCode'=>'CSRF_INVALID']);
 $resources=null;try{if($photo)
     {$raw=$request->headers->get('X-FM2-Operation','');
 if(!is_string($raw)||strlen($raw)>4096)return$this->json(400,['status'=>'rejected']);
@@ -119,8 +119,8 @@ $actor=$this->actor();
 $owner=$this->owner();
 $access=$owner->access($actor,$id);
 if(!($access['exists']??false))return$this->json(404,['status'=>'rejected']);
-if(!($access['read']??false))return$this->json(403,['status'=>'rejected']);
-if(($operation['itemId']??null)===42&&!($access['itemComplete']??false))return$this->json(403,['status'=>'rejected']);
+if(!($access['read']??false))return$this->json(403,['status'=>'rejected','reasonCode'=>'ACCESS_DENIED']);
+if(($operation['itemId']??null)===42&&!($access['itemComplete']??false))return$this->json(403,['status'=>'rejected','reasonCode'=>'ACCESS_DENIED']);
 if(($operation['itemId']??null)===42)return$this->json(409,['status'=>'rejected','message'=>'Последние 15% закрываются актом ПТО и декларацией в карточке объекта.']);
 $recording=null;
 if(($operation['type']??null)==='item_completed'){
@@ -131,11 +131,12 @@ if(($operation['type']??null)==='item_completed'){
 }
 $result=$owner->accept($id,$actor,$operation,$photo?$body:null);
 if($result['status']==='not_found')return$this->json(404,['status'=>'rejected']);
-if($result['status']==='forbidden')return$this->json(403,['status'=>'rejected']);
-if(($result['reason']??null)==='case_not_working')return$this->json(409,['status'=>'rejected']);
+if($result['status']==='forbidden')return$this->json(403,['status'=>'rejected','reasonCode'=>'ACCESS_DENIED']);
+if(($result['reason']??null)==='case_not_working')return$this->json(409,['status'=>'rejected','reasonCode'=>'CASE_NOT_WORKING']);
 $access=$owner->access($actor,$id);
-if(!($access['read']??false))return$this->json(403,['status'=>'rejected']);
-$result['projection']=$this->projection($owner,$id);
+if(!($access['read']??false))return$this->json(403,['status'=>'rejected','reasonCode'=>'ACCESS_DENIED']);
+$result['projection']=$this->projection($owner,$id);$reason=$result['reason']??null;
+if(!isset($result['reasonCode'])&&!in_array($result['status'],['accepted','duplicate','retryable'],true))$result['reasonCode']=match($reason){'photo_limit_reached'=>'PHOTO_LIMIT_REACHED','photo_invalid'=>'PHOTO_INVALID','case_not_working'=>'CASE_NOT_WORKING','stale_revision'=>'STALE_REVISION','operation_payload_conflict'=>'OPERATION_PAYLOAD_CONFLICT',default=>$result['status']==='conflict'?'STALE_REVISION':'OPERATION_REJECTED'};
 $status=in_array($result['status'],['accepted','duplicate'],true)?200:($result['status']==='conflict'?409:422);
 return$this->json($status,$result);
 } catch(\JsonException)
@@ -147,6 +148,21 @@ return$this->json($status,$result);
     }
 
     public function actionQueue():string|Response{return$this->renderQueue();}
+
+    public function actionOfflineManifest():Response
+    {
+        $raw=Yii::$app->request->get('page','1');if(!is_string($raw)||preg_match('/^[1-9][0-9]*$/D',$raw)!==1)return$this->json(404,['status'=>'not_found']);
+        try{$manifest=$this->owner()->offlineManifest($this->actor(),(int)$raw,50);$response=$this->json(200,$manifest);$response->headers->set('Cache-Control','private, no-store');return$response;}
+        catch(\DomainException){return$this->json(403,['status'=>'rejected','reasonCode'=>'ACCESS_DENIED']);}
+        catch(\OutOfBoundsException){return$this->json(404,['status'=>'not_found']);}
+        catch(\Throwable$error){Yii::$app->response->headers->set('X-FMonitor-Error-ID',SafeRuntimeFailure::report($error,'offline_manifest'));return$this->json(503,['status'=>'retryable']);}
+    }
+
+    public function actionOffline():string|Response
+    {
+        try{return$this->render('@app/app/YiiRuntime/Views/field-offline',['identity'=>Yii::$app->user->identity]);}
+        catch(\Throwable$error){Yii::$app->response->headers->set('X-FMonitor-Error-ID',SafeRuntimeFailure::report($error,'offline_shell'));return$this->plain(503,true);}
+    }
 
     public function actionInspectionPlan(string$id):string|Response
     {

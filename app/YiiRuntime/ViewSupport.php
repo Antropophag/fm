@@ -27,10 +27,14 @@ final class ViewSupport
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title><?= Html::encode($title) ?> · FMonitor 2.0</title>
     <link rel="icon" href="/pilot/assets/favicon.svg">
+    <link rel="manifest" href="/pilot/assets/manifest.webmanifest">
+    <link rel="stylesheet" href="/pilot/assets/<?=Html::encode(\FMonitor2\YiiRuntime\Assets\AssetVersion::file('field-offline.css'))?>">
     <script src="/pilot/assets/<?=Html::encode(\FMonitor2\YiiRuntime\Assets\AssetVersion::file('sidebar-bootstrap.js'))?>" data-storage-key="fmonitor.sidebar.expanded" data-storage-api="localStorage.getItem" data-root-state="dataset.fm2Sidebar"></script>
+    <script src="/pilot/assets/<?=Html::encode(\FMonitor2\YiiRuntime\Assets\AssetVersion::file('field-offline-store.js'))?>" defer></script>
+    <script src="/pilot/assets/<?=Html::encode(\FMonitor2\YiiRuntime\Assets\AssetVersion::file('field-offline-lifecycle.js'))?>" defer></script>
     <?php $view->head() ?>
 </head>
-<body class="shlz-scope">
+<body class="shlz-scope" data-authenticated-user-id="<?=(int)$identity->getId()?>">
 <?php $view->beginBody() ?>
 <a class="fm2-skip shlz-link" href="#main-content">Перейти к содержанию</a>
 <div class="fm2-shell<?= $shellVariant !== '' ? ' fm2-shell--' . Html::encode($shellVariant) : '' ?>">

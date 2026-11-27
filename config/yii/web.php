@@ -92,6 +92,8 @@ return ArrayHelper::merge(require __DIR__ . '/common.php', [
                 'GET,HEAD pilot/installers' => 'installer-directory/index',
                 'pilot/installers' => 'installer-directory/index',
                 'GET,HEAD pilot/construction-control' => 'checklist/queue',
+                'GET,HEAD pilot/construction-control/offline-manifest' => 'checklist/offline-manifest',
+                'GET,HEAD pilot/construction-control/offline' => 'checklist/offline',
                 'POST pilot/construction-control/objects/<id:[1-9]\\d*>/inspection-plan' => 'checklist/inspection-plan',
                 'pilot/construction-control/objects/<id:[1-9]\\d*>/inspection-plan' => 'checklist/inspection-plan',
                 'GET,HEAD pilot/objects/<id:[1-9]\\d*>/checklist' => 'checklist/view',

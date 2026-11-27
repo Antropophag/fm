@@ -1,0 +1,22 @@
+{
+  "change": "reliable-field-offline-read-order",
+  "planned_paths": [
+    "app/YiiRuntime/Assets/field-offline.js",
+    "tests/Yii2/reliable_field_offline_recovery_001_test.mjs",
+    "specs/RELIABLE-FIELD-OFFLINE-001.md"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "RELIABLE-FIELD-OFFLINE-001",
+      "acceptance_id": "A3-commit-read-order",
+      "spec_path": "specs/RELIABLE-FIELD-OFFLINE-001.md",
+      "seam": "Public Session initial/retry/batch commit truth survives older in-flight read; existing12 recovery unit cases are controls. Full nine-consumer field acceptance remains required for final candidate.",
+      "tests": [
+        "tests/Yii2/reliable_field_offline_recovery_001_test.mjs"
+      ],
+      "gate3_expected": {
+        "tests/Yii2/reliable_field_offline_recovery_001_test.mjs": "INTENDED_RED"
+      }
+    }
+  ]
+}
