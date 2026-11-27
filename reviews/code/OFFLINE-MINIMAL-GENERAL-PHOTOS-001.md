@@ -45,3 +45,40 @@ No unresolved product, specification, implementation, security, history, replay,
 ## Remaining delivery gates
 
 This approval covers the reviewed frozen product source. It is not evidence of an open PR, exact-source GitHub CI success, merge, home assembly, deployment, hardware camera/FortiClient/iPhone behavior, or live smoke success. The planner-selected full exact-source CI, normal PR/merge workflow, separately reviewed home binding/assembly, fresh live preflight, and post-cutover smoke remain required.
+
+
+# Independent final review — three-file CI correction batch
+
+- Reviewer: independent `/root/delivery_reviewer`
+- Base feature commit: `bb446b91025d70ca221f6fa2f9e92d14af28dbb7`
+- Reconstructible source: `/tmp/fm-ci-batch-source/source.patch`
+- Patch SHA-256: `b6d8932204b6b8595f456b9569c4bddba0d381cbe110bed8ea4a6bd4c7f17ee6`
+- Prepared package: `/Users/antropophag/.local/share/fmonitor-2/delivery-harness/packages/20261127T171930Z-f089236ad9/package.json`
+- Complete initial CI inventory SHA-256: `b0f5251fa4bd55a4147887f2dd90335b54a493f0ba199096b54c5c61db21b794`
+
+## Verdict
+
+**APPROVED**
+
+No unresolved findings in the bounded test/planner correction batch.
+
+## Review conclusions
+
+- The change is exactly three files, eight insertions, and three deletions. It contains no application, domain, security, replay, storage, schema, runtime, specification, or verification-policy behavior change.
+- `registered_yii2_focused_bootstrap_001_test.py` adds exactly the three already registered feature tests and their correct integration/browser profiles to the strict expected map. Dictionary equality, stable route IDs, command wrapping, and bootstrap failure coverage remain intact.
+- `yii2_construction_control_active_queue_001_test.php` replaces stale header-count text with the authoritative existing footer summary. It preserves exact visible/total pairs across pages (`50/52`, `2/52`, repeated `50/52`) and after the PTO-only transition (`50/51`). Exact row membership, order, completed markers, filters, pagination, permissions, transition facts, and no-write history checks remain unchanged.
+- The OpenSpec verification input adds only the two correction-test paths so the planner owns their regression coverage.
+- The complete failed-job and `REGRESSION_FAILURE` inventory was collected before correction. It identifies exactly two recoverable primary regressions: the home focused-profile expected literals and the stale active-queue header oracle on both integration shards.
+- The PR governance job's 20-minute cancellation and unavailable raw log remain explicitly `UNKNOWN_GITHUB_BLOB_NOT_FOUND`. This review does not infer its details from the home run and does not treat either initial CI run as approval or GREEN. Verify/Quality Graph failures are correctly classified as downstream.
+
+## Verification reviewed
+
+- All three unchanged product acceptance consumers are exact-source GREEN.
+- Active queue correction is GREEN: record `1795799578279713000-30d43c8332f144a6a70f886d8258a79e`.
+- The final full eight-case focused-bootstrap governance recheck is GREEN: record `1795799726005446000-0de64c4f0df744d6acc44723b1a4139d`.
+- All five records in the prepared package resolve to the same frozen candidate source.
+- No full local suite was run, consistent with the owner decision.
+
+## Remaining delivery gate
+
+This approval covers only the frozen correction batch. The prior failed/cancelled CI runs remain failed evidence. A new immutable commit and fresh complete exact-source CI are required; no same-source retry, push, or CI run has been approved by inference from these local checks.
