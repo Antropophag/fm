@@ -622,6 +622,7 @@
         "tests/Yii2/reliable_field_offline_001_test.php",
         "tests/Yii2/reliable_field_offline_browser_001_test.php",
         "tests/Yii2/reliable_field_offline_worker_001_test.mjs",
+        "tests/Yii2/reliable_field_offline_recovery_001_test.mjs",
         "tests/Yii2/yii2_checklist_operation_replay_001_test.php",
         "tests/Yii2/yii2_checklist_photo_viewing_browser_001_test.php",
         "tests/Yii2/yii2_construction_control_server_filtering_001_test.php"

@@ -220,12 +220,22 @@
     }));
   }
 
-  function confirmLogout(count) {
+  async function pendingState() {
+    let durable = 0;
+    try { durable = await pendingCount(); } catch {}
+    const unsaved = Number(globalThis.FMonitorField?.unsavedCount?.(userId)) || 0;
+    return { durable, unsaved };
+  }
+
+  function confirmLogout({ durable, unsaved }) {
     return new Promise((resolve) => {
       const dialog = document.createElement("dialog");
       dialog.className = "shlz-modal fm2-confirm-dialog";
       dialog.innerHTML = '<div class="shlz-modal__surface"><header class="shlz-modal__header"><h2 class="shlz-modal__title">Выйти из FMonitor?</h2></header><div class="shlz-modal__body"><p></p></div><footer class="shlz-modal__footer"><button class="shlz-button shlz-button--secondary" type="button" data-cancel>Остаться</button><button class="shlz-button shlz-button--primary" type="button" data-field-logout-confirm>Выйти</button></footer></div>';
-      dialog.querySelector("p").textContent = `На устройстве осталось действий: ${count}. Они сохранятся и отправятся после входа тем же пользователем.`;
+      const messages = [];
+      if (unsaved > 0) messages.push(`Несохранённых фотографий: ${unsaved}. Они будут потеряны при выходе.`);
+      if (durable > 0) messages.push(`Действий на устройстве: ${durable}. Они сохранятся и отправятся после входа тем же пользователем.`);
+      dialog.querySelector("p").textContent = messages.join(" ");
       const finish = (value) => { dialog.close(); dialog.remove(); resolve(value); };
       dialog.querySelector("[data-cancel]").addEventListener("click", () => finish(false));
       dialog.querySelector("[data-field-logout-confirm]").addEventListener("click", () => finish(true));
@@ -239,8 +249,9 @@
   form?.addEventListener("submit", async (event) => {
     if (submitted) return;
     event.preventDefault();
-    const count = await pendingCount().catch(() => 0);
-    if (count > 0 && !(await confirmLogout(count))) return;
+    const pending = await pendingState();
+    if ((pending.durable > 0 || pending.unsaved > 0) && !(await confirmLogout(pending))) return;
+    globalThis.FMonitorField?.closeAll?.();
     hidePrivate("Выполняется выход. Не закрывайте страницу.");
     let cleanupFailed = false;
     try {

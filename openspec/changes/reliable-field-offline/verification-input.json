@@ -66,17 +66,19 @@
         "tests/Yii2/yii2_inspection_browser_001_test.php",
         "tests/Yii2/yii2_construction_control_mobile_list_browser_001_test.php",
         "tests/Yii2/production_performance_sw_001_test.mjs",
-        "tests/Yii2/runtime_help_001_test.py"
+        "tests/Yii2/runtime_help_001_test.py",
+        "tests/Yii2/reliable_field_offline_recovery_001_test.mjs"
       ],
       "gate3_expected": {
         "tests/Yii2/reliable_field_offline_001_test.php": "GREEN",
         "tests/Yii2/reliable_field_offline_browser_001_test.php": "INTENDED_RED",
-        "tests/Yii2/reliable_field_offline_worker_001_test.mjs": "INTENDED_RED",
+        "tests/Yii2/reliable_field_offline_worker_001_test.mjs": "GREEN",
         "tests/Yii2/yii2_checklist_operation_replay_001_test.php": "GREEN",
         "tests/Yii2/yii2_inspection_browser_001_test.php": "GREEN",
         "tests/Yii2/yii2_construction_control_mobile_list_browser_001_test.php": "GREEN",
-        "tests/Yii2/production_performance_sw_001_test.mjs": "INTENDED_RED",
-        "tests/Yii2/runtime_help_001_test.py": "INTENDED_RED"
+        "tests/Yii2/production_performance_sw_001_test.mjs": "GREEN",
+        "tests/Yii2/runtime_help_001_test.py": "GREEN",
+        "tests/Yii2/reliable_field_offline_recovery_001_test.mjs": "INTENDED_RED"
       }
     }
   ]

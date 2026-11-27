@@ -17,3 +17,5 @@
 - [x] 3.2 Независимый final review exact source с закрытыми findings и актуальным planner package.
 - [ ] 3.3 Личный GitHub identity/auth, commit/PR и один exact-source CI через существующий consumer; triage всех failures до corrections.
 - [ ] 3.4 Проверить домашний стенд в разрешённом scope, записать фактический результат и hardware UNKNOWN, актуализировать delivery record без false GREEN.
+
+A3 reopened27.11: valid prepared photo must remain recoverable on aborted local write; previous approvals/evidence remain historical and no deployment has occurred.

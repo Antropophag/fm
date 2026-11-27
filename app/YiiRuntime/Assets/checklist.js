@@ -19,6 +19,7 @@
     let session,
       snapshot = {
         operations: [],
+        unsavedPhotos: [],
         projection: initial,
         connection: { state: navigator.onLine ? "online" : "offline" },
         storage: {},
@@ -299,6 +300,81 @@
             if (Number(value.id) === Number(operation.photoId)) map.delete(key);
       return [...map.values()];
     }
+    function clearUnsavedPhotoCards() {
+      for (const container of root.querySelectorAll("[data-unsaved-photos]"))
+        container.remove();
+    }
+    function renderUnsavedPhotos(section, sectionId) {
+      const strip = section.querySelector("[data-photo-strip]");
+      if (!strip) return;
+      const photos = (snapshot.unsavedPhotos || []).filter(
+        (photo) => Number(photo.sectionId) === sectionId,
+      );
+      let container = section.querySelector("[data-unsaved-photos]");
+      if (!photos.length) {
+        container?.remove();
+        return;
+      }
+      if (!container) {
+        container = document.createElement("div");
+        container.className = "fm2-unsaved-photos";
+        container.dataset.unsavedPhotos = "";
+        strip.after(container);
+      }
+      container.replaceChildren(
+        ...photos.map((photo) => {
+          const card = document.createElement("article");
+          card.className = "fm2-unsaved-photo";
+          card.dataset.unsavedPhoto = "";
+          card.dataset.unsavedPhotoId = photo.id;
+
+          const copy = document.createElement("div");
+          copy.className = "fm2-unsaved-photo__copy";
+          const name = document.createElement("strong");
+          name.textContent = photo.name;
+          const status = document.createElement("span");
+          status.textContent = "Не сохранено";
+          copy.append(name, status);
+          if (photo.message) {
+            const message = document.createElement("small");
+            message.textContent = photo.message;
+            copy.append(message);
+          }
+
+          const actions = document.createElement("div");
+          actions.className = "fm2-unsaved-photo__actions";
+          const download = document.createElement(
+            photo.previewUrl ? "a" : "button",
+          );
+          download.className = "shlz-button shlz-button--secondary";
+          download.dataset.unsavedDownload = "";
+          if (photo.previewUrl) {
+            download.href = photo.previewUrl;
+            download.download = photo.name;
+          } else {
+            download.type = "button";
+          }
+          download.textContent = "Скачать";
+          const retry = document.createElement("button");
+          retry.className = "shlz-button shlz-button--primary";
+          retry.type = "button";
+          retry.dataset.unsavedRetry = "";
+          retry.disabled = Boolean(photo.saving);
+          retry.textContent = photo.saving
+            ? "Сохраняем…"
+            : "Повторить сохранение";
+          const discard = document.createElement("button");
+          discard.className = "shlz-button shlz-button--secondary";
+          discard.type = "button";
+          discard.dataset.unsavedDiscard = "";
+          discard.disabled = Boolean(photo.saving);
+          discard.textContent = "Удалить";
+          actions.append(download, retry, discard);
+          card.append(copy, actions);
+          return card;
+        }),
+      );
+    }
     function render() {
       const checked = completedItems(),
         allPhotos = photos();
@@ -454,6 +530,7 @@
           }
           strip.append(figure);
         }
+        renderUnsavedPhotos(section, sectionId);
       }
       const totalWeight = [...checked.keys()].reduce(
           (sum, id) =>
@@ -486,7 +563,9 @@
             auth_required: "Войдите снова. Данные сохранены",
             access_denied: "Доступ отозван — данные сохранены",
             uncertain: "Результат отправки не подтверждён",
-            storage_recovery: "Локальные данные требуют восстановления",
+            storage_recovery:
+              snapshot.connection.message ||
+              "Локальные данные требуют восстановления",
             conflict: "Есть действие, требующее решения",
           }[state] ||
           snapshot.connection.message ||
@@ -839,6 +918,51 @@
       root.querySelector(".fm2-check-layout").hidden = false;
     });
     root.addEventListener("click", async (event) => {
+      const card = event.target.closest("[data-unsaved-photo]");
+      if (!card) return;
+      const id = card.dataset.unsavedPhotoId;
+      try {
+        const download = event.target.closest("[data-unsaved-download]");
+        if (download) {
+          if (download instanceof HTMLAnchorElement) return;
+          if (!session) throw Error("Локальная сессия ещё не готова.");
+          const file = session.exportUnsavedPhoto(id);
+          let url = URL.createObjectURL(file.blob);
+          try {
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = file.name;
+            link.hidden = true;
+            document.body.append(link);
+            link.click();
+            link.remove();
+            const acceptedUrl = url;
+            url = null;
+            setTimeout(() => URL.revokeObjectURL(acceptedUrl), 1000);
+          } finally {
+            if (url) URL.revokeObjectURL(url);
+          }
+          return;
+        }
+        const activeSession = await sessionReady;
+        if (event.target.closest("[data-unsaved-retry]")) {
+          await activeSession.retryUnsavedPhoto(id);
+          notify("Фото сохранено на устройстве.");
+        }
+        if (
+          event.target.closest("[data-unsaved-discard]") &&
+          (await confirmAction(
+            "Удалить несохранённое фото?",
+            "Фото не сохранено на устройстве и после удаления не сможет быть восстановлено из этой вкладки.",
+            "Удалить фото",
+          ))
+        )
+          await activeSession.discardUnsavedPhoto(id);
+      } catch (error) {
+        notify(error.message, true);
+      }
+    });
+    root.addEventListener("click", async (event) => {
       const row = event.target.closest("[data-field-operation]");
       if (!row) return;
       const id = row.dataset.operationId;
@@ -875,6 +999,7 @@
         userId,
         objectId,
         projection: initial,
+        onClose: clearUnsavedPhotoCards,
         onChange: (value) => {
           snapshot = value;
           render();

@@ -32,13 +32,18 @@
     for (const listener of actorListeners) listener(event.data);
   };
 
+  const fallbackError = (code, message) => {
+    const error = new Error(message);
+    error.code = code;
+    return error;
+  };
   const request = (value) => new Promise((resolve, reject) => {
     value.onsuccess = () => resolve(value.result);
-    value.onerror = () => reject(value.error || new Error("IndexedDB request failed"));
+    value.onerror = () => reject(value.error || fallbackError("LOCAL_STORAGE_REQUEST_FAILED", "IndexedDB request failed"));
   });
   const complete = (transaction) => new Promise((resolve, reject) => {
     transaction.oncomplete = resolve;
-    transaction.onabort = () => reject(transaction.error || new Error("IndexedDB transaction aborted"));
+    transaction.onabort = () => reject(transaction.error || fallbackError("LOCAL_STORAGE_TRANSACTION_ABORTED", "IndexedDB transaction aborted"));
     transaction.onerror = () => {};
   });
   const clone = (value) => value == null ? value : structuredClone(value);
@@ -83,11 +88,11 @@
         blockedUpgrade = true;
         notifyBlocked("Закройте старые вкладки ФМ и обновите страницу");
         databasePromise = undefined;
-        reject(new Error("Закройте старые вкладки ФМ и обновите страницу"));
+        reject(fallbackError("LOCAL_STORAGE_BLOCKED", "Закройте старые вкладки ФМ и обновите страницу"));
       };
       opening.onerror = () => {
         databasePromise = undefined;
-        reject(opening.error || new Error("Локальное хранилище недоступно"));
+        reject(opening.error || fallbackError("LOCAL_STORAGE_OPEN_FAILED", "Локальное хранилище недоступно"));
       };
       opening.onsuccess = () => {
         const db = opening.result;
@@ -106,7 +111,7 @@
 
   async function transaction(names, mode, work) {
     const db = await open();
-    if (blocked && mode === "readwrite") throw new Error("Обновите вкладку перед сохранением");
+    if (blocked && mode === "readwrite") throw fallbackError("LOCAL_STORAGE_BLOCKED", "Обновите вкладку перед сохранением");
     let tx;
     try { tx = db.transaction(names, mode, { durability: mode === "readwrite" ? "strict" : "default" }); }
     catch { tx = db.transaction(names, mode); }
