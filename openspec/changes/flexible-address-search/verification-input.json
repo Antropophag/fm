@@ -1,0 +1,76 @@
+{
+  "change": "flexible-address-search",
+  "planned_paths": [
+    "app/InstallationProcess/MariaDbYiiObjectQueue.php",
+    "app/InstallationProcess/MariaDbAddressRegister.php",
+    "app/InstallationProcess/MariaDbYiiCompletionRegister.php",
+    "app/InspectionEvidence/MariaDbYiiChecklistRead.php",
+    "app/Otiz/MariaDbOtizPortfolioEconomy.php",
+    "app/Otiz/MariaDbObjectRegister.php",
+    "app/Otiz/MariaDbObjectRegisterQuery.php",
+    "app/YiiRuntime/Controllers/OtizSettlementV2Controller.php",
+    "app/YiiRuntime/Views/field-offline.php",
+    "app/YiiRuntime/Controllers/PilotAssetController.php",
+    "composer.json",
+    "composer.lock",
+    "tests/AddressSearch",
+    "tests/Yii2/yii2_flexible_address_search_001_test.php",
+    "tests/Yii2/yii2_flexible_control_search_001_test.php",
+    "tools/verification/suites.tsv",
+    "app/AddressRegister/Search.php",
+    "app/AddressRegister/AddressQuery.php",
+    "app/YiiRuntime/Assets/field-offline-address-search.js",
+    "app/YiiRuntime/Assets/field-offline-preparation.js",
+    "app/YiiRuntime/Assets/checklist-sw.js",
+    "app/YiiRuntime/Assets/FieldOfflineAssetBundle.php",
+    "public/third-party/fuse",
+    "tests/Yii2/yii2_otiz_settlement_v2_001_test.php",
+    "tests/Yii2/reliable_field_offline_browser_001_test.php",
+    "tests/Yii2/reliable_field_offline_browser.cjs",
+    "deploy/dependencies/direct-dist-sha256.json",
+    "tests/Deployment/production_make_live_001_test.py",
+    "tests/Support/yii2_production_web_cutover_contract.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "FLEXIBLE-ADDRESS-SEARCH-001",
+      "acceptance_id": "A1-A8",
+      "spec_path": "specs/FLEXIBLE-ADDRESS-SEARCH-001.md",
+      "seam": "AddressSearch public matcher + actual list HTTP/read seams + offline JS",
+      "tests": [
+        "tests/AddressSearch/flexible_address_search_001_test.php",
+        "tests/Yii2/yii2_flexible_address_search_001_test.php",
+        "tests/Yii2/yii2_flexible_control_search_001_test.php",
+        "tests/Yii2/yii2_otiz_settlement_v2_001_test.php",
+        "tests/Yii2/reliable_field_offline_browser_001_test.php",
+        "tests/Deployment/production_dependencies_001_test.py"
+      ],
+      "gate3_expected": {
+        "tests/AddressSearch/flexible_address_search_001_test.php": "INTENDED_RED",
+        "tests/Yii2/yii2_flexible_address_search_001_test.php": "INTENDED_RED",
+        "tests/Yii2/yii2_flexible_control_search_001_test.php": "GREEN",
+        "tests/Yii2/yii2_otiz_settlement_v2_001_test.php": "GREEN",
+        "tests/Yii2/reliable_field_offline_browser_001_test.php": "GREEN",
+        "tests/Deployment/production_dependencies_001_test.py": "INTENDED_RED"
+      }
+    }
+  ],
+  "lifecycle": {
+    "intent": "COMPACT_MAINTENANCE",
+    "issue": "owner-2026-11-27-address-search",
+    "change_kind": "READ",
+    "requirement_status": "CURRENT",
+    "semantic_change": "AGREED_ORDINARY_CHANGE",
+    "canonical_requirements": [
+      {
+        "path": "specs/FLEXIBLE-ADDRESS-SEARCH-001.md"
+      }
+    ],
+    "executable_regression": "tests/AddressSearch/flexible_address_search_001_test.php",
+    "sensitivity": {
+      "classification": "ORDINARY",
+      "boundaries": [],
+      "rationale": "Read-only search, no change to permissions, financial rules or persisted facts. Dependency integration may require planner escalation."
+    }
+  }
+}

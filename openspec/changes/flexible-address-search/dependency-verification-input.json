@@ -1,0 +1,40 @@
+{
+  "change": "flexible-address-search",
+  "planned_paths": [
+    "deploy/dependencies/direct-dist-sha256.json",
+    "tests/Deployment/production_make_live_001_test.py",
+    "tests/Support/yii2_production_web_cutover_contract.php"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "FLEXIBLE-ADDRESS-SEARCH-001",
+      "acceptance_id": "A8",
+      "spec_path": "specs/FLEXIBLE-ADDRESS-SEARCH-001.md",
+      "seam": "Production locked dependency manifest and direct installation; delta of approved search candidate",
+      "tests": [
+        "tests/Deployment/production_dependencies_001_test.py"
+      ],
+      "gate3_expected": {
+        "tests/Deployment/production_dependencies_001_test.py": "INTENDED_RED"
+      }
+    }
+  ],
+  "lifecycle": {
+    "intent": "COMPACT_MAINTENANCE",
+    "issue": "owner-2026-11-27-address-search",
+    "change_kind": "READ",
+    "requirement_status": "CURRENT",
+    "semantic_change": "AGREED_ORDINARY_CHANGE",
+    "canonical_requirements": [
+      {
+        "path": "specs/FLEXIBLE-ADDRESS-SEARCH-001.md"
+      }
+    ],
+    "executable_regression": "tests/Deployment/production_dependencies_001_test.py",
+    "sensitivity": {
+      "classification": "ORDINARY",
+      "boundaries": [],
+      "rationale": "Read-only search, no change to permissions, financial rules or persisted facts. Dependency integration may require planner escalation."
+    }
+  }
+}

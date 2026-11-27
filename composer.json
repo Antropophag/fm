@@ -5,6 +5,7 @@
     "require": {
         "ext-gd": "*",
         "ext-zip": "*",
+        "loilo/fuse": "7.1.1",
         "tecnickcom/tcpdf": "6.11.4",
         "php": ">=8.4 <8.6",
         "yiisoft/yii2": "2.0.55"

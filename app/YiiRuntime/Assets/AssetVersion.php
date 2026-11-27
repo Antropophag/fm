@@ -17,6 +17,7 @@ final class AssetVersion
         if (isset($seen[$name])) return '';
         $seen[$name] = true;
         $path = __DIR__ . '/' . $name;
+        if ($name === 'fuse.min.js') $path=dirname(__DIR__,3).'/public/third-party/fuse/fuse.min.js';
         if ($name === 'shlz-behaviors.js') {
             $root=(string)(getenv('FMONITOR_SHLZ_UI_ROOT')?:dirname(__DIR__,4).'/shlz-ui');
             $path=$root.'/packages/behaviors/dist/browser.js';
