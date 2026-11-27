@@ -26,7 +26,10 @@
     "public/third-party/fuse",
     "tests/Yii2/yii2_otiz_settlement_v2_001_test.php",
     "tests/Yii2/reliable_field_offline_browser_001_test.php",
-    "tests/Yii2/reliable_field_offline_browser.cjs"
+    "tests/Yii2/reliable_field_offline_browser.cjs",
+    "deploy/dependencies/direct-dist-sha256.json",
+    "tests/Deployment/production_make_live_001_test.py",
+    "tests/Support/yii2_production_web_cutover_contract.php"
   ],
   "acceptances": [
     {
@@ -39,14 +42,16 @@
         "tests/Yii2/yii2_flexible_address_search_001_test.php",
         "tests/Yii2/yii2_flexible_control_search_001_test.php",
         "tests/Yii2/yii2_otiz_settlement_v2_001_test.php",
-        "tests/Yii2/reliable_field_offline_browser_001_test.php"
+        "tests/Yii2/reliable_field_offline_browser_001_test.php",
+        "tests/Deployment/production_dependencies_001_test.py"
       ],
       "gate3_expected": {
         "tests/AddressSearch/flexible_address_search_001_test.php": "INTENDED_RED",
         "tests/Yii2/yii2_flexible_address_search_001_test.php": "INTENDED_RED",
         "tests/Yii2/yii2_flexible_control_search_001_test.php": "GREEN",
         "tests/Yii2/yii2_otiz_settlement_v2_001_test.php": "GREEN",
-        "tests/Yii2/reliable_field_offline_browser_001_test.php": "GREEN"
+        "tests/Yii2/reliable_field_offline_browser_001_test.php": "GREEN",
+        "tests/Deployment/production_dependencies_001_test.py": "INTENDED_RED"
       }
     }
   ],

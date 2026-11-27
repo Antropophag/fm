@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "composerJsonSha256": "0a7d5d9e89838fe0af243f4ce3d52d4b09451064a9991306d4101fcdd5a88934",
-  "composerLockSha256": "a750e3b033610f59076504df6156c64c3e8186b9fbf284b36e7c079e848c5482",
+  "composerJsonSha256": "91827cbf1614dc41dc23c59adda3c6bcd3190f0f5590557d8ef31b720dd829c0",
+  "composerLockSha256": "dc2b62cf00c44f47f11abb782b304513936d13293302afe6c0097d5072757426",
   "packages": [
     {"name":"bower-asset/inputmask","version":"5.0.10","reference":"325dde43365b7638393e5dc1a2b6463114ef14dd","type":"zip","url":"https://codeload.github.com/RobinHerbots/Inputmask/legacy.zip/325dde43365b7638393e5dc1a2b6463114ef14dd","sha256":"db58bc0816874e9dc70499e0c6d49234c3708492a5f9a0975c3d08a4cc88854a","byteSize":868104},
     {"name":"bower-asset/jquery","version":"3.7.1","reference":"fde1f76e2799dd877c176abde0ec836553246991","type":"zip","url":"https://codeload.github.com/jquery/jquery-dist/legacy.zip/fde1f76e2799dd877c176abde0ec836553246991","sha256":"5297f6c4e9f3b8960d1f6df7228a44145f9678c5438d12c4e59b6dc7eded169b","byteSize":452227},
@@ -9,6 +9,7 @@
     {"name":"bower-asset/yii2-pjax","version":"2.0.9","reference":"452b56b7124326487fd0d3be6b205fcaa66598a0","type":"zip","url":"https://codeload.github.com/yiisoft/jquery-pjax/legacy.zip/452b56b7124326487fd0d3be6b205fcaa66598a0","sha256":"b3e68ef46d4b2678732ae1ee847fa0a60c39c77fbf1627d7ee0f2ec0c18a9871","byteSize":301106},
     {"name":"cebe/markdown","version":"1.2.1","reference":"9bac5e971dd391e2802dca5400bbeacbaea9eb86","type":"zip","url":"https://codeload.github.com/cebe/markdown/legacy.zip/9bac5e971dd391e2802dca5400bbeacbaea9eb86","sha256":"fe49b1c169cba2310f565aa96716b7f04fd5b3181e85409ce65df05881e795b1","byteSize":135518},
     {"name":"ezyang/htmlpurifier","version":"v4.19.0","reference":"b287d2a16aceffbf6e0295559b39662612b77fcf","type":"zip","url":"https://codeload.github.com/ezyang/htmlpurifier/legacy.zip/b287d2a16aceffbf6e0295559b39662612b77fcf","sha256":"78926fd6bbc5e75670297cbb0466f41cb0144782f77ac77c5b2c786e5d492ecd","byteSize":432512},
+    {"name":"loilo/fuse","version":"7.1.1","reference":"aef0aecc4f7eada734ecc44cb403f453d8fedca2","type":"zip","url":"https://codeload.github.com/loilo/Fuse/legacy.zip/aef0aecc4f7eada734ecc44cb403f453d8fedca2","sha256":"e0f2138e179ffb67ea97fbc90d96e93fe400c9b4a710d77156ce299771c6b015","byteSize":34681},
     {"name":"tecnickcom/tcpdf","version":"6.11.4","reference":"fbbaf14cfae8fe646f154f7c530d15ec25764040","type":"zip","url":"https://codeload.github.com/tecnickcom/TCPDF/legacy.zip/fbbaf14cfae8fe646f154f7c530d15ec25764040","sha256":"0ca46b1ea0a22377cdda219b93c8987837f6114edcb8f86063a990c9ee794885","byteSize":15333338},
     {"name":"yiisoft/yii2","version":"2.0.55","reference":"b900eecdb225041a4c4e0f5e0e5336f606a23bdb","type":"zip","url":"https://codeload.github.com/yiisoft/yii2-framework/legacy.zip/b900eecdb225041a4c4e0f5e0e5336f606a23bdb","sha256":"caf5d863c81163f2045956707b0d59e7069dc7103e79c50d377e796ba2ca3d81","byteSize":1512460},
     {"name":"yiisoft/yii2-composer","version":"2.0.11","reference":"b684b01ecb119c8287721def726a0e24fec2fef2","type":"zip","url":"https://codeload.github.com/yiisoft/yii2-composer/legacy.zip/b684b01ecb119c8287721def726a0e24fec2fef2","sha256":"b282d401418d34238e763366de7cc37d55fc08bc0e2e8278b418d8c61a87a8bd","byteSize":10855}

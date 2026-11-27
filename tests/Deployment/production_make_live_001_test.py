@@ -80,7 +80,7 @@ sha256sum composer.json composer.lock > /tmp/before
 bash deploy/dependencies/install --project /tmp/project --manifest /workspace/fmonitor-2/deploy/dependencies/direct-dist-sha256.json --composer /fixture/composer-first-fails --mode auto --archive-dir /archives
 test -f /tmp/first-composer-failed
 test -f /tmp/project/vendor/bower-asset/jquery/dist/jquery.js
-php -r 'require "/tmp/project/vendor/autoload.php"; require "/tmp/project/vendor/yiisoft/yii2/Yii.php"; if(!class_exists("Yii")||!class_exists("TCPDF"))exit(1);'
+php -r 'require "/tmp/project/vendor/autoload.php"; require "/tmp/project/vendor/yiisoft/yii2/Yii.php"; if(!class_exists("Yii")||!class_exists("TCPDF")||!class_exists("Fuse\\Fuse"))exit(1);'
 cd /tmp/project
 composer check-platform-reqs --no-dev
 sha256sum composer.json composer.lock > /tmp/after
@@ -105,7 +105,7 @@ PATH=/fixture:$PATH bash deploy/dependencies/install --project /tmp/project --mo
 test ! -e /tmp/fetch-log
 # Missing cache downloads the exact approved URL through a transport fixture.
 PATH=/fixture:$PATH bash deploy/dependencies/install --project /tmp/project --mode direct --archive-dir /tmp/download-cache
-test "$(wc -l </tmp/fetch-log)" -eq 9
+test "$(wc -l </tmp/fetch-log)" -eq __EXPECTED_PACKAGE_COUNT__
 # A bad download must be rejected before Composer and keep the working vendor.
 mkdir /tmp/bad-transport
 printf '#!/bin/sh\nwhile [ "$#" -gt 0 ]; do case "$1" in -o|--output) shift; printf wrong > "$1";; esac; shift; done\n' > /tmp/bad-transport/curl
@@ -114,6 +114,7 @@ printf sentinel > /tmp/project/vendor/retained-sentinel
 if PATH=/tmp/bad-transport:$PATH bash deploy/dependencies/install --project /tmp/project --mode direct --archive-dir /tmp/bad-download; then exit 93; fi
 test "$(cat /tmp/project/vendor/retained-sentinel)" = sentinel
 '''
+    script=script.replace('__EXPECTED_PACKAGE_COUNT__',str(len(manifest['packages'])))
     command(['docker','run','--rm','--network','none','--user','0:0','-v',str(archive_dir)+':/archives:ro','-v',str(fixture)+':/fixture:ro','--entrypoint','sh',image,'-c',script],timeout=240)
     p=port();d.update(COMPOSE_PROJECT_NAME='fm2-prod-test-'+token,FMONITOR_IMAGE_MODE='local',FMONITOR_RUNTIME_IMAGE=image,FMONITOR_SOURCE_REVISION=source,FMONITOR_RUNTIME_ENV='production',FMONITOR_HTTP_PORT=str(p),FMONITOR_TRUSTED_REQUEST_HOST='127.0.0.1:'+str(p),FMONITOR_TRUSTED_REQUEST_SCHEME='http',FMONITOR_PUBLIC_BASE_URL='http://127.0.0.1:'+str(p),FMONITOR_ALLOW_HTTP='true',FMONITOR_INITIAL_OWNER_EMAIL='acceptance@shlz.ru',FMONITOR_JOBS_ENABLED='false',FMONITOR_DEPLOY_STATE_DIR=str(home/'deployment'),FMONITOR_BACKUP_ROOT=str(home/'backups'))
     for k in list(d):

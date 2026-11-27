@@ -76,3 +76,51 @@ d69d121c9605bbe44516b38afdd588bd2fbf0fcbcbd344050364afa11e64d443  app/AddressReg
 1401a79444cb1f9088c72c2d28fb7a5cca3fe8375a231b543fea1629eb070e58  tests/AddressSearch/corpus.json
 a1f3f03e41c42556056a1a9085ab2d4f7d5110fe8ac3e9899e0eafedf5ced7a2  tests/Yii2/yii2_flexible_address_search_001_test.php
 ```
+
+
+---
+
+## Final CI-correction review — 2026-11-28
+
+- Reviewer: independent agent `/root/search_final_review`; authored neither correction tests nor implementation
+- Package: `/Users/antropophag/.local/share/fmonitor-2/delivery-harness/packages/20261127T223354Z-7ad10dc309/package.json`
+- Exact candidate source: `f1da04a15c75ce13455ce13b1f108c47358d36e8c95644be763a346af8c1a321`
+- Executable source: `73588cec9c5ca5b1a1d65a401e30088b7f623ec00a7ffe9703d16b6bd6c61953`
+- Snapshot patch: `/tmp/fm-flexible-address-evidence/ci-correction-source/source.patch`, SHA-256 `46143f3acf82affc70a49ab1e75e9c408aa20ff7414ce4ffe764e6070ab4fd4c`
+- Restored snapshot: `/tmp/fm-flexible-address-evidence/ci-correction-restored`
+- Base feature commit: `f5cd454b84633c952df41eb3518f2ea85e989fc2`, whose product runtime and search behavior retain the prior final approval
+- Verdict: `APPROVED`
+
+### Complete CI inventory
+
+The original exact-source CI inventory is complete: 11 jobs, 6 failed including 2 aggregate-only jobs, and 13 `REGRESSION_FAILURE` markers. The substantive failures were traced to two bounded candidate omissions: the production direct-distribution manifest did not match the new Composer graph, and the production guest-asset contract retained the old generated service-worker digest and omitted the two new search assets. Integration 1/2 failed earlier on an external Microsoft Ubuntu APT HTTP 403 before tests. Aggregate verify/quality jobs added no independent failure. The inventory is retained at `/tmp/fm-flexible-address-evidence/ci-46073957434/complete-triage.json`; unresolved admission correctly requires a fresh exact-source CI run.
+
+### Dependency manifest and fallback
+
+The manifest now binds the exact current `composer.json` and `composer.lock` SHA-256 values and adds exactly one package, `loilo/fuse` 7.1.1, at lock reference `aef0aecc4f7eada734ecc44cb403f453d8fedca2`. Its canonical codeload URL, archive SHA-256 `e0f2138e179ffb67ea97fbc90d96e93fe400c9b4a710d77156ce299771c6b015`, and byte size 34681 are validated by the unchanged manifest validator and the live download. The other nine package entries retain their identities and archive hashes.
+
+The root-authored production fallback delta is appropriate: the empty-cache fetch count is derived from the reviewed manifest graph, and the offline-installed autoload probe now requires `Fuse\\Fuse`. It does not relax exact URL/checksum, network-disabled install, cache integrity, platform requirements, primary Composer behavior, or working-vendor preservation.
+
+`production_dependencies_001_test.py` is GREEN at the exact source. The first live run built the production image and then ended with `RemoteDisconnected` while retrieving archives, before the fallback assertions; that raw failure remains retained and is not called pre-existing. One justified same-source retry, with no intervening source or test change, is GREEN. It verified the actual archive bytes, network-disabled direct installation, Fuse autoload, ten approved fetches, disposable boot/login/restart, backup, and restore lifecycle. The retry record is `/Users/antropophag/.local/share/fmonitor-2/delivery-harness/records/1795818591381307000-d7060403003d428ba9343c8eabd4ada0.json`.
+
+### Production guest assets
+
+The cutover contract updates the generated `checklist-sw.js` digest to the actually served candidate bytes and adds `fuse.min.js` plus `field-offline-address-search.js` with their exact content types and cache policies. These are fixture updates for assets already reviewed in the approved runtime; no server behavior changed. The pinned asset bytes match the restored candidate hashes, and the actual production cutover HTTP consumer is GREEN at the exact candidate/executable source, covering guest access, bytes, content types, cache headers, and the surrounding route/security contract.
+
+### Prior findings and lineage
+
+The earlier final-review finding 1 remains fixed: effective address, entrance, and registration participate in retained `ObjectRegister` matching, display, stale-value removal, and pre-page sort. Finding 2 remains withdrawn because its economics summary is explicitly global. Numeric street-name handling remains generic and PHP/JS-parallel. All prior Gate 3 approvals and historical true RED records remain valid; the correction GREEN evidence closes packaging and fixture omissions and makes no new RED claim.
+
+No findings. The bounded CI correction is `APPROVED` for exact candidate source `f1da04a15c75ce13455ce13b1f108c47358d36e8c95644be763a346af8c1a321`. This approval does not substitute for fresh exact-source CI admission or deployment-operator review. Subsequent tracked additions limited to this exact review appendix and task/status metadata do not change the reviewed source; any runtime, manifest, or test change requires a new bound review.
+
+### Reviewed hashes
+
+```text
+e37a7b4ccaa70a8d0e50bf1c7d86f9ab807061d0374b109f6a904db87c77245a  deploy/dependencies/direct-dist-sha256.json
+be39c50cc4b3972f908e0b37caf0436436ef1e43ff010ad1fbd0f7d9715b3a3f  tests/Deployment/production_make_live_001_test.py
+8d6702a01200b4c8e342690d16b237317c557864e8a91fbe246a8672b3444866  tests/Support/yii2_production_web_cutover_contract.php
+91827cbf1614dc41dc23c59adda3c6bcd3190f0f5590557d8ef31b720dd829c0  composer.json
+dc2b62cf00c44f47f11abb782b304513936d13293302afe6c0097d5072757426  composer.lock
+220934f576134b0466d99f786ce21b13f87d319b1e9ae633c55e68f6f41c3c9d  public/third-party/fuse/fuse.min.js
+67d74df4cfd4f0ad401f6471eccc2025069a9d1ddfc405907724a53db72e7aa6  app/YiiRuntime/Assets/field-offline-address-search.js
+```

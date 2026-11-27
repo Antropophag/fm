@@ -168,3 +168,38 @@ c5ae15830fa549c0bef9590f4c4f494cb53e557244c54c016be21c4c4e5ef200  tests/Yii2/yii
 ```
 
 Correction Gate 3 is `APPROVED` for exact candidate source `b9af69ebadf509e723654c459b05701779c200f319d9e51ffb0bd6bdf223b321`. Implementation may proceed against these expectations; any test/spec change requires a new bound review.
+
+
+---
+
+## Dependency-manifest correction Gate 3 — 2026-11-28
+
+- Reviewer: independent agent `/root/search_final_review`; authored neither test delta nor implementation
+- Package: `/Users/antropophag/.local/share/fmonitor-2/delivery-harness/packages/20261127T222453Z-a03d270cd6/package.json`
+- Candidate source: `2f683df3f7982d37999ae7ca133e4f8b9f959bdf8cb79ff7270b90e94ad223a1`
+- Executable source: `1db488f4799bbbd669264f42d0832bd71f470b66c740819d1ec3bfae6af979c4`
+- Base: feature commit `f5cd454b84633c952df41eb3518f2ea85e989fc2`, whose product code retains the prior full approval
+- Scope: dependency verification binding, root-authored production fallback test delta, and the minimal future manifest-only correction
+- Verdict: `APPROVED`
+
+### Assessment
+
+`production_dependencies_001_test.py` remains an independent exact-manifest oracle. It computes the current Composer input hashes, derives the entire package identity set from `composer.lock`, requires one matching manifest entry per locked production package, and rejects missing, duplicate, malformed, untrusted, or stale entries before fetch while preserving existing vendor. The retained record exits 1 at the first stale `composerJsonSha256` assertion. This is a valid intended RED at the production dependency-manifest boundary; it is not a setup or network failure.
+
+The `production_make_live_001_test.py` delta strengthens the existing disposable production fallback acceptance without changing its workflow. Replacing literal fetch count `9` with `len(manifest['packages'])` retains the exact assertion that the empty-cache path fetches every approved entry once and avoids encoding the old graph cardinality. The placeholder is replaced before the shell script executes and has one bounded occurrence. Adding `class_exists("Fuse\\Fuse")` to the existing offline-installed autoload probe proves the newly locked runtime class is reachable alongside Yii and TCPDF. All prior checksum, exact URL, network-disabled install, cache reuse, bad-download, corrupt-cache, platform-failure, primary-success, and working-vendor preservation assertions remain intact.
+
+The verification input correctly maps the correction to A8 and limits planned runtime paths to `deploy/dependencies/direct-dist-sha256.json` plus the test-only live acceptance update. The implementation must change only the manifest's two Composer input hashes and add the exact `loilo/fuse` 7.1.1 archive entry matching lock reference `aef0aecc4f7eada734ecc44cb403f453d8fedca2`, canonical codeload URL, independently measured SHA-256, and byte size. Existing nine package entries must retain their identities and archive hashes. No installer or application source change is authorized by this approval.
+
+The current source intentionally retains the stale manifest to preserve RED, so this review approves the expectations and bounded implementation shape rather than claiming the manifest is already corrected. The corrected exact source must run the static validator GREEN and the disposable Docker live fallback consumer GREEN before final rereview. The still-pending complete CI failure inventory remains a separate admission prerequisite.
+
+No findings. Gate 3 is `APPROVED` for candidate source `2f683df3f7982d37999ae7ca133e4f8b9f959bdf8cb79ff7270b90e94ad223a1`. Previous product-code Gate 3/final approvals and historical evidence remain unchanged; this is not final code, CI, or deployment approval.
+
+### Reviewed hashes
+
+```text
+c56c08bd2409e5402355b266524becbdcb096ded906f9e79b0f3163ae785ab8d  tests/Deployment/production_dependencies_001_test.py
+be39c50cc4b3972f908e0b37caf0436436ef1e43ff010ad1fbd0f7d9715b3a3f  tests/Deployment/production_make_live_001_test.py
+7764652079147270d94be98fab1a58c8f43084ba111c5c015b0a75f841ef97f7  openspec/changes/flexible-address-search/dependency-verification-input.json
+91827cbf1614dc41dc23c59adda3c6bcd3190f0f5590557d8ef31b720dd829c0  composer.json
+dc2b62cf00c44f47f11abb782b304513936d13293302afe6c0097d5072757426  composer.lock
+```
