@@ -10,7 +10,7 @@ try {
  await login(c.email);
  const response=await page.goto(c.origin+'/pilot/objects/4512/checklist');check(response.status()===200,'INTENDED_RED Yii browser checklist');
  check(!response.headers()['content-security-policy'].includes('unsafe-inline'),'CSP no unsafe-inline');
- await page.waitForFunction(()=>document.querySelector('[data-checklist]')?.dataset.userId==='73');
+ await page.waitForFunction(()=>document.querySelector('[data-checklist]')?.dataset.userId==='73'&&document.querySelector('[data-checklist]')?.dataset.fieldReady==='true');
  if(await page.locator('[data-check-section="1"] .fm2-section-toggle').getAttribute('aria-expanded')==='false')await page.locator('[data-check-section="1"] .fm2-section-toggle').click();
  let lost=false,acceptedId=null;
  await page.route('**/pilot/objects/4512/checklist/operations',async route=>{const data=route.request().postDataJSON();if(!lost&&data.type==='item_completed'){const answer=await route.fetch();const body=await answer.json();check(body.status==='accepted','first click accepted before response loss');lost=true;acceptedId=data.clientOperationId;await route.abort('connectionreset');}else await route.continue();});
@@ -23,34 +23,47 @@ try {
  await page.screenshot({path:c.artifacts+'/inspection-desktop.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});check(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'mobile no overflow');await page.screenshot({path:c.artifacts+'/inspection-mobile.png',fullPage:true});
  // Preserve real stores/scope, failed intentions, mixed operation/photo/section ordering.
- const localRows=()=>page.evaluate(()=>new Promise((resolve,reject)=>{const r=indexedDB.open('fmonitor2-fast-pilot',2);r.onerror=()=>reject(r.error);r.onsuccess=()=>{const db=r.result,t=db.transaction(['operations','meta','photoBlobs']),q=t.objectStore('operations').getAll(),d=t.objectStore('meta').get('deviceInstallationId'),p=t.objectStore('photoBlobs').getAll();t.oncomplete=()=>{resolve({stores:[...db.objectStoreNames],rows:q.result,device:d.result,photos:p.result});db.close();};};}));
+ const localRows=()=>page.evaluate(()=>new Promise((resolve,reject)=>{const r=indexedDB.open('fmonitor2-fast-pilot');r.onerror=()=>reject(r.error);r.onsuccess=()=>{const db=r.result,t=db.transaction(['operations','meta','photoBlobs']),q=t.objectStore('operations').getAll(),d=t.objectStore('meta').get('deviceInstallationId'),p=t.objectStore('photoBlobs').getAll();t.oncomplete=()=>{resolve({stores:[...db.objectStoreNames],rows:q.result,device:d.result,photos:p.result});db.close();};};}));
  const pollLocal=async(predicate,message,timeout=30000)=>{const deadline=Date.now()+timeout;let current;do{current=await localRows();if(predicate(current))return current;await new Promise(resolve=>setTimeout(resolve,50));}while(Date.now()<deadline);throw new Error(message+'; observed '+JSON.stringify(current.rows.map(r=>({id:r.clientOperationId,type:r.type,status:r.status}))));};
- let local=await localRows();check(JSON.stringify(local.stores.sort())===JSON.stringify(['meta','operations','photoBlobs']),'exact IDB v2 stores');check(local.rows.every(r=>r.scope===`73:${r.deviceInstallationId}:4512`),'user device object scope');
+ let local=await localRows();check(JSON.stringify(local.stores.sort())===JSON.stringify(['actorState','leases','meta','operations','photoBlobs','preparations','preparedDocuments','scopeState']),'durable v3 stores preserve legacy operations and blobs');check(local.rows.every(r=>r.scope===`73:${r.deviceInstallationId}:4512`),'user device object scope');
  if(await page.locator('[data-check-section="1"] .fm2-section-toggle').getAttribute('aria-expanded')==='false')await page.locator('[data-check-section="1"] .fm2-section-toggle').click();
  await context.setOffline(true);await page.locator('[data-check-item="29"] .fm2-check-toggle').click();
  await pollLocal(s=>s.rows.some(r=>r.itemId===29),'offline item durably queued');
  const offlineId=(await localRows()).rows.find(r=>r.itemId===29).clientOperationId;
  const failures=[{status:'conflict',code:409},{status:'rejected',code:422},{status:'retryable',code:503}];let injected=0;
- await page.route('**/pilot/objects/4512/checklist/operations',async route=>{const op=route.request().postDataJSON();if(op.clientOperationId===offlineId&&injected<failures.length){const failure=failures[injected++];await route.fulfill({status:failure.code,contentType:'application/json',body:JSON.stringify({status:failure.status,revision:1})});}else await route.continue();});
+ await page.route('**/pilot/objects/4512/checklist/operations',async route=>{const op=route.request().postDataJSON();if(op.itemId===29&&injected<failures.length){const failure=failures[injected++];await route.fulfill({status:failure.code,contentType:'application/json',body:JSON.stringify({status:failure.status,revision:1})});}else await route.continue();});
  await context.setOffline(false);
- for(let i=0;i<3;i++){const expected=['conflict','rejected','retryable_error'][i];await pollLocal(s=>s.rows.some(r=>r.clientOperationId===offlineId&&r.status===expected),'failed intention retained as '+expected);check((await localRows()).rows.some(r=>r.clientOperationId===offlineId),'failed intention retained');await page.locator('[data-sync-now]').click();}
- await pollLocal(s=>s.rows.some(r=>r.clientOperationId===offlineId&&r.status==='accepted'),'retried item accepted');
+ let currentOfflineId=offlineId;
+ for(let i=0;i<3;i++){
+  const expected=['conflict','rejected','retryable_error'][i];
+  const observed=await pollLocal(s=>s.rows.some(r=>r.itemId===29&&r.status===expected),'failed intention retained as '+expected);
+  const failed=observed.rows.find(r=>r.itemId===29&&r.status===expected);currentOfflineId=failed.clientOperationId;
+  check(observed.rows.some(r=>r.clientOperationId===offlineId),'original failed intention retained');
+  if(i<2){
+   await page.locator(`[data-field-operation][data-operation-id="${currentOfflineId}"] [data-field-resolve]`).click();
+   await page.locator('dialog[open]').getByRole('button',{name:'Применить заново',exact:true}).click();
+   await pollLocal(s=>s.rows.some(r=>r.clientOperationId===currentOfflineId&&r.status==='superseded'),'explicit resolution preserves original');
+  }else await page.locator('[data-sync-now]').click();
+ }
+ await pollLocal(s=>s.rows.some(r=>r.clientOperationId===currentOfflineId&&r.status==='accepted'),'only explicit replacement and transient retry accepted');
  await page.unroute('**/pilot/objects/4512/checklist/operations');await page.reload();await page.waitForFunction(()=>document.querySelector('[data-check-item="29"] [role=checkbox]')?.getAttribute('aria-checked')==='true');
  // Queue the remaining section and photo while offline; automatic section completion follows them.
  if(await page.locator('[data-check-section="1"] .fm2-section-toggle').getAttribute('aria-expanded')==='false')await page.locator('[data-check-section="1"] .fm2-section-toggle').click();
- const sent=[];page.on('request',r=>{if(r.method()==='POST'&&r.url().includes('/checklist/')){if(r.url().endsWith('/photos'))sent.push('photo_uploaded');else sent.push(r.postDataJSON().type);}});
+ const sent=[];context.on('request',r=>{if(r.method()==='POST'&&r.url().includes('/checklist/')){if(r.url().endsWith('/photos'))sent.push('photo_uploaded');else sent.push(r.postDataJSON().type);}});
  await context.setOffline(true);await page.locator('[data-check-section="1"] [data-check-all]').click();await page.locator('[data-bulk-confirm]').click();
  await page.locator('[data-check-section="1"] input[data-photo-input]').last().setInputFiles({name:'offline.png',mimeType:'image/png',buffer:Buffer.from(c.png,'base64')});
  await pollLocal(s=>s.photos.length>0,'offline photo bytes durably queued');
+ const competing=await context.newPage();await competing.goto(c.origin+'/pilot/objects/4512/checklist');await competing.locator('[data-photo-strip] img[src^="blob:"]').waitFor();await competing.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await pollLocal(s=>s.rows.some(r=>r.type==='section_completed'),'section completion enqueued');check((await localRows()).rows.filter(r=>r.type==='section_completed').length===1,'two tabs create one durable section-completion intent');
  await context.setOffline(false);await pollLocal(s=>s.rows.some(r=>r.type==='section_completed'&&r.status==='accepted'),'mixed section actually accepted');
- check(sent.includes('photo_uploaded')&&sent.includes('section_completed'),'mixed photo and section actually sent');check(sent.indexOf('photo_uploaded')>sent.lastIndexOf('item_completed')&&sent.indexOf('section_completed')>sent.indexOf('photo_uploaded'),'ordered item then photo then section');
- await page.reload();check(await page.locator('[data-check-section="1"] [data-section-state]').textContent().then(x=>x.includes('Заверш')),'section persisted on refresh');
+ await competing.close();
+ check(sent.includes('photo_uploaded')&&sent.includes('section_completed'),'mixed photo and section actually sent');check(sent.indexOf('photo_uploaded')>sent.lastIndexOf('item_completed')&&sent.indexOf('section_completed')>sent.indexOf('photo_uploaded'),'ordered item then photo then section: '+JSON.stringify(sent));
+ await page.reload();await page.locator('[data-checklist][data-field-ready="true"]').waitFor();check(await page.locator('[data-check-section="1"] [data-section-state]').textContent().then(x=>/заверш/iu.test(x)),'section persisted on refresh');
  // The existing sync-context endpoint returns a usable fresh native CSRF token.
  const sync=await page.evaluate(async()=>{const r=await fetch('/pilot/construction-control/objects/4512/sync-context',{credentials:'include'});return {status:r.status,body:await r.json()};});check(sync.status===200&&typeof sync.body.csrf==='string'&&sync.body.revision===11,'sync context revision/token after mixed queue');
  await page.locator('.fm2-back-link[href="/pilot/objects/4512"]').click();await page.waitForURL(c.origin+'/pilot/objects/4512');
  await page.evaluate(async()=>{for(const name of await caches.keys())if(name.startsWith('fmonitor2-checklist-doc-'))await caches.delete(name);});
  await page.goto(c.origin+'/pilot/construction-control');
- await page.waitForFunction(async()=>{const registration=await navigator.serviceWorker.getRegistration('/pilot/');if(!registration||registration.scope!==location.origin+'/pilot/')return false;const cache=await caches.open('fmonitor2-checklist-doc-v7-73');return Boolean(await cache.match('/pilot/construction-control/objects/4512/checklist'));});
+ await page.locator('[data-offline-summary][data-state="ready"]').waitFor();check(await page.evaluate(async()=>{const registration=await navigator.serviceWorker.getRegistration('/pilot/');return registration?.scope===location.origin+'/pilot/';}),'public prepared state with correct worker scope');
  check(true,'construction queue registers /pilot/ worker and prefetches eligible checklist');
  await page.goto(c.origin+'/pilot/construction-control/objects/4512/checklist');await page.locator('.fm2-back-link[href="/pilot/construction-control"]').click();await page.waitForURL(c.origin+'/pilot/construction-control');
  check(await page.getByRole('navigation',{name:'Основная навигация'}).getByRole('link',{name:'Стройконтроль',exact:true}).count()===1,'capability-gated shell entry to construction queue');

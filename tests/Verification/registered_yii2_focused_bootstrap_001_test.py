@@ -222,6 +222,7 @@ raise SystemExit(75)
  'tests/Yii2/yii2_calendar_003_test.php': 'browser',
  'tests/Yii2/yii2_checklist_photo_viewing_001_test.php': 'browser',
  'tests/Yii2/yii2_checklist_photo_viewing_browser_001_test.php': 'browser',
+ 'tests/Yii2/yii2_construction_control_server_filtering_001_test.php': 'browser',
  'tests/Yii2/yii2_construction_control_shipment_indicator_001_test.php': 'integration',
  'tests/Yii2/yii2_inspection_browser_001_test.php': 'browser',
  'tests/Yii2/yii2_installer_utilization_stage_one_001_test.php': 'browser',

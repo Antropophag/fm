@@ -4,6 +4,19 @@ namespace FMonitor2\InspectionEvidence;
 
 trait MariaDbYiiChecklistRead
 {
+        public function offlineManifest(int $actorId,int $page=1,int $size=50):array
+        {
+            if($page<1||$size<1||$size>50)throw new \OutOfBoundsException();
+            $first=$this->queue($actorId,1,50,'mine','',true);$pages=(int)($first[0]['_pagination']['pages']??1);$rows=$first;
+            for($current=2;$current<=$pages;$current++)$rows=array_merge($rows,$this->queue($actorId,$current,50,'mine','',true));
+            $items=[];
+            foreach($rows as$row){$objectId=(int)$row['id'];$access=$this->access($actorId,$objectId);if(!($access['read']??false)||!($access['assigned']??false))continue;
+                $items[$objectId]=['objectId'=>$objectId,'checklistUrl'=>'/pilot/construction-control/objects/'.$objectId.'/checklist','address'=>(string)$row['address'],'registrationNumber'=>(string)$row['registrationNumber'],'entrance'=>(string)$row['entrance'],'completed'=>(bool)$row['completed']];}
+            ksort($items,SORT_NUMERIC);$items=array_values($items);$total=count($items);$manifestPages=max(1,(int)ceil($total/$size));if($page>$manifestPages)throw new \OutOfBoundsException();
+            $setVersion=hash('sha256',implode(',',array_map(static fn(array$item):string=>(string)$item['objectId'],$items)));
+            return['userId'=>$actorId,'page'=>$page,'pages'=>$manifestPages,'total'=>$total,'setVersion'=>$setVersion,'items'=>array_slice($items,($page-1)*$size,$size)];
+        }
+
         public function access(int $actorId,int $objectId):array
         {
             $case=$this->case($objectId,false);

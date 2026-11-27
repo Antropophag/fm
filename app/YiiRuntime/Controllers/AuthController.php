@@ -8,8 +8,8 @@ final class AuthController extends PilotController
  public function behaviors():array{return['verbs'=>['class'=>VerbFilter::class,'actions'=>['logout'=>['POST'],'first-password'=>['POST'],'forgot-password'=>['GET','HEAD','POST'],'reset-password'=>['GET','HEAD','POST']]]];}
  public function actionLogin():string|Response
  {
-  Yii::$app->session->open();if(!Yii::$app->user->isGuest)return$this->localRedirect('/pilot/objects');
-  $r=Yii::$app->request;$email=$this->normalize((string)$r->post('email',''));$password=$r->post('password');$stage='email';$error='';
+  Yii::$app->session->open();$r=Yii::$app->request;$reauth=$r->get('reauth');$explicitReauth=is_string($reauth)&&$reauth==='1';if(!Yii::$app->user->isGuest&&!$r->isPost&&!$explicitReauth)return$this->localRedirect('/pilot/objects');
+  $email=$this->normalize((string)$r->post('email',''));$password=$r->post('password');$stage='email';$error='';
   if($r->isPost&&$this->validEmail($email))try{$step=Yii::$app->userAccess->loginStep($email);if($step==='initial')$stage='initial';elseif($step==='password'){$stage='password';if(is_string($password)){$destination=$this->authenticate($email,$password);if($destination===null)$error=$this->neutral();else return$this->localRedirect($destination);}}else$error='Для предоставления доступа создайте заявку в ИТСМ.';}catch(\Throwable$e){throw new \RuntimeException('Authentication unavailable.',0,$e);}elseif($r->isPost)$error='Введите рабочий email в домене @shlz.ru.';
   $path=$r->pathInfo==='pilot/otiz/login'?'/pilot/otiz/login':'/pilot/login';return$this->render('@app/app/YiiRuntime/Views/login',compact('stage','email','error','path'));
  }
