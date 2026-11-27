@@ -14,10 +14,14 @@ final class PilotAssetController extends PilotController
     public function actionFile(string$path): Response
     {
         $root = dirname(__DIR__) . '/Assets';
-        $shellFiles=['shlz.css','pilot.css','preopening.css','field-offline.css','sidebar-bootstrap.js','navigation.js','shlz-behaviors.js','preloader.js','preopening.js','template-offer.js','inspection-schedule.js','field-offline-store.js','field-offline-sync.js','field-offline-photo.js','field-offline.js','field-offline-preparation.js','field-offline-lifecycle.js','checklist.js','control-queue.js'];
-        $shellAssets=array_map(static fn(string$file):string=>'/pilot/assets/'.AssetVersion::file($file),$shellFiles);
-        $shellGeneration=hash('sha256',json_encode($shellAssets,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));
+        $shellAssets=null;$shellGeneration=null;
+        if(in_array($path,['field-shell.json','checklist-sw.js'],true)){
+            $shellFiles=['shlz.css','pilot.css','preopening.css','field-offline.css','sidebar-bootstrap.js','navigation.js','shlz-behaviors.js','preloader.js','preopening.js','template-offer.js','inspection-schedule.js','field-offline-store.js','field-offline-sync.js','field-offline-photo.js','field-offline.js','field-offline-preparation.js','field-offline-lifecycle.js','checklist.js','control-queue.js'];
+            $shellAssets=array_map(static fn(string$file):string=>'/pilot/assets/'.AssetVersion::file($file),$shellFiles);
+            $shellGeneration=hash('sha256',json_encode($shellAssets,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));
+        }
         if($path==='field-shell.json'){
+            if(!is_array($shellAssets)||!is_string($shellGeneration))throw new \RuntimeException('Shell manifest unavailable.');
             $response=Yii::$app->response;$response->format=Response::FORMAT_JSON;$response->data=['generation'=>$shellGeneration,'assets'=>$shellAssets];$response->headers->set('Cache-Control','no-store');return$response;
         }
         $map = [];
@@ -43,7 +47,7 @@ final class PilotAssetController extends PilotController
         }$bytes = file_get_contents($entry[0]);
         if (!is_string($bytes)) {
             throw new \RuntimeException();
-        }if($path==='checklist-sw.js')$bytes=str_replace('__FMONITOR_WORKER_GENERATION__',$shellGeneration,$bytes);if(str_ends_with($path,'.js'))$bytes=preg_replace_callback("~((?:from\\s*|import\\s*)['\"])/pilot/assets/([A-Za-z0-9.-]+\\.js)(['\"])~",static fn(array$m):string=>$m[1].'/pilot/assets/'.AssetVersion::file($m[2]).$m[3],$bytes)??$bytes;
+        }if($path==='checklist-sw.js'){if(!is_string($shellGeneration))throw new \RuntimeException('Shell generation unavailable.');$bytes=str_replace('__FMONITOR_WORKER_GENERATION__',$shellGeneration,$bytes);}if(str_ends_with($path,'.js'))$bytes=preg_replace_callback("~((?:from\\s*|import\\s*)['\"])/pilot/assets/([A-Za-z0-9.-]+\\.js)(['\"])~",static fn(array$m):string=>$m[1].'/pilot/assets/'.AssetVersion::file($m[2]).$m[3],$bytes)??$bytes;
         $requested=Yii::$app->request->get('v');$expected=null;if(preg_match('/\\.(?:css|js)$/D',$path)===1){$versioned=AssetVersion::file($path);$expected=substr($versioned,strpos($versioned,'?v=')+3);}
         $immutable=($expected!==null&&is_string($requested)&&hash_equals($expected,$requested))||($expected===null&&$entry[2]===31536000);
         $r = Yii::$app->response;

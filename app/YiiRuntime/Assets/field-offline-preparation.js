@@ -6,7 +6,11 @@
   let userId = Number((queue || shell).dataset.userId);
   const Store = globalThis.FMonitorFieldStore;
   let preparing = false,
-    deferredInstall = null;
+    deferredInstall = null,
+    currentRunToken = null,
+    activeAttempt = null,
+    completedAttempt = null,
+    pendingPreparation = Promise.resolve();
   const timeout = (ms = 15000) =>
     typeof AbortSignal.timeout === "function"
       ? AbortSignal.timeout(ms)
@@ -110,7 +114,50 @@
     await navigator.serviceWorker.ready;
     return registration;
   }
-  function cacheDocument(worker, item, identity, generation) {
+  function workerCall(worker, message, timeoutMs = 3000) {
+    return new Promise((resolve, reject) => {
+      const channel = new MessageChannel(),
+        timer = setTimeout(
+          () => reject(Error("Service worker did not respond")),
+          timeoutMs,
+        );
+      channel.port1.onmessage = (event) => {
+        clearTimeout(timer);
+        resolve(event.data || {});
+      };
+      worker.postMessage(message, [channel.port2]);
+    });
+  }
+  async function runtimeInfo(worker) {
+    const value = await workerCall(worker, { type: "FIELD_RUNTIME_INFO" });
+    if (
+      value.protocol !== 3 ||
+      typeof value.generation !== "string" ||
+      !/^[a-f0-9]{64}$/.test(value.generation)
+    )
+      throw Error("Обновление для работы без сети ещё не готово.");
+    return value;
+  }
+  function isCurrent(runToken, descriptor = null) {
+    return (
+      currentRunToken === runToken &&
+      (!descriptor || activeAttempt === descriptor) &&
+      !descriptor?.cancelled
+    );
+  }
+  function cancelAttempt(descriptor) {
+    if (!descriptor || descriptor.cancelled) return;
+    descriptor.cancelled = true;
+    descriptor.worker?.postMessage({
+      type: "CANCEL_CHECKLIST_WARMUPS",
+      userId: descriptor.userId,
+      epoch: descriptor.epoch,
+      generation: descriptor.generation,
+      scope: descriptor.scope,
+      attempt: descriptor.attempt,
+    });
+  }
+  function cacheDocument(worker, item, identity, descriptor) {
     return new Promise((resolve, reject) => {
       const channel = new MessageChannel(),
         timer = setTimeout(
@@ -130,7 +177,10 @@
           url: new URL(item.checklistUrl, location.origin).href,
           userId,
           epoch: identity.state.epoch,
-          generation,
+          generation: descriptor.generation,
+          scope: descriptor.scope,
+          attempt: descriptor.attempt,
+          priority: "normal",
         },
         [channel.port2],
       );
@@ -166,22 +216,39 @@
       worker.postMessage({ type: "FIELD_CHECK_ACTOR" }, [channel.port2]);
     });
   }
-  async function prepare() {
-    if (preparing) return;
-    preparing = true;
+  async function runPreparation(runToken) {
+    if (currentRunToken !== runToken) return;
     try {
       const identity = await actor(true);
+      if (currentRunToken !== runToken) return;
       const manifest = await stableManifest();
+      if (currentRunToken !== runToken) return;
       const registration = await register();
+      if (currentRunToken !== runToken) return;
       const key = `${userId}:${identity.deviceInstallationId}`;
       const previous = await Store.getPreparation(key);
-      const generation = `field-${manifest.setVersion.slice(0, 16)}`;
+      if (currentRunToken !== runToken) return;
       const done = new Set();
-      const workerTarget = registration.active;
+      const workerTarget =
+        registration.active || navigator.serviceWorker.controller;
       if (!workerTarget)
         throw Error(
           "Обновление ещё не готово. Закройте другие вкладки FMonitor и откройте страницу снова.",
         );
+      const runtime = await runtimeInfo(workerTarget);
+      if (currentRunToken !== runToken) return;
+      const descriptor = {
+        runToken,
+        worker: workerTarget,
+        userId,
+        epoch: identity.state.epoch,
+        generation: runtime.generation,
+        scope: `field-preparation:${identity.deviceInstallationId}:${crypto.randomUUID()}`,
+        attempt: crypto.randomUUID(),
+        cancelled: false,
+      };
+      activeAttempt = descriptor;
+      const generation = descriptor.generation;
       const previousItems = new Map(
         (previous?.items || []).map((item) => [Number(item.objectId), item]),
       );
@@ -199,7 +266,9 @@
       await Promise.all(
         items.map(async (item) => {
           if (item.state !== "verifying") return;
-          if (await cachePresent(workerTarget, item)) {
+          const present = await cachePresent(workerTarget, item);
+          if (!isCurrent(runToken, descriptor)) return;
+          if (present) {
             item.state = "refreshing";
             done.add(item.objectId);
           } else {
@@ -209,6 +278,7 @@
           }
         }),
       );
+      if (!isCurrent(runToken, descriptor)) return;
       summary("preparing", done.size, manifest.total);
       let cursor = 0,
         errors = [];
@@ -236,16 +306,18 @@
         },
         fence,
       );
+      if (!isCurrent(runToken, descriptor)) return;
       async function worker() {
-        while (cursor < items.length) {
+        while (isCurrent(runToken, descriptor) && cursor < items.length) {
           const item = items[cursor++];
           try {
             const cached = await cacheDocument(
               workerTarget,
               item,
               identity,
-              generation,
+              descriptor,
             );
+            if (!isCurrent(runToken, descriptor)) return;
             item.state = "ready";
             item.cachedAt = new Date().toISOString();
             item.contentHash = cached.contentHash;
@@ -264,8 +336,10 @@
               },
               fence,
             );
+            if (!isCurrent(runToken, descriptor)) return;
             done.add(item.objectId);
           } catch (error) {
+            if (!isCurrent(runToken, descriptor)) return;
             item.state = done.has(item.objectId) ? "stale" : "error";
             item.error = error.message;
             errors.push({ objectId: item.objectId, message: error.message });
@@ -290,9 +364,11 @@
             },
             fence,
           );
+          if (!isCurrent(runToken, descriptor)) return;
         }
       }
       await Promise.all([worker(), worker()]);
+      if (!isCurrent(runToken, descriptor)) return;
       const state = errors.length ? "partial" : "ready",
         updatedAt = new Date().toISOString();
       await Store.putPreparationFenced(
@@ -314,6 +390,7 @@
         },
         fence,
       );
+      if (!isCurrent(runToken, descriptor)) return;
       summary(
         state,
         done.size,
@@ -324,10 +401,29 @@
         updatedAt,
       );
     } catch (error) {
-      summary("error", 0, 0, error.message);
+      if (currentRunToken === runToken) summary("error", 0, 0, error.message);
     } finally {
-      preparing = false;
+      if (activeAttempt?.runToken === runToken) {
+        completedAttempt = activeAttempt;
+        activeAttempt = null;
+      }
+      if (currentRunToken === runToken) preparing = false;
     }
+  }
+  function prepare() {
+    const runToken = crypto.randomUUID();
+    currentRunToken = runToken;
+    preparing = true;
+    cancelAttempt(activeAttempt);
+    cancelAttempt(completedAttempt);
+    activeAttempt = null;
+    completedAttempt = null;
+    const predecessor = pendingPreparation;
+    pendingPreparation = (async () => {
+      await predecessor.catch(() => {});
+      await runPreparation(runToken);
+    })();
+    return pendingPreparation;
   }
   async function renderShell() {
     const state = document.querySelector("[data-offline-state]"),
@@ -389,6 +485,10 @@
   document
     .querySelector("[data-offline-retry]")
     ?.addEventListener("click", prepare);
+  window.addEventListener("pagehide", () => {
+    cancelAttempt(activeAttempt);
+    cancelAttempt(completedAttempt);
+  });
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     deferredInstall = event;

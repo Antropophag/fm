@@ -48,9 +48,11 @@
       control.disabled = true;
     }
     for (const box of root.querySelectorAll(".fm2-check-box")) {
-      if (!box.querySelector("svg"))
-        box.innerHTML =
-          '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 10 4 4 8-8"/></svg>';
+      const mark = document.createElement("span");
+      mark.className = "fm2-check-mark";
+      mark.setAttribute("aria-hidden", "true");
+      mark.textContent = "✓";
+      box.replaceChildren(mark);
     }
     banner.dataset.state = "loading";
     banner.querySelector("[data-sync-copy]").textContent =
@@ -489,7 +491,7 @@
           }[state] ||
           snapshot.connection.message ||
           "Сохранено на устройстве";
-      banner.dataset.state = state;
+      banner.dataset.state = state === "online" ? "ok" : state;
       banner.querySelector("[data-sync-copy]").textContent = copy;
       const retry = banner.querySelector("[data-sync-now]");
       retry.hidden = ![

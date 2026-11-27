@@ -42,7 +42,15 @@
     "tests/Yii2/yii2_construction_control_server_filtering_001_test.php",
     "app/YiiRuntime/Assets/pilot.css",
     "tests/Yii2/construction_control_mobile_list_browser.mjs",
-    "app/YiiRuntime/Controllers/AuthController.php"
+    "app/YiiRuntime/Controllers/AuthController.php",
+    "tests/Verification/change_verification_sensitive_offline_132_test.py",
+    "tests/Verification/registered_yii2_focused_bootstrap_001_test.py",
+    "tests/Yii2/production_performance_sw_001_test.mjs",
+    "tests/Yii2/runtime_help_001_test.py",
+    "tests/Yii2/sidebar_state_icons_browser.mjs",
+    "tests/Runtime/yii2_safe_error_correlation_001_test.php",
+    "tests/Support/yii2_production_web_cutover_contract.php",
+    "tests/Yii2/calendar_003_browser.mjs"
   ],
   "acceptances": [
     {
@@ -56,15 +64,19 @@
         "tests/Yii2/reliable_field_offline_worker_001_test.mjs",
         "tests/Yii2/yii2_checklist_operation_replay_001_test.php",
         "tests/Yii2/yii2_inspection_browser_001_test.php",
-        "tests/Yii2/yii2_construction_control_mobile_list_browser_001_test.php"
+        "tests/Yii2/yii2_construction_control_mobile_list_browser_001_test.php",
+        "tests/Yii2/production_performance_sw_001_test.mjs",
+        "tests/Yii2/runtime_help_001_test.py"
       ],
       "gate3_expected": {
-        "tests/Yii2/reliable_field_offline_001_test.php": "INTENDED_RED",
+        "tests/Yii2/reliable_field_offline_001_test.php": "GREEN",
         "tests/Yii2/reliable_field_offline_browser_001_test.php": "INTENDED_RED",
-        "tests/Yii2/reliable_field_offline_worker_001_test.mjs": "GREEN",
+        "tests/Yii2/reliable_field_offline_worker_001_test.mjs": "INTENDED_RED",
         "tests/Yii2/yii2_checklist_operation_replay_001_test.php": "GREEN",
         "tests/Yii2/yii2_inspection_browser_001_test.php": "GREEN",
-        "tests/Yii2/yii2_construction_control_mobile_list_browser_001_test.php": "GREEN"
+        "tests/Yii2/yii2_construction_control_mobile_list_browser_001_test.php": "GREEN",
+        "tests/Yii2/production_performance_sw_001_test.mjs": "INTENDED_RED",
+        "tests/Yii2/runtime_help_001_test.py": "INTENDED_RED"
       }
     }
   ]

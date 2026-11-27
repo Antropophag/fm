@@ -158,7 +158,10 @@
       if (!force && contextRetry.nextAttemptAt && contextRetry.nextAttemptAt > Date.now()) {
         this.schedule(contextRetry.nextAttemptAt); return;
       }
-      if (!(await this.acquire())) return;
+      if (!(await this.acquire())) {
+        this.schedule(Date.now() + 1500 + Math.random() * 1000);
+        return;
+      }
       try {
         let context;
         try {

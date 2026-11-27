@@ -16,6 +16,17 @@ class SensitiveOfflineClassification(unittest.TestCase):
         "app/YiiRuntime/Assets/checklist.js",
         "app/YiiRuntime/Assets/control-queue.js",
     ]
+    PATTERNS = SENSITIVE + [
+        "app/YiiRuntime/Assets/field-offline*",
+        "app/YiiRuntime/Assets/manifest.webmanifest",
+        "app/YiiRuntime/Assets/pwa-icon-192.png",
+        "app/YiiRuntime/Assets/pwa-icon-512.png",
+    ]
+    SENSITIVE = SENSITIVE + ["app/YiiRuntime/Assets/" + path for path in [
+        "field-offline.js", "field-offline-store.js", "field-offline-sync.js",
+        "field-offline-photo.js", "field-offline-preparation.js", "field-offline-lifecycle.js",
+        "field-offline.css", "manifest.webmanifest", "pwa-icon-192.png", "pwa-icon-512.png",
+    ]]
     ORACLE = "tests/Yii2/yii2_inspection_browser_001_test.php"
 
     def setUp(self):
@@ -142,7 +153,7 @@ class SensitiveOfflineClassification(unittest.TestCase):
     def test_l_shipped_policy_explains_exact_sensitive_reason(self):
         policy = json.loads((self.root / ".quality-graph/verification-policy.json").read_text())
         boundary = next(item for item in policy["boundaries"] if item["name"] == "sensitive-offline-ui")
-        self.assertEqual(self.SENSITIVE, boundary["patterns"])
+        self.assertEqual(self.PATTERNS, boundary["patterns"])
         result, plan = self.build([self.SENSITIVE[0]])
         self.assertEqual(0, result.returncode, "INTENDED_RED: " + result.stderr)
         self.assertEqual([{"lane": "CRITICAL", "reason": "sensitive-offline-ui"}], plan["escalations"])

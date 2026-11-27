@@ -9,6 +9,7 @@ const LOGIN_KEY = "/pilot/__field-login-proof__";
 const LOGIN_PENDING_KEY = "/pilot/__field-login-pending__";
 const ASSET_MANIFEST = "/pilot/assets/field-shell.json";
 const OFFLINE = "/pilot/construction-control/offline";
+const SHELL_STAGING_PREFIX = "fmonitor2-field-staging-";
 const STATIC_ASSETS = [
   OFFLINE,
   "/pilot/assets/pwa-icon-192.png",
@@ -31,7 +32,12 @@ const STATIC_ASSETS = [
   "/pilot/assets/shlz-icons/arrow-left-md.svg",
   "/pilot/assets/shlz-icons/arrow-right-md.svg",
 ];
+const WARMUP_LIMIT = 2;
 const warmups = new Map();
+const warmupQueue = [];
+const completedWarmups = new Map();
+let activeWarmups = 0;
+let foregroundNavigations = 0;
 let epoch = 0;
 
 const checklistPath = (path) =>
@@ -46,7 +52,7 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(notifyUpdate());
+  event.waitUntil(activateWorker());
 });
 
 self.addEventListener("message", (event) => {
@@ -89,7 +95,11 @@ self.addEventListener("message", (event) => {
     return;
   }
   if (data.type === "CACHE_CHECKLIST") {
-    event.waitUntil(cacheChecklist(data, event.ports?.[0]));
+    event.waitUntil(cacheChecklist(data, event.ports?.[0], event.source));
+    return;
+  }
+  if (data.type === "CANCEL_CHECKLIST_WARMUPS") {
+    event.waitUntil(cancelChecklistWarmups(data, event.ports?.[0], event.source));
   }
 });
 
@@ -113,7 +123,7 @@ self.addEventListener("fetch", (event) => {
     request.mode === "navigate" &&
     (checklistPath(url.pathname) || queuePath(url.pathname))
   ) {
-    event.respondWith(navigate(request, url));
+    event.respondWith(foregroundNavigate(request, url));
     return;
   }
   if (url.pathname.startsWith("/pilot/assets/"))
@@ -130,20 +140,130 @@ async function installShell() {
   const generation = String(manifest.generation || "");
   if (generation !== BUILD_GENERATION || !/^[a-f0-9]{64}$/.test(generation))
     throw new Error("Shell generation invalid");
-  const cache = await caches.open(`fmonitor2-field-shell-${BUILD_GENERATION}`);
-  await cache.put(ASSET_MANIFEST, manifestResponse);
-  for (const url of STATIC_ASSETS) {
-    const exact = `${url}${url.includes("?") ? "&" : "?"}build=${BUILD_GENERATION}`;
-    const response = await fetch(exact, { cache: "no-store" });
-    if (!response.ok)
-      throw new Error(`Mandatory shell asset unavailable: ${url}`);
-    await cache.put(url, response);
+  const attempt = crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const stagingName = `${SHELL_STAGING_PREFIX}${BUILD_GENERATION}-${attempt}`;
+  const cache = await caches.open(stagingName);
+  try {
+    for (const url of STATIC_ASSETS) {
+      const exact = `${url}${url.includes("?") ? "&" : "?"}build=${BUILD_GENERATION}`;
+      const response = await fetch(exact, { cache: "no-store" });
+      if (!response.ok)
+        throw new Error(`Mandatory shell asset unavailable: ${url}`);
+      await cache.put(url, response);
+    }
+    for (const raw of manifest.assets) {
+      const url = new URL(raw, self.location.origin);
+      if (url.origin !== self.location.origin || !url.pathname.startsWith("/pilot/assets/"))
+        throw new Error("Shell manifest asset invalid");
+      const response = await fetch(url.href, { cache: "no-store" });
+      if (!response.ok)
+        throw new Error(`Mandatory manifest asset unavailable: ${url.pathname}`);
+      await cache.put(url.href, response);
+    }
+    await cache.put(ASSET_MANIFEST, manifestResponse);
+    if (!(await completeShellCache(cache, manifest)))
+      throw new Error("Staged shell validation failed");
+  } catch (error) {
+    await caches.delete(stagingName);
+    throw error;
   }
-  await cache.addAll(manifest.assets);
+}
+
+async function activateWorker() {
+  await publishInstalledShell();
+  await notifyUpdate();
+  await clearBuildStaging();
+}
+
+async function cacheManifest(cache) {
+  try {
+    const response = await cache.match(ASSET_MANIFEST);
+    if (!response || !response.ok) return null;
+    const manifest = await response.json();
+    return manifest?.generation === BUILD_GENERATION &&
+      Array.isArray(manifest.assets)
+      ? manifest
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+async function publishInstalledShell() {
+  const cacheName = `fmonitor2-field-shell-${BUILD_GENERATION}`;
+  const names = await caches.keys();
+  if (names.includes(cacheName)) {
+    const published = await caches.open(cacheName);
+    const manifest = await cacheManifest(published);
+    if (manifest && (await completeShellCache(published, manifest))) {
+      return;
+    }
+  }
+  for (const name of names) {
+    if (!name.startsWith(`${SHELL_STAGING_PREFIX}${BUILD_GENERATION}-`))
+      continue;
+    const staging = await caches.open(name);
+    const manifest = await cacheManifest(staging);
+    if (!manifest || !(await completeShellCache(staging, manifest))) continue;
+    await promoteShellCache(staging, cacheName, manifest);
+    return;
+  }
+  throw new Error("Complete staged shell unavailable");
+}
+
+async function clearBuildStaging() {
+  for (const name of await caches.keys()) {
+    if (name.startsWith(`${SHELL_STAGING_PREFIX}${BUILD_GENERATION}-`))
+      await caches.delete(name);
+  }
+}
+
+async function completeShellCache(cache, expectedManifest) {
+  try {
+    const stored = await cache.match(ASSET_MANIFEST);
+    if (!stored || !stored.ok) return false;
+    const manifest = await stored.json();
+    if (
+      manifest.generation !== BUILD_GENERATION ||
+      JSON.stringify(manifest.assets) !== JSON.stringify(expectedManifest.assets)
+    )
+      return false;
+    for (const url of STATIC_ASSETS) {
+      const response = await cache.match(url);
+      if (!response || !response.ok) return false;
+    }
+    for (const raw of expectedManifest.assets) {
+      const response = await cache.match(new URL(raw, self.location.origin).href);
+      if (!response || !response.ok) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function promoteShellCache(staging, cacheName, manifest) {
+  await caches.delete(cacheName);
+  const published = await caches.open(cacheName);
+  try {
+    for (const request of await staging.keys()) {
+      const response = await staging.match(request);
+      if (!response) throw new Error("Staged shell entry missing");
+      await published.put(request, response);
+    }
+    if (!(await completeShellCache(published, manifest)))
+      throw new Error("Published shell validation failed");
+  } catch (error) {
+    await caches.delete(cacheName);
+    throw error;
+  }
 }
 
 async function notifyUpdate() {
   const meta = await caches.open(META_CACHE);
+  const previous = await activeGeneration();
   const retained = await meta.match(GENERATION_HISTORY_KEY);
   let history = [];
   try {
@@ -152,6 +272,7 @@ async function notifyUpdate() {
   history = [...new Set([...history, BUILD_GENERATION])];
   await meta.put(GENERATION_KEY, new Response(BUILD_GENERATION));
   await meta.put(GENERATION_HISTORY_KEY, new Response(JSON.stringify(history)));
+  if (!previous || previous === BUILD_GENERATION) return;
   const clients = await self.clients.matchAll({ includeUncontrolled: true });
   for (const client of clients) {
     client.postMessage({
@@ -429,8 +550,7 @@ async function establishActor(data, port) {
 async function tombstone() {
   const current = await identity();
   epoch = Math.max(epoch, Number(current?.epoch || 0)) + 1;
-  for (const controller of warmups.values()) controller.abort();
-  warmups.clear();
+  cancelAllWarmups("Сеанс завершён. Подготовка остановлена.");
   await writeIdentity({
     userId: current?.userId || null,
     epoch,
@@ -445,61 +565,263 @@ async function logoutRequest(request) {
   return fetch(request);
 }
 
-async function cacheChecklist(data, port) {
-  const url = safeChecklist(data.url);
-  if (!url) {
-    port?.postMessage({ ok: false, message: "Некорректный адрес чек-листа." });
-    return;
-  }
-  const durableIdentity = await identity();
-  epoch = Math.max(epoch, Number(durableIdentity?.epoch || 0));
-  const captured = epoch;
-  const controller = new AbortController();
-  warmups.set(url.href, controller);
-  try {
-    const result = await refresh(
-      url,
-      controller.signal,
-      captured,
-      Number(data.userId),
-    );
-    port?.postMessage({ ok: true, ...result });
-  } catch (error) {
-    port?.postMessage({
-      ok: false,
-      message: error?.message || "Не удалось сохранить объект.",
+function warmupText(value) {
+  return typeof value === "string" && value.length > 0 && value.length <= 256
+    ? value
+    : null;
+}
+
+function warmupKey(userId, actorEpoch, generation, url) {
+  return `${userId}\n${actorEpoch}\n${generation}\n${url.href}`;
+}
+
+function consumerKey(clientId, data, attempt) {
+  return `${clientId}\n${data.userId}\n${data.epoch}\n${data.generation}\n${data.scope}\n${attempt}`;
+}
+
+function memoKey(ownerKey, entryKey) {
+  return `${ownerKey}\n${entryKey}`;
+}
+
+async function warmupContextValid(userId, actorEpoch, generation) {
+  if (generation !== BUILD_GENERATION) return false;
+  const [current, active] = await Promise.all([identity(), activeGeneration()]);
+  epoch = Math.max(epoch, Number(current?.epoch || 0));
+  return Boolean(
+    current &&
+      !current.tombstone &&
+      Number(current.userId) === Number(userId) &&
+      Number(current.epoch) === Number(actorEpoch) &&
+      Number(actorEpoch) === epoch &&
+      active === BUILD_GENERATION,
+  );
+}
+
+function finishWarmupSubscriber(subscriber, result, remember = false) {
+  if (subscriber.done) return;
+  subscriber.done = true;
+  if (remember && result.ok) {
+    completedWarmups.set(subscriber.memoKey, {
+      clientId: subscriber.clientId,
+      scope: subscriber.scope,
+      attempt: subscriber.attempt,
+      userId: subscriber.userId,
+      epoch: subscriber.epoch,
+      generation: subscriber.generation,
+      result,
     });
-  } finally {
-    warmups.delete(url.href);
+  }
+  subscriber.port?.postMessage(result);
+  subscriber.resolve(result);
+}
+
+function cancelEntryIfUnused(entry) {
+  if (entryHasConsumers(entry)) return;
+  entry.state = "cancelled";
+  entry.controller.abort();
+  if (warmups.get(entry.key) === entry) warmups.delete(entry.key);
+}
+
+function entryHasConsumers(entry) {
+  return [...entry.subscribers].some((subscriber) => !subscriber.done);
+}
+
+function cancelAllWarmups(message) {
+  const result = { ok: false, message };
+  for (const entry of warmups.values()) {
+    for (const subscriber of entry.subscribers)
+      finishWarmupSubscriber(subscriber, result);
+    entry.state = "cancelled";
+    entry.controller.abort();
+  }
+  warmups.clear();
+  warmupQueue.length = 0;
+  completedWarmups.clear();
+}
+
+async function cancelChecklistWarmups(data, port, source) {
+  const clientId = warmupText(source?.id);
+  const scope = warmupText(data.scope);
+  const attempt = data.attempt == null ? null : warmupText(data.attempt);
+  if (
+    !clientId ||
+    !scope ||
+    (data.attempt != null && !attempt) ||
+    !Number.isInteger(Number(data.userId)) ||
+    !Number.isInteger(Number(data.epoch)) ||
+    data.generation !== BUILD_GENERATION
+  ) {
+    port?.postMessage({ ok: false, cancelled: 0 });
+    return { ok: false, cancelled: 0 };
+  }
+  let cancelled = 0;
+  for (const entry of [...warmups.values()]) {
+    for (const subscriber of entry.subscribers) {
+      if (
+        !subscriber.done &&
+        subscriber.clientId === clientId &&
+        subscriber.scope === scope &&
+        (attempt === null || subscriber.attempt === attempt) &&
+        subscriber.userId === Number(data.userId) &&
+        subscriber.epoch === Number(data.epoch) &&
+        subscriber.generation === data.generation
+      ) {
+        cancelled++;
+        finishWarmupSubscriber(subscriber, {
+          ok: false,
+          message: "Подготовка отменена.",
+        });
+      }
+    }
+    cancelEntryIfUnused(entry);
+  }
+  for (const [key, memo] of completedWarmups) {
+    if (
+      memo.clientId === clientId &&
+      memo.scope === scope &&
+      (attempt === null || memo.attempt === attempt) &&
+      memo.userId === Number(data.userId) &&
+      memo.epoch === Number(data.epoch) &&
+      memo.generation === data.generation
+    )
+      completedWarmups.delete(key);
+  }
+  const result = { ok: true, cancelled };
+  port?.postMessage(result);
+  pumpWarmups();
+  return result;
+}
+
+async function cacheChecklist(data, port, source) {
+  const url = safeChecklist(data.url);
+  const clientId = warmupText(source?.id);
+  const scope = warmupText(data.scope);
+  const attempt = warmupText(data.attempt ?? data.scope);
+  const userId = Number(data.userId);
+  const actorEpoch = Number(data.epoch);
+  const generation = data.generation;
+  if (
+    !url ||
+    !clientId ||
+    !scope ||
+    !attempt ||
+    !Number.isInteger(userId) ||
+    !Number.isInteger(actorEpoch) ||
+    generation !== BUILD_GENERATION ||
+    !(await warmupContextValid(userId, actorEpoch, generation))
+  ) {
+    const result = { ok: false, message: "Сессия подготовки устарела." };
+    port?.postMessage(result);
+    return result;
+  }
+  const key = warmupKey(userId, actorEpoch, generation, url);
+  const ownerKey = consumerKey(clientId, data, attempt);
+  const completed = completedWarmups.get(memoKey(ownerKey, key));
+  if (completed) {
+    port?.postMessage(completed.result);
+    return completed.result;
+  }
+  let entry = warmups.get(key);
+  if (!entry || entry.state === "cancelled" || ![...entry.subscribers].some((subscriber) => !subscriber.done)) {
+    entry = {
+      key,
+      url,
+      userId,
+      epoch: actorEpoch,
+      generation,
+      state: "queued",
+      controller: new AbortController(),
+      subscribers: new Set(),
+    };
+    warmups.set(key, entry);
+    warmupQueue.push(entry);
+  }
+  const promise = new Promise((resolve) => {
+    entry.subscribers.add({
+      clientId,
+      scope,
+      attempt,
+      userId,
+      epoch: actorEpoch,
+      generation,
+      memoKey: memoKey(ownerKey, key),
+      port,
+      resolve,
+      done: false,
+    });
+  });
+  pumpWarmups();
+  return promise;
+}
+
+function pumpWarmups() {
+  if (foregroundNavigations > 0) return;
+  while (activeWarmups < WARMUP_LIMIT && warmupQueue.length > 0) {
+    const entry = warmupQueue.shift();
+    if (
+      !entry ||
+      entry.state !== "queued" ||
+      warmups.get(entry.key) !== entry ||
+      !entryHasConsumers(entry)
+    )
+      continue;
+    dispatchWarmup(entry);
   }
 }
 
-async function refresh(url, signal, captured, expectedUserId) {
-  const response = await fetch(url.href, {
+function dispatchWarmup(entry) {
+  entry.state = "inflight";
+  activeWarmups++;
+  (async () => {
+    if (!(await warmupContextValid(entry.userId, entry.epoch, entry.generation)))
+      throw new Error("Сессия подготовки устарела.");
+    const result = await refreshWarmup(entry);
+    if (!(await warmupContextValid(entry.userId, entry.epoch, entry.generation)))
+      throw new Error("Сессия подготовки устарела.");
+    entry.state = "completed";
+    for (const subscriber of entry.subscribers)
+      finishWarmupSubscriber(subscriber, { ok: true, ...result }, true);
+  })()
+    .catch((error) => {
+      const result = {
+        ok: false,
+        message: error?.message || "Не удалось сохранить объект.",
+      };
+      for (const subscriber of entry.subscribers)
+        finishWarmupSubscriber(subscriber, result);
+    })
+    .finally(() => {
+      activeWarmups--;
+      if (warmups.get(entry.key) === entry) warmups.delete(entry.key);
+      pumpWarmups();
+    });
+}
+
+async function refreshWarmup(entry) {
+  const response = await fetch(entry.url.href, {
     credentials: "include",
     cache: "no-store",
-    signal: combined(signal, 15000),
+    signal: combined(entry.controller.signal, 15000),
   });
   const userId = await authenticated(response);
-  const current = await identity();
-  if (
-    !userId ||
-    userId !== expectedUserId ||
-    captured !== epoch ||
-    current?.tombstone
-  ) {
-    throw new Error("Сессия изменилась. Войдите снова.");
-  }
-  if (current?.userId && Number(current.userId) !== userId) {
+  if (userId !== entry.userId)
     throw new Error("Учётная запись изменилась. Войдите снова.");
-  }
-  if (!current)
-    await writeIdentity({ userId, epoch: captured, tombstone: false });
+  if (!entryHasConsumers(entry)) throw new DOMException("Cancelled", "AbortError");
+  if (!(await warmupContextValid(entry.userId, entry.epoch, entry.generation)))
+    throw new Error("Сессия подготовки устарела.");
   const contentHash = await responseHash(response);
-  if (captured !== epoch) throw new DOMException("Cancelled", "AbortError");
-  await (
-    await documentCache(userId)
-  ).put(url.pathname, await cacheableResponse(response));
+  if (!entryHasConsumers(entry)) throw new DOMException("Cancelled", "AbortError");
+  if (!(await warmupContextValid(entry.userId, entry.epoch, entry.generation)))
+    throw new Error("Сессия подготовки устарела.");
+  const cache = await documentCache(userId);
+  await cache.put(entry.url.pathname, await cacheableResponse(response));
+  if (
+    !entryHasConsumers(entry) ||
+    !(await warmupContextValid(entry.userId, entry.epoch, entry.generation))
+  ) {
+    await cache.delete(entry.url.pathname);
+    throw new Error("Сессия подготовки устарела.");
+  }
   return { contentHash, generation: BUILD_GENERATION };
 }
 
@@ -526,8 +848,21 @@ async function checkDocument(data, port) {
   });
 }
 
+async function foregroundNavigate(request, url) {
+  foregroundNavigations++;
+  try {
+    return await navigate(request, url);
+  } finally {
+    foregroundNavigations--;
+    pumpWarmups();
+  }
+}
+
 async function navigate(request, url) {
+  const startingIdentity = await identity();
+  epoch = Math.max(epoch, Number(startingIdentity?.epoch || 0));
   const captured = epoch;
+  const capturedGeneration = await activeGeneration();
   try {
     const response = await racedFetch(request, 3000);
     if (
@@ -542,14 +877,26 @@ async function navigate(request, url) {
       if (
         userId &&
         !current?.tombstone &&
-        (!current?.userId || Number(current.userId) === userId)
+        (!current?.userId || Number(current.userId) === userId) &&
+        Number(current?.epoch || captured) === captured &&
+        captured === epoch &&
+        capturedGeneration === BUILD_GENERATION &&
+        (await activeGeneration()) === BUILD_GENERATION
       ) {
         if (!current)
           await writeIdentity({ userId, epoch: captured, tombstone: false });
         if (captured === epoch && checklistPath(url.pathname)) {
-          await (
-            await documentCache(userId)
-          ).put(url.pathname, await cacheableResponse(response));
+          const cache = await documentCache(userId);
+          await cache.put(url.pathname, await cacheableResponse(response));
+          const after = await identity();
+          if (
+            after?.tombstone ||
+            Number(after?.userId) !== userId ||
+            Number(after?.epoch) !== captured ||
+            captured !== epoch ||
+            (await activeGeneration()) !== BUILD_GENERATION
+          )
+            await cache.delete(url.pathname);
         }
       }
       return response;
@@ -669,9 +1016,36 @@ async function asset(request) {
   const current = await (await shellCache()).match(request);
   if (current) return current;
   const url = new URL(request.url);
-  const cached = url.searchParams.has("v") ? await caches.match(request) : null;
+  const cached = url.searchParams.has("v")
+    ? await publishedAssetMatch(request)
+    : null;
   if (cached) return cached;
   return fetch(request);
+}
+
+async function publishedAssetMatch(request) {
+  const names = await caches.keys();
+  const allowed = new Set(
+    names.filter((name) => name.startsWith("fmonitor2-checklist-shell-")),
+  );
+  const meta = await caches.open(META_CACHE);
+  const retained = await meta.match(GENERATION_HISTORY_KEY);
+  let generations = [];
+  try {
+    generations = retained ? await retained.json() : [];
+  } catch {}
+  const active = await activeGeneration();
+  if (active) generations.push(active);
+  for (const generation of new Set(generations)) {
+    if (typeof generation === "string" && /^[a-f0-9]{64}$/.test(generation))
+      allowed.add(`fmonitor2-field-shell-${generation}`);
+  }
+  for (const name of allowed) {
+    if (!names.includes(name)) continue;
+    const response = await (await caches.open(name)).match(request);
+    if (response) return response;
+  }
+  return null;
 }
 
 async function responseHash(response) {
