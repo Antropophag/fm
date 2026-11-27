@@ -16,67 +16,16 @@
     const e = JSON.parse(sessionStorage.getItem(r) || "null");
     e && requestAnimationFrame(() => scrollTo(0, Number(e.scrollY) || 0));
   } catch {}
-  function c() {
-    return new Promise((e) => {
-      const t = indexedDB.open("fmonitor2-fast-pilot", 2);
-      ((t.onupgradeneeded = () => {
-        const e = t.result;
-        for (const t of ["meta", "operations", "photoBlobs"])
-          e.objectStoreNames.contains(t) ||
-            e.createObjectStore(t, { keyPath: "meta" === t ? void 0 : "id" });
-      }),
-        (t.onerror = () => e([])),
-        (t.onsuccess = () => {
-          const o = t.result;
-          if (!o.objectStoreNames.contains("operations"))
-            return (o.close(), void e([]));
-          const s = o
-            .transaction("operations")
-            .objectStore("operations")
-            .getAll();
-          ((s.onerror = () => {
-            (o.close(), e([]));
-          }),
-            (s.onsuccess = () => {
-              (o.close(), e(s.result || []));
-            }));
-        }));
-    });
-  }
-  function i(e, t, o) {
-    return new Promise((s) => {
-      const r = indexedDB.open("fmonitor2-fast-pilot", 2);
-      ((r.onerror = () => s(null)),
-        (r.onsuccess = () => {
-          const n = r.result,
-            a = n
-              .transaction(e, void 0 === o ? "readonly" : "readwrite")
-              .objectStore(e),
-            c = void 0 === o ? a.get(t) : a.put(o);
-          ((c.onerror = () => {
-            (n.close(), s(null));
-          }),
-            (c.onsuccess = () => {
-              const e = c.result;
-              (n.close(), s(e));
-            }));
-        }));
-    });
-  }
   async function l() {
-    const o = new Map(),
-      s = `${e.dataset.userId}:`;
-    for (const e of await c()) {
-      if (
-        "accepted" === e.status ||
-        "string" != typeof e.scope ||
-        !e.scope.startsWith(s)
-      )
-        continue;
-      const t = e.scope.split(":").at(-1),
-        r = o.get(t) || [];
-      (r.push(e.status), o.set(t, r));
-    }
+    const pending =
+        (await globalThis.FMonitorField?.pending(Number(e.dataset.userId))) ||
+        {},
+      o = new Map(
+        Object.entries(pending.objects || {}).map(([id, value]) => [
+          id,
+          Array.isArray(value.statuses) ? value.statuses : [],
+        ]),
+      );
     for (const e of t) {
       const t = e.querySelector("[data-local-sync]");
       if (!t) continue;
@@ -101,147 +50,6 @@
         t.setAttribute("aria-label", n),
         (t.querySelector(".fm2-visually-hidden").textContent = n));
     }
-  }
-  async function d() {
-    if (
-      "serviceWorker" in navigator &&
-      window.isSecureContext &&
-      navigator.onLine
-    )
-      try {
-        const e = await navigator.serviceWorker.register(
-          "/pilot/assets/checklist-sw.js",
-          { scope: "/pilot/" },
-        );
-        await navigator.serviceWorker.ready;
-        const o = e.active || e.waiting || e.installing;
-        if (!o) return;
-        const s = [
-          ...new Set(
-            t
-              .map((e) => e.querySelector('a[href*="/checklist"]')?.href)
-              .filter(Boolean),
-          ),
-        ];
-        o.postMessage({
-          type: "CACHE_CHECKLIST_BATCH",
-          urls: s,
-          scope: `queue:${e.dataset.userId}`,
-          generation: location.pathname + location.search,
-          priority: "normal",
-        });
-      } catch {}
-  }
-  async function u() {
-    if (!navigator.onLine) return;
-    const t = `${e.dataset.userId}:`,
-      o = {
-        item_completed: 1,
-        item_installers_changed: 1,
-        photo_uploaded: 2,
-        photo_revoked: 2,
-        section_completed: 3,
-      },
-      s = await c(),
-      r = new Map(s.map((e) => [e.clientOperationId, e])),
-      n = s.filter(
-        (e) =>
-          ["queued", "sending", "retryable_error"].includes(e.status) &&
-          "string" == typeof e.scope &&
-          e.scope.startsWith(t),
-      ),
-      a = new Map();
-    for (const e of n) {
-      const t = e.scope.split(":").at(-1),
-        o = a.get(t) || [];
-      (o.push(e), a.set(t, o));
-    }
-    for (const [e, t] of a)
-      try {
-        const s = await fetch(
-          `/pilot/construction-control/objects/${e}/sync-context`,
-          { credentials: "same-origin", cache: "no-store" },
-        );
-        if (!s.ok) continue;
-        const n = await s.json();
-        for (const s of t.sort(
-          (e, t) =>
-            (o[e.type] || 9) - (o[t.type] || 9) ||
-            (e.localBatchId && e.localBatchId === t.localBatchId
-              ? (e.localBatchSequence || 0) - (t.localBatchSequence || 0)
-              : 0),
-        )) {
-          if (null === s.baseRevision) {
-            const e = r.get(s.localPredecessorId);
-            if (
-              !e ||
-              "accepted" !== e.status ||
-              !Number.isInteger(e.acceptedRevision)
-            )
-              break;
-            s.baseRevision = e.acceptedRevision;
-          }
-          ((s.status = "sending"), await i("operations", s.id, s), await l());
-          const t = { ...s };
-          for (const e of [
-            "id",
-            "scope",
-            "status",
-            "message",
-            "localPredecessorId",
-            "localBatchId",
-            "localBatchSequence",
-            "acceptedRevision",
-          ])
-            delete t[e];
-          let o;
-          if ("photo_uploaded" === s.type) {
-            const r = await i("photoBlobs", s.id);
-            if (!r?.blob) throw new Error();
-            const a = new TextEncoder().encode(JSON.stringify(t));
-            let c = "";
-            for (const e of a) c += String.fromCharCode(e);
-            o = await fetch(`/pilot/objects/${e}/checklist/photos`, {
-              method: "POST",
-              credentials: "same-origin",
-              headers: {
-                "Content-Type": s.mime,
-                "X-FM2-CSRF": n.csrf,
-                "X-FM2-Operation": btoa(c),
-              },
-              body: r.blob,
-            });
-          } else
-            o = await fetch(`/pilot/objects/${e}/checklist/operations`, {
-              method: "POST",
-              credentials: "same-origin",
-              headers: {
-                "Content-Type": "application/json; charset=UTF-8",
-                "X-FM2-CSRF": n.csrf,
-              },
-              body: JSON.stringify(t),
-            });
-          const a = await o.json();
-          if (
-            ((s.status = ["accepted", "duplicate"].includes(a.status)
-              ? "accepted"
-              : "retryable" === a.status
-                ? "retryable_error"
-                : a.status),
-            (s.message = a.message || ""),
-            "accepted" === s.status &&
-              (s.acceptedRevision = Number(a.revision)),
-            await i("operations", s.id, s),
-            await l(),
-            "accepted" !== s.status)
-          )
-            break;
-        }
-      } catch {
-        for (const e of t.filter((e) => "sending" === e.status))
-          ((e.status = "retryable_error"), await i("operations", e.id, e));
-        await l();
-      }
   }
   const p = e.querySelector("[data-control-filter-form]");
   // A server-filtered search reloads the page; retain only its one-shot input focus.
@@ -337,7 +145,22 @@
   let lifecycleRun = null;
   const runLifecycle = () => {
     if (lifecycleRun) return lifecycleRun;
-    lifecycleRun = Promise.allSettled([l(), u(), d()]).finally(() => {
+    lifecycleRun = (async () => {
+      try {
+        if (globalThis.FMonitorFieldLifecycle?.ready)
+          await globalThis.FMonitorFieldLifecycle.ready;
+        if (e.hidden || document.querySelector("[data-field-identity-alert]"))
+          return;
+        await globalThis.FMonitorField?.syncPending(Number(e.dataset.userId));
+        await l();
+      } catch (error) {
+        const identityClosed =
+          /уч[её]тная запись|войдите снова|очередь остановлена|сесс/i.test(
+            String(error?.message || ""),
+          );
+        if (identityClosed) e.hidden = true;
+      }
+    })().finally(() => {
       lifecycleRun = null;
     });
     return lifecycleRun;
@@ -347,11 +170,9 @@
     runLifecycle();
   });
   window.addEventListener("online", runLifecycle);
-  window.addEventListener("pagehide", () => {
-    navigator.serviceWorker?.controller?.postMessage({
-      type: "CANCEL_CHECKLIST_WARMUPS",
-      scope: `queue:${e.dataset.userId}`,
-    });
+  window.addEventListener("focus", runLifecycle);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") runLifecycle();
   });
   runLifecycle();
 })();

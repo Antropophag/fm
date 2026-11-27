@@ -1,1012 +1,900 @@
-((globalThis.FMonitorChecklistProgressCap = (i, x) =>
-  x === 100 ? 100 : Math.min(Number(i), Number(x))),
+((globalThis.FMonitorChecklistProgressCap = (value, cap) =>
+  cap === 100 ? 100 : Math.min(Number(value), Number(cap))),
   (() => {
     "use strict";
-    const i = document.querySelector("[data-checklist]");
-    if (!i) return;
-    i.dataset.enabled;
-    const x = i.dataset.itemCompletionEnabled === "true",
-      E = i.dataset.legacyOperationsEnabled === "true",
-      pe = i.dataset.assignedCorrectionEnabled === "true",
-      P = i.dataset.photoRevokeEnabled === "true",
-      j = Number(i.dataset.objectId),
-      Y = Number(i.dataset.userId),
-      K = i.dataset.csrf,
-      w = [...i.querySelectorAll("[data-check-section]")].filter(
-        (e) =>
-          e.querySelector(".fm2-section-toggle") &&
-          e.querySelector("[data-check-all]") &&
-          e.querySelector("[data-check-item]"),
-      ),
-      R = `fm2-checklist-open:${Y}:${j}`,
-      h = i.querySelector("[data-bulk-dialog]"),
-      p = i.querySelector("[data-installer-dialog]"),
-      f = i.querySelector("[data-reason-dialog]");
-    let D = null,
-      U = null,
-      z = Promise.resolve();
-    const me = Uint8Array.from(
-        atob(
-          i.dataset.projection ||
-            "eyJyZXZpc2lvbiI6MCwiY3JldyI6W10sIml0ZW1zIjp7fSwicGhvdG9zIjpbXSwiY29tcGxldGVkU2VjdGlvbnMiOnt9fQ==",
+    const root = document.querySelector("[data-checklist]");
+    if (!root) return;
+    const userId = Number(root.dataset.userId),
+      objectId = Number(root.dataset.objectId),
+      itemEnabled = root.dataset.itemCompletionEnabled === "true",
+      legacyEnabled = root.dataset.legacyOperationsEnabled === "true";
+    const decode = (value) =>
+        JSON.parse(
+          new TextDecoder("utf-8", { fatal: true }).decode(
+            Uint8Array.from(atob(value), (x) => x.charCodeAt(0)),
+          ),
         ),
-        (e) => e.charCodeAt(0),
-      ),
-      L = JSON.parse(new TextDecoder("utf-8", { fatal: !0 }).decode(me)),
-      a = {
-        revision: Number(L.revision || 0),
-        crew: L.crew || [],
-        checked: new Map(
-          Object.entries(L.items || {}).map(([e, t]) => [
-            Number(e),
-            {
-              status: "accepted",
-              at: t.deviceTime,
-              installers: t.installers || [],
-              clientOperationId: t.clientOperationId,
-              actorUserId: t.actorUserId,
-            },
-          ]),
-        ),
-        completed: new Map(
-          Object.keys(L.completedSections || {}).map((e) => [
-            Number(e),
-            "accepted",
-          ]),
-        ),
-        photos: new Map(),
+      initial = decode(root.dataset.projection),
+      crew = initial.crew || [];
+    let session,
+      snapshot = {
         operations: [],
-      };
-    for (const e of L.photos || []) {
-      const t = a.photos.get(e.sectionId) || [];
-      (t.push({ ...e, status: "accepted" }), a.photos.set(e.sectionId, t));
+        projection: initial,
+        connection: { state: navigator.onLine ? "online" : "offline" },
+        storage: {},
+      },
+      busy = false;
+    let resolveSession, rejectSession;
+    const sessionReady = new Promise((resolve, reject) => {
+      resolveSession = resolve;
+      rejectSession = reject;
+    });
+    sessionReady.catch(() => {});
+    const sections = [...root.querySelectorAll("[data-check-section]")].filter(
+        (x) => x.querySelector("[data-check-item]"),
+      ),
+      toast = root.querySelector("[data-toast]"),
+      banner = root.querySelector("[data-sync-banner]"),
+      reasonDialog = root.querySelector("[data-reason-dialog]");
+    const mutatingControls = [
+      ...root.querySelectorAll(
+        ".fm2-check-toggle,[data-check-all],[data-installer-edit],[data-photo-input]",
+      ),
+    ];
+    for (const control of mutatingControls) {
+      control.dataset.fieldInitiallyDisabled = control.disabled
+        ? "true"
+        : "false";
+      control.disabled = true;
     }
-    let G = null,
-      W = "",
-      q = Promise.resolve();
-    const F = indexedDB.open("fmonitor2-fast-pilot", 2);
-    function $(e, t = "readonly") {
-      return G.transaction(e, t).objectStore(e);
+    for (const box of root.querySelectorAll(".fm2-check-box")) {
+      if (!box.querySelector("svg"))
+        box.innerHTML =
+          '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 10 4 4 8-8"/></svg>';
     }
-    function J(e, t) {
-      return new Promise((u, o) => {
-        const n = $(e).get(t);
-        ((n.onsuccess = () => u(n.result)), (n.onerror = () => o(n.error)));
+    banner.dataset.state = "loading";
+    banner.querySelector("[data-sync-copy]").textContent =
+      "Загружаем сохранённые данные…";
+    const completingSections = new Set();
+    function askReason(title, copy) {
+      return new Promise((resolve) => {
+        const input = reasonDialog.querySelector("[data-reason-input]");
+        reasonDialog.querySelector("[data-reason-title]").textContent = title;
+        reasonDialog.querySelector("[data-reason-copy]").textContent = copy;
+        input.value = "";
+        const finish = (value) => {
+            reasonDialog.close();
+            reasonDialog
+              .querySelector("[data-reason-confirm]")
+              .removeEventListener("click", confirmReason);
+            reasonDialog
+              .querySelector("[data-reason-cancel]")
+              .removeEventListener("click", cancel);
+            resolve(value);
+          },
+          confirmReason = () => {
+            const value = input.value.trim();
+            if (value) finish(value);
+          },
+          cancel = () => finish(null);
+        reasonDialog
+          .querySelector("[data-reason-confirm]")
+          .addEventListener("click", confirmReason);
+        reasonDialog
+          .querySelector("[data-reason-cancel]")
+          .addEventListener("click", cancel);
+        reasonDialog.showModal();
+        input.focus();
       });
     }
-    function I(e, t, u) {
-      return new Promise((o, n) => {
-        const r =
-          u === void 0 ? $(e, "readwrite").put(t) : $(e, "readwrite").put(t, u);
-        ((r.onsuccess = () => o()), (r.onerror = () => n(r.error)));
+    function confirmAction(title, copy, action) {
+      return new Promise((resolve) => {
+        const dialog = document.createElement("dialog");
+        dialog.className = "shlz-modal fm2-confirm-dialog";
+        dialog.innerHTML =
+          '<div class="shlz-modal__surface"><header class="shlz-modal__header"><h2 class="shlz-modal__title"></h2></header><div class="shlz-modal__body"><p></p></div><footer class="shlz-modal__footer"><button class="shlz-button shlz-button--secondary" type="button" data-cancel>Отмена</button><button class="shlz-button shlz-button--primary" type="button" data-confirm></button></footer></div>';
+        dialog.querySelector("h2").textContent = title;
+        dialog.querySelector("p").textContent = copy;
+        dialog.querySelector("[data-confirm]").textContent = action;
+        const finish = (value) => {
+          dialog.close();
+          dialog.remove();
+          resolve(value);
+        };
+        dialog
+          .querySelector("[data-cancel]")
+          .addEventListener("click", () => finish(false));
+        dialog
+          .querySelector("[data-confirm]")
+          .addEventListener("click", () => finish(true));
+        document.body.append(dialog);
+        dialog.showModal();
       });
     }
-    function Q(e) {
-      const t = new Set((e || []).map(String));
-      return a.crew.filter((u) => t.has(String(u.tabId)));
+    function notify(message, error = false) {
+      toast.textContent = message;
+      toast.hidden = false;
+      toast.dataset.state = error ? "error" : "success";
+      clearTimeout(notify.timer);
+      notify.timer = setTimeout(() => (toast.hidden = true), 5000);
     }
-    function X() {
-      return a.crew
-        .filter((e) => e.employmentStatus !== "dismissed")
-        .map((e) => String(e.tabId));
-    }
-    function H(e) {
-      if (e.status !== "accepted") {
-        if (
-          (["item_completed", "item_installers_changed"].includes(e.type) &&
-            a.checked.set(e.itemId, {
-              status: e.status,
-              at: e.deviceTime,
-              installers: Q(e.installerTabIds),
-            }),
-          e.type === "photo_uploaded")
-        ) {
-          const t = a.photos.get(e.sectionId) || [];
-          (t.some((u) => u.clientOperationId === e.clientOperationId) ||
-            t.push({
-              clientOperationId: e.clientOperationId,
-              name: e.originalName,
-              type: e.mime,
-              size: e.size,
-              status: e.status,
-              local: !0,
-              previewUrl: e.previewUrl,
-            }),
-            a.photos.set(e.sectionId, t));
-        }
-        if (e.type === "photo_revoked")
-          for (const t of a.photos.get(e.sectionId) || [])
-            t.id === e.photoId && (t.revoked = !0);
-        (e.type === "completion_retracted" &&
-          (a.checked.delete(e.itemId), a.completed.delete(e.sectionId)),
-          e.type === "section_completed" &&
-            a.completed.set(e.sectionId, e.status));
-      }
-    }
-    async function k(e, t, u, o = !1, n = null, r = null, l = 0) {
-      const d = {
-        id: crypto.randomUUID(),
-        clientOperationId: crypto.randomUUID(),
-        deviceInstallationId: a.device,
-        scope: W,
-        type: e,
-        status: "queued",
-        deviceTime: new Date().toISOString(),
-        baseRevision: o && n ? null : a.revision,
-        localPredecessorId: n,
-        localBatchId: r,
-        localBatchSequence: l,
-        ...t,
-      };
+    function operationStatus(operation) {
+      if (operation.storageError)
+        return "Сохранённое фото недоступно. Не удаляйте исходное действие: сохраните сведения и обратитесь в поддержку для восстановления.";
       return (
-        a.operations.push(d),
-        u &&
-          ((d.previewUrl = URL.createObjectURL(u)),
-          await I("photoBlobs", { id: d.id, blob: u })),
-        await I("operations", d),
-        H(d),
-        v(),
-        o || !navigator.onLine || ((q = q.then(C, C)), await q),
-        d
+        {
+          queued: "Сохранено на устройстве · ожидает отправки",
+          sending: "Отправляется",
+          retryable_error: "Связь недоступна · отправим позже",
+          uncertain: "Результат отправки не подтверждён · данные сохранены",
+          auth_required: "Войдите снова — данные сохранены",
+          access_denied: "Доступ отозван — данные сохранены",
+          storage_recovery:
+            "Локальное вложение требует восстановления — исходное действие сохранено",
+          conflict: "Требует решения",
+          rejected: "Отклонено сервером",
+          accepted: "Принято сервером",
+          superseded: "Заменено новым действием",
+          discarded: "Удалено с устройства",
+        }[operation.status] || operation.status
       );
     }
-    async function _(e) {
-      if (!E) return;
-      const t = Number(e.dataset.checkSection),
-        u = B(e);
-      u.all &&
-        u.photos.length &&
-        !a.completed.has(t) &&
-        (await k("section_completed", { sectionId: t }));
+    function itemTitle(itemId) {
+      const label = root.querySelector(
+        `[data-check-item="${Number(itemId)}"] .fm2-check-label`,
+      );
+      return label?.childNodes[0]?.textContent?.trim() || `Работа ${itemId}`;
     }
-    function ee(e) {
-      return e === "item_completed" ? x : e === "photo_revoked" ? P : E;
+    function sectionTitle(sectionId) {
+      return (
+        root
+          .querySelector(
+            `[data-check-section="${Number(sectionId)}"] .fm2-section-title strong`,
+          )
+          ?.textContent?.trim() || `Раздел ${sectionId}`
+      );
     }
-    ((F.onupgradeneeded = () => {
-      const e = F.result;
-      for (const t of ["meta", "operations", "photoBlobs"])
-        e.objectStoreNames.contains(t) ||
-          e.createObjectStore(t, { keyPath: t === "meta" ? void 0 : "id" });
-      (e.objectStoreNames.contains("state") && e.deleteObjectStore("state"),
-        e.objectStoreNames.contains("photos") && e.deleteObjectStore("photos"));
-    }),
-      (F.onerror = () => {
-        (re(
-          "error",
-          "\u041B\u043E\u043A\u0430\u043B\u044C\u043D\u043E\u0435 \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0435 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E",
-        ),
-          se());
-      }),
-      (F.onsuccess = async () => {
-        G = F.result;
-        let e = await J("meta", "deviceInstallationId");
-        (e ||
-          ((e = crypto.randomUUID()),
-          await I("meta", e, "deviceInstallationId")),
-          (W = `${Y}:${e}:${j}`),
-          (a.device = e),
-          await (async function () {
-            a.operations = (
-              await new Promise((t, u) => {
-                const o = $("operations").getAll();
-                ((o.onsuccess = () => t(o.result)),
-                  (o.onerror = () => u(o.error)));
-              })
-            ).filter((t) => t.scope === W);
-            for (const t of a.operations) {
-              if (t.type === "photo_uploaded") {
-                const u = await J("photoBlobs", t.id);
-                if (u?.blob) {
-                  t.previewUrl = URL.createObjectURL(u.blob);
-                  const o = (a.photos.get(t.sectionId) || []).find(
-                    (n) => n.clientOperationId === t.clientOperationId,
-                  );
-                  o && (o.previewUrl = t.previewUrl);
-                }
-              }
-              H(t);
-            }
-          })(),
-          await (async function () {
-            if (E) for (const t of w) await _(t);
-          })(),
-          v(),
-          se(),
-          Z(),
-          navigator.onLine && C());
-      }));
-    const te = {
-      item_completed: 1,
-      item_installers_changed: 1,
-      completion_retracted: 1,
-      photo_uploaded: 2,
-      photo_revoked: 2,
-      section_completed: 3,
-    };
-    let V = !1;
-    function uploadPhoto(operation, blob, encoded) {
-      return new Promise((resolve, reject) => {
-        const request = new XMLHttpRequest();
-        request.open("POST", `/pilot/objects/${j}/checklist/photos`);
-        request.responseType = "json";
-        request.withCredentials = true;
-        request.setRequestHeader("Content-Type", operation.mime);
-        request.setRequestHeader("X-FM2-CSRF", K);
-        request.setRequestHeader("X-FM2-Operation", encoded);
-        request.upload.addEventListener("progress", async (event) => {
-          if (!event.lengthComputable || event.total < 1) return;
-          operation.uploadProgress = Math.min(
-            100,
-            Math.round((event.loaded / event.total) * 100),
-          );
-          operation.uploadStage =
-            operation.uploadProgress === 100 ? "processing" : "uploading";
-          await I("operations", operation);
-          v();
-        });
-        request.upload.addEventListener("load", () => {
-          operation.uploadProgress = 100;
-          operation.uploadStage = "processing";
-          I("operations", operation).then(v);
-        });
-        request.addEventListener("load", () =>
-          resolve({
-            json: async () =>
-              request.response,
-          }),
-        );
-        for (const event of ["error", "timeout", "abort"])
-          request.addEventListener(event, () => reject(new Error(event)));
-        request.send(blob);
-      });
+    function operationIdentity(operation) {
+      if (
+        [
+          "item_completed",
+          "item_installers_changed",
+          "completion_retracted",
+        ].includes(operation.type)
+      )
+        return `${sectionTitle(operation.sectionId)} · ${itemTitle(operation.itemId)}`;
+      if (operation.type === "photo_uploaded")
+        return `${sectionTitle(operation.sectionId)} · фото «${operation.originalName || "без названия"}»`;
+      if (operation.type === "photo_revoked")
+        return `${sectionTitle(operation.sectionId)} · отзыв фото`;
+      if (operation.type === "section_completed")
+        return `${sectionTitle(operation.sectionId)} · завершение раздела`;
+      return "Местное действие";
     }
-    async function C() {
-      if (!V && G)
-        if (navigator.onLine) {
-          V = !0;
+    function reviewAction(clientOperationId) {
+      return new Promise((resolve) => {
+        const dialog = document.createElement("dialog");
+        dialog.className = "shlz-modal fm2-field-review";
+        dialog.innerHTML =
+          '<div class="shlz-modal__surface"><header class="shlz-modal__header"><h2 class="shlz-modal__title">Посмотреть изменения</h2></header><div class="shlz-modal__body"><section data-field-review-local><h3>Местное действие</h3><p>Загружаем…</p></section><section data-field-review-server><h3>Текущее состояние на сервере</h3><p data-review-state role="status">Загружаем изменения…</p><div data-review-items></div></section></div><footer class="shlz-modal__footer"><button class="shlz-button shlz-button--secondary" type="button" data-review-cancel>Отмена</button><button class="shlz-button shlz-button--secondary" type="button" data-review-retry hidden>Повторить загрузку</button><button class="shlz-button shlz-button--primary" type="button" data-review-confirm disabled>Применить заново</button></footer></div>';
+        const local = dialog.querySelector("[data-field-review-local] p");
+        const state = dialog.querySelector("[data-review-state]");
+        const items = dialog.querySelector("[data-review-items]");
+        const confirm = dialog.querySelector("[data-review-confirm]");
+        const retry = dialog.querySelector("[data-review-retry]");
+        let review = null;
+        const close = (value) => {
+          dialog.close();
+          dialog.remove();
+          resolve(value);
+        };
+        const load = async () => {
+          confirm.disabled = true;
+          retry.hidden = true;
+          state.textContent = "Загружаем изменения…";
+          items.replaceChildren();
           try {
-            for (const e of a.operations
-              .filter(
-                (t) => ee(t.type) && ["queued", "sending"].includes(t.status),
-              )
-              .sort(
-                (t, u) =>
-                  te[t.type] - te[u.type] ||
-                  (t.localBatchId && t.localBatchId === u.localBatchId
-                    ? (t.localBatchSequence || 0) - (u.localBatchSequence || 0)
-                    : 0),
-              )) {
-              if (e.baseRevision === null) {
-                const t = a.operations.find(
-                  (u) => u.clientOperationId === e.localPredecessorId,
-                );
-                if (
-                  !t ||
-                  t.status !== "accepted" ||
-                  !Number.isInteger(t.acceptedRevision)
-                )
-                  break;
-                e.baseRevision = t.acceptedRevision;
-              }
-              ((e.status = "sending"), await I("operations", e), v());
-              try {
-                let t;
-                if (e.type === "photo_uploaded") {
-                  const n = await J("photoBlobs", e.id),
-                    r = he(ue(e));
-                  t = await uploadPhoto(e, n.blob, r);
-                } else
-                  t = await fetch(`/pilot/objects/${j}/checklist/operations`, {
-                    method: "POST",
-                    credentials: "same-origin",
-                    headers: {
-                      "Content-Type": "application/json; charset=UTF-8",
-                      "X-FM2-CSRF": K,
-                    },
-                    body: JSON.stringify(ue(e)),
-                    signal: AbortSignal.timeout(15e3),
-                  });
-                const o = await t.json();
-                if (
-                  ((e.status =
-                    o.status === "duplicate" ? "accepted" : o.status),
-                  (e.message = o.message || ""),
-                  o.projection && fe(o.projection),
-                  e.status === "accepted"
-                    ? ((a.revision = Number(o.revision || a.revision)),
-                      (e.acceptedRevision = a.revision))
-                    : e.status === "retryable" &&
-                      (e.status = "retryable_error"),
-                  await I("operations", e),
-                  ["retryable_error", "rejected", "conflict"].includes(
-                    e.status,
-                  ))
-                )
-                  break;
-              } catch {
-                ((e.status = "retryable_error"),
-                  (e.message =
-                    e.type === "photo_uploaded"
-                      ? "Результат отправки фото неизвестен. Повторите загрузку: копия фотографии не появится."
-                      : "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u0432\u044F\u0437\u0430\u0442\u044C\u0441\u044F \u0441 \u0441\u0435\u0440\u0432\u0435\u0440\u043E\u043C."),
-                  (e.uploadStage = "unknown"),
-                  await I("operations", e));
-                break;
-              }
-            }
-          } finally {
-            ((V = !1),
-              v(),
-              navigator.onLine && Z(),
-              navigator.onLine &&
-                !a.operations.some((e) =>
-                  ["retryable_error", "rejected", "conflict"].includes(
-                    e.status,
-                  ),
-                ) &&
-                a.operations.some((e) => e.status === "queued") &&
-                queueMicrotask(C));
-          }
-        } else v();
-    }
-    function ue(e) {
-      const t = { ...e };
-      return (
-        delete t.id,
-        delete t.scope,
-        delete t.status,
-        delete t.message,
-        delete t.previewUrl,
-        delete t.localPredecessorId,
-        delete t.localBatchId,
-        delete t.localBatchSequence,
-        delete t.acceptedRevision,
-        delete t.uploadProgress,
-        delete t.uploadStage,
-        t
-      );
-    }
-    function he(e) {
-      const t = new TextEncoder().encode(JSON.stringify(e));
-      let u = "";
-      for (const o of t) u += String.fromCharCode(o);
-      return btoa(u);
-    }
-    function fe(e) {
-      ((a.revision = Number(e.revision || a.revision)),
-        (a.crew = e.crew || a.crew),
-        a.checked.clear());
-      for (const [t, u] of Object.entries(e.items || {}))
-        a.checked.set(Number(t), {
-          status: "accepted",
-          at: u.deviceTime,
-          installers: u.installers || [],
-          clientOperationId: u.clientOperationId,
-          actorUserId: u.actorUserId,
-        });
-      a.completed.clear();
-      for (const t of Object.keys(e.completedSections || {}))
-        a.completed.set(Number(t), "accepted");
-      for (const t of e.photos || []) {
-        const u = a.photos.get(t.sectionId) || [],
-          o = u.find((n) => n.clientOperationId === t.clientOperationId);
-        (o
-          ? Object.assign(o, t, { status: "accepted" })
-          : u.some((n) => n.id === t.id) ||
-            u.push({ ...t, status: "accepted" }),
-          a.photos.set(t.sectionId, u));
-      }
-      for (const t of a.operations) H(t);
-    }
-    let cacheRegistration = null;
-    async function Z() {
-      if (cacheRegistration) return cacheRegistration;
-      cacheRegistration = (async () => {
-      if ("serviceWorker" in navigator && window.isSecureContext)
-        try {
-          const e = await navigator.serviceWorker.register(
-            "/pilot/assets/checklist-sw.js",
-            { scope: "/pilot/" },
-          );
-          (await navigator.serviceWorker.ready,
-            (e.active || e.waiting)?.postMessage({
-              type: "CACHE_CHECKLIST",
-              url: location.href,
-              scope: `checklist:${Y}:${j}`,
-              generation: location.pathname,
-              priority: "foreground",
-            }));
-        } catch {}
-      })().finally(() => (cacheRegistration = null));
-      return cacheRegistration;
-    }
-    function oe(e) {
-      return [...e.querySelectorAll("[data-check-item]")];
-    }
-    function B(e) {
-      const t = oe(e),
-        u = t.filter((o) => a.checked.has(Number(o.dataset.checkItem)));
-      return {
-        items: t,
-        done: u,
-        photos: (a.photos.get(Number(e.dataset.checkSection)) || []).filter(
-          (o) => !o.revoked,
-        ),
-        weight: u.reduce((o, n) => o + Number(n.dataset.weight), 0),
-        all: u.length === t.length,
-      };
-    }
-    function ge(e, t) {
-      const u = [...new Set(e.map((n) => String(n.tabId)))].sort(),
-        o = [...new Set(t.map((n) => String(n.tabId)))].sort();
-      return u.length === o.length && u.every((n, r) => n === o[r]);
-    }
-    function v() {
-      let e = 0,
-        t = 0,
-        u = 0;
-      for (const c of w) {
-        Number(c.dataset.checkSection);
-        const s = B(c);
-        for (const g of s.items) {
-          const we = Number(g.dataset.checkItem),
-            A = a.checked.get(we),
-            O = A?.installers?.length ? A.installers : a.crew,
-            M = O.filter((S) => S.employmentStatus === "dismissed"),
-            de = O.filter((S) => S.currentlyAssigned === !1);
-          (g.classList.toggle("is-checked", !!A),
-            g.classList.toggle("has-dismissed", M.length > 0),
-            g
-              .querySelector(".fm2-check-toggle")
-              .setAttribute("aria-checked", String(!!A)),
-            (g.querySelector("[data-item-sync]").textContent = A
-              ? ye(A.at)
-              : "\u041D\u0435 \u043E\u0442\u043C\u0435\u0447\u0435\u043D\u043E"),
-            (g.querySelector("[data-installer-summary]").textContent = ge(
-              O,
-              a.crew,
-            )
-              ? `\u0412\u0441\u0435 \u043C\u043E\u043D\u0442\u0430\u0436\u043D\u0438\u043A\u0438 \xB7 ${O.length}`
-              : O.map((S) => S.fio).join(", ")),
-            (g.querySelector("[data-installer-edit] small").textContent =
-              de.length
-                ? `\u0412\u044B\u043F\u043E\u043B\u043D\u0438\u043B \u0440\u0430\u043D\u0435\u0435 \xB7 \u0431\u043E\u043B\u044C\u0448\u0435 \u043D\u0435 \u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0451\u043D: ${de.map((S) => S.fio).join(", ")}`
-                : M.length
-                  ? `${M.length === 1 ? "\u0423\u0432\u043E\u043B\u0435\u043D" : "\u0423\u0432\u043E\u043B\u0435\u043D\u044B"}: ${M.map((S) => S.fio).join(", ")}`
-                  : "\u0418\u0437\u043C\u0435\u043D\u0438\u0442\u044C \u0438\u0441\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u0435\u0439"));
-        }
-        ((e += s.weight),
-          (t += s.done.length),
-          (c.querySelector("[data-section-count]").textContent =
-            `${s.done.length} \u0438\u0437 ${s.items.length}`),
-          (c.querySelector("[data-section-progress]").textContent =
-            `${s.weight} \u0438\u0437 ${Number(c.dataset.sectionWeight)}%`));
-        const m = s.all && s.photos.length > 0,
-          y = m
-            ? "\u0417\u0430\u0432\u0435\u0440\u0448\u0451\u043D"
-            : s.all
-              ? "\u041D\u0443\u0436\u043D\u043E \u0444\u043E\u0442\u043E"
-              : s.done.length
-                ? "\u0412 \u0440\u0430\u0431\u043E\u0442\u0435"
-                : "\u041D\u0435 \u043D\u0430\u0447\u0430\u0442";
-        ((c.querySelector("[data-section-state]").textContent = y),
-          c.classList.toggle("is-complete", m),
-          c.classList.toggle("is-progressing", !s.all && s.done.length > 0),
-          c.classList.toggle("needs-photo", s.all && !s.photos.length));
-        const b = c.querySelector("[data-check-all]");
-        (b.classList.toggle("is-checked", s.all),
-          (b.disabled = !E || s.all),
-          b.setAttribute(
-            "aria-label",
-            s.all
-              ? "\u0412\u0441\u0435 \u0440\u0430\u0431\u043E\u0442\u044B \u0440\u0430\u0437\u0434\u0435\u043B\u0430 \u043E\u0442\u043C\u0435\u0447\u0435\u043D\u044B"
-              : "\u041E\u0442\u043C\u0435\u0442\u0438\u0442\u044C \u0432\u0441\u0435 \u0440\u0430\u0431\u043E\u0442\u044B \u0440\u0430\u0437\u0434\u0435\u043B\u0430",
-          ),
-          (u += s.photos.length),
-          Ee(c, s.photos));
-      }
-      ((i.querySelector("[data-total-progress]").textContent =
-        globalThis.FMonitorChecklistProgressCap(
-          e,
-          Number(
-            i.querySelector("[data-total-progress]").dataset.progressCap ?? e,
-          ),
-        )),
-        (i.querySelector("[data-total-items]").textContent = t),
-        (i.querySelector("[data-photo-total]").textContent = u));
-      const o = a.operations.filter((c) => c.status !== "accepted"),
-        n = o.find((c) => ["rejected", "conflict"].includes(c.status)),
-        r = o.find((c) => c.status === "retryable_error"),
-        l = o.find((c) => c.status === "sending"),
-        d = n
-          ? `\u041A\u043E\u043D\u0444\u043B\u0438\u043A\u0442/\u043E\u0442\u043A\u043B\u043E\u043D\u0435\u043D\u043E: ${n.message || "\u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u043E\u0435 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0435 \u0438 \u043F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u043A\u0443"}`
-          : "";
-      re(
-        n
-          ? "conflict"
-          : r
-            ? "error"
-            : l
-              ? "sending"
-              : o.length
-                ? navigator.onLine
-                  ? "pending"
-                  : "offline"
-                : "ok",
-        n
-          ? d
-          : r
-            ? "\u041E\u0448\u0438\u0431\u043A\u0430 \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0438\u0437\u0430\u0446\u0438\u0438"
-            : l
-              ? "\u041E\u0442\u043F\u0440\u0430\u0432\u043B\u044F\u0435\u043C"
-              : o.length
-                ? `${o.length} \u043D\u0430 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u0435`
-                : "\u041F\u0440\u0438\u043D\u044F\u0442\u043E \u0441\u0435\u0440\u0432\u0435\u0440\u043E\u043C",
-      );
-    }
-    function ne(e, t, u, source = null) {
-      const o = document.createElement("a"),
-        n = document.createElement("img");
-      ((o.href = t),
-        (o.target = "_blank"),
-        (o.rel = "noopener"));
-      if (!source) {
-        const placeholder = document.createElement("span");
-        placeholder.className = "fm2-photo-placeholder";
-        placeholder.textContent = "Открыть фото";
-        o.append(placeholder);
-        return o;
-      }
-      ((n.src = source),
-        (n.alt = u),
-        (n.loading = "lazy"),
-        (n.decoding = "async"),
-        o.append(n));
-      const r = (l) => {
-        l?.preventDefault();
-        const d = Number(o.dataset.retry || 0) + 1;
-        ((o.dataset.retry = String(d)),
-          o.removeAttribute("data-photo-error"),
-          o.replaceChildren(n),
-          (n.src = `${source}${source.includes("?") ? "&" : "?"}retry=${d}`));
-      };
-      return (
-        n.addEventListener("error", () => {
-          const l = document.createElement("span"),
-            d = document.createElement("button");
-          ((o.dataset.photoError = "true"),
-            (l.textContent =
-              "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u0444\u043E\u0442\u043E"),
-            (d.type = "button"),
-            (d.textContent =
-              "\u041F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u044C"),
-            d.addEventListener("click", r),
-            o.replaceChildren(l, d));
-        }),
-        o
-      );
-    }
-    function Ee(e, t) {
-      const u = e.querySelector("[data-photo-strip]");
-      if ((u.replaceChildren(), !t.length)) {
-        const o = document.createElement("span");
-        return (
-          (o.className = "fm2-photo-empty"),
-          (o.textContent =
-            "\u0424\u043E\u0442\u043E\u0433\u0440\u0430\u0444\u0438\u0439 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442"),
-          void u.append(o)
-        );
-      }
-      t.forEach((o, n) => {
-        const r = document.createElement("figure");
-        r.className = "fm2-photo-thumb";
-        const l = o.previewUrl || o.viewUrl,
-          source = o.previewUrl || o.thumbnailUrl || null,
-          d = l
-            ? ne(r, l, `\u0424\u043E\u0442\u043E ${n + 1}`, source)
-            : document.createElement("div");
-        l ||
-          ((d.className = "fm2-photo-placeholder"),
-          (d.textContent = "\u0424\u043E\u0442\u043E"));
-        const c = document.createElement("figcaption");
-        c.textContent = `\u0424\u043E\u0442\u043E ${n + 1}`;
-        const s = document.createElement("button");
-        ((s.type = "button"),
-          (s.disabled = !P),
-          s.setAttribute(
-            "aria-label",
-            `\u041E\u0442\u043E\u0437\u0432\u0430\u0442\u044C \u0444\u043E\u0442\u043E ${n + 1}`,
-          ),
-          (s.textContent = "\xD7"),
-          s.addEventListener("click", async () => {
-            if (!P || o.status !== "accepted") return;
-            const m = await ie(
-              "\u041E\u0442\u043E\u0437\u0432\u0430\u0442\u044C \u0444\u043E\u0442\u043E\u0433\u0440\u0430\u0444\u0438\u044E?",
-              "\u0424\u043E\u0442\u043E\u0433\u0440\u0430\u0444\u0438\u044F \u043F\u0435\u0440\u0435\u0441\u0442\u0430\u043D\u0435\u0442 \u0443\u0447\u0438\u0442\u044B\u0432\u0430\u0442\u044C\u0441\u044F \u043A\u0430\u043A \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u0438\u0435 \u0440\u0430\u0437\u0434\u0435\u043B\u0430.",
-            );
-            m &&
-              ((o.revoked = !0),
-              await k("photo_revoked", {
-                sectionId: Number(e.dataset.checkSection),
-                photoId: o.id,
-                reason: m,
-              }),
-              v());
-          }),
-          r.append(d, c, s),
-          u.append(r));
-      });
-    }
-    function ae() {
-      const e = i.querySelector("[data-gallery-content]");
-      e.replaceChildren();
-      let t = !1;
-      for (const u of w) {
-        const o = B(u).photos;
-        if (!o.length) continue;
-        t = !0;
-        const n = document.createElement("section"),
-          r = document.createElement("h3"),
-          l = document.createElement("div");
-        ((n.className = "fm2-gallery-group"),
-          (r.textContent = u.querySelector(
-            ".fm2-section-title strong",
-          ).textContent),
-          (l.className = "fm2-gallery-grid"),
-          o.forEach((d, c) => {
-            const s = document.createElement("figure"),
-              m = d.previewUrl || d.viewUrl,
-              source = d.previewUrl || d.thumbnailUrl || null,
-              y = m
-                ? ne(
-                    s,
-                    m,
-                    `${r.textContent}, \u0444\u043E\u0442\u043E ${c + 1}`,
-                    source,
-                  )
-                : document.createElement("div"),
-              b = document.createElement("figcaption");
-            ((s.className = "fm2-gallery-photo"),
-              m ||
-                ((y.className = "fm2-gallery-placeholder"),
-                (y.textContent =
-                  "\u041F\u0440\u0435\u0432\u044C\u044E \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E \u043D\u0430 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u0435, \u0441 \u043A\u043E\u0442\u043E\u0440\u043E\u0433\u043E \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D\u043E \u0444\u043E\u0442\u043E")),
-              (b.textContent = `\u0424\u043E\u0442\u043E ${c + 1}`),
-              s.append(y, b),
-              l.append(s));
-          }),
-          n.append(r, l),
-          e.append(n));
-      }
-      if (!t) {
-        const u = document.createElement("p");
-        ((u.className = "fm2-gallery-empty"),
-          (u.textContent =
-            "\u0412 \u0447\u0435\u043A-\u043B\u0438\u0441\u0442\u0435 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442 \u0444\u043E\u0442\u043E\u0433\u0440\u0430\u0444\u0438\u0439"),
-          e.append(u));
-      }
-    }
-    function re(e, t) {
-      const u = i.querySelector("[data-sync-banner]"),
-        progress = u.querySelector("[data-sync-progress]"),
-        upload = a.operations.find(
-          (operation) =>
-            operation.type === "photo_uploaded" &&
-            operation.status === "sending" &&
-            Number.isInteger(operation.uploadProgress),
-        );
-      ((u.dataset.state = e),
-        (u.querySelector("[data-sync-copy]").textContent = t),
-        (progress.hidden = !upload),
-        upload && (progress.value = upload.uploadProgress),
-        (u.querySelector("[data-sync-now]").hidden = ![
-          "error",
-          "offline",
-          "conflict",
-        ].includes(e)));
-    }
-    function ye(e) {
-      const t = new Date(e);
-      return Number.isNaN(t.getTime())
-        ? "\u0414\u0430\u0442\u0430 \u043E\u0442\u043C\u0435\u0442\u043A\u0438 \u043D\u0435 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0430"
-        : new Intl.DateTimeFormat("ru-RU", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          }).format(t);
-    }
-    function ce(e) {
-      w.forEach((t) => {
-        const u = t === e;
-        (t.classList.toggle("is-open", u),
-          t
-            .querySelector(".fm2-section-toggle")
-            .setAttribute("aria-expanded", String(u)));
-      });
-    }
-    function se() {
-      let e = "";
-      try {
-        e = sessionStorage.getItem(R) || "";
-      } catch {}
-      const t = w.find((o) => o.dataset.checkSection === e),
-        u = w.find((o) => {
-          const n = B(o);
-          return !(n.all && n.photos.length);
-        });
-      ce(t || u || null);
-    }
-    function be(e) {
-      const t = e.classList.contains("is-open");
-      ce(t ? null : e);
-      try {
-        t
-          ? sessionStorage.removeItem(R)
-          : sessionStorage.setItem(R, e.dataset.checkSection);
-      } catch {}
-      t || e.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-    function N(e) {
-      const t = i.querySelector("[data-toast]");
-      ((t.textContent = e),
-        (t.hidden = !1),
-        clearTimeout(N.timer),
-        (N.timer = setTimeout(() => (t.hidden = !0), 2800)));
-    }
-    function ie(e, t) {
-      return new Promise((u) => {
-        const o = f.querySelector("[data-reason-input]"),
-          n = f.querySelector("[data-reason-error]"),
-          r = f.querySelector("[data-reason-confirm]"),
-          l = f.querySelector("[data-reason-cancel]"),
-          d = (c) => {
-            (f.open && f.close(), u(c));
-          };
-        ((f.querySelector("[data-reason-title]").textContent = e),
-          (f.querySelector("[data-reason-copy]").textContent = t),
-          (o.value = ""),
-          (n.hidden = !0),
-          (r.onclick = () => {
-            const c = o.value.trim();
-            c ? d(c) : ((n.hidden = !1), o.focus());
-          }),
-          (l.onclick = () => d(null)),
-          (f.oncancel = (c) => {
-            (c.preventDefault(), d(null));
-          }),
-          f.showModal(),
-          o.focus());
-      });
-    }
-    async function Se(e) {
-      return [
-        ...new Uint8Array(
-          await crypto.subtle.digest("SHA-256", await e.arrayBuffer()),
-        ),
-      ]
-        .map((t) => t.toString(16).padStart(2, "0"))
-        .join("");
-    }
-    function ve(e) {
-      U = e;
-      const t = a.checked.get(Number(e.dataset.checkItem)),
-        u = Q(X()),
-        o = new Set(
-          (t?.installers?.length ? t.installers : u).map((r) =>
-            String(r.tabId),
-          ),
-        ),
-        n = p.querySelector("[data-installer-options]");
-      ((p.querySelector("[data-installer-item-name]").textContent = e
-        .querySelector(".fm2-check-label")
-        .childNodes[0].textContent.trim()),
-        (p.querySelector("[data-installer-error]").hidden = !0),
-        n.replaceChildren());
-      for (const r of a.crew) {
-        const l = r.employmentStatus === "dismissed",
-          d = document.createElement("label");
-        d.className =
-          "fm2-installer-choice " + (l ? "is-dismissed" : "is-employed");
-        const c = document.createElement("input");
-        ((c.type = "checkbox"),
-          (c.className = "shlz-checkbox"),
-          (c.value = String(r.tabId)),
-          (c.checked = o.has(String(r.tabId))));
-        const s = document.createElement("span"),
-          m = document.createElement("strong"),
-          y = document.createElement("span"),
-          b = document.createElement("small"),
-          g = document.createElement("em");
-        ((m.textContent = r.fio),
-          (b.textContent = String(r.tabId).padStart(6, "0")),
-          (g.textContent = l
-            ? "\u0423\u0432\u043E\u043B\u0435\u043D"
-            : "\u0420\u0430\u0431\u043E\u0442\u0430\u0435\u0442"),
-          (y.className = "fm2-installer-choice__meta"),
-          y.append(b, g),
-          s.append(m, y),
-          d.append(c, s),
-          n.append(d));
-      }
-      p.showModal();
-    }
-    function T() {
-      (p.close(), (U = null));
-    }
-    for (const e of w) {
-      (e
-        .querySelector(".fm2-section-toggle")
-        .addEventListener("click", () => be(e)),
-        e.querySelector("[data-check-all]").addEventListener("click", () => {
-          E &&
-            (a.crew.length
-              ? ((D = e),
-                (h.querySelector("[data-bulk-section-name]").textContent =
-                  `\xAB${e.querySelector(".fm2-section-title strong").textContent}\xBB`),
-                h.showModal())
-              : N(
-                  "\u041D\u0430 \u043E\u0431\u044A\u0435\u043A\u0442\u0435 \u043D\u0435\u0442 \u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0451\u043D\u043D\u044B\u0445 \u043C\u043E\u043D\u0442\u0430\u0436\u043D\u0438\u043A\u043E\u0432",
-                ));
-        }));
-      for (const t of oe(e))
-        (t
-          .querySelector(".fm2-check-toggle")
-          .addEventListener("click", async () => {
-            if (!x) return;
-            const u = Number(t.dataset.checkItem),
-              o = a.checked.get(u);
-            if (o) {
-              if (!pe && o.actorUserId !== n)
-                return void N(
-                  "\u0418\u0441\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u043E\u0442\u043C\u0435\u0442\u043A\u0443 \u043C\u043E\u0436\u0435\u0442 \u0435\u0451 \u0430\u0432\u0442\u043E\u0440 \u0438\u043B\u0438 \u043D\u0430\u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044B\u0439 \u0438\u043D\u0436\u0435\u043D\u0435\u0440",
-                );
-              const r = await ie(
-                "\u0418\u0441\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u043E\u0442\u043C\u0435\u0442\u043A\u0443?",
-                "\u0423\u043A\u0430\u0436\u0438\u0442\u0435 \u043F\u0440\u0438\u0447\u0438\u043D\u0443: \u0438\u0441\u0445\u043E\u0434\u043D\u0430\u044F \u043E\u0442\u043C\u0435\u0442\u043A\u0430 \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u0441\u044F \u0432 \u0438\u0441\u0442\u043E\u0440\u0438\u0438.",
+            review = await session.review(clientOperationId);
+            local.textContent = operationIdentity(review.operation);
+            for (const row of root.querySelectorAll("[data-check-item]")) {
+              const itemId = Number(row.dataset.checkItem);
+              const entry = document.createElement("p");
+              const completed = Boolean(
+                review.projection.items?.[String(itemId)],
               );
-              return r
-                ? void (await k("completion_retracted", {
-                    sectionId: Number(e.dataset.checkSection),
-                    itemId: u,
-                    originalClientOperationId: o.clientOperationId,
-                    reason: r,
-                  }))
-                : void 0;
+              entry.dataset.reviewItem = String(itemId);
+              entry.dataset.completed = String(completed);
+              entry.textContent = `${itemTitle(itemId)} — ${completed ? "выполнено" : "не отмечено"}`;
+              items.append(entry);
             }
-            const n = X();
-            n.length
-              ? (await k("item_completed", {
-                  sectionId: Number(e.dataset.checkSection),
-                  itemId: u,
-                  installerTabIds: n,
-                }),
-                await _(e))
-              : N(
-                  "\u041D\u0430 \u043E\u0431\u044A\u0435\u043A\u0442\u0435 \u043D\u0435\u0442 \u0437\u0430\u043A\u0440\u0435\u043F\u043B\u0451\u043D\u043D\u044B\u0445 \u043C\u043E\u043D\u0442\u0430\u0436\u043D\u0438\u043A\u043E\u0432",
-                );
-          }),
-          t
-            .querySelector("[data-installer-edit]")
-            .addEventListener("click", () => {
-              E && ve(t);
-            }));
-      for (const t of e.querySelectorAll("[data-photo-input]"))
-        t.addEventListener("change", async (u) => {
-          if (!E) return;
-          await z;
-          const o = [...(u.target.files || [])],
-            n = Number(e.dataset.checkSection),
-            r = B(e).photos;
-          for (const l of o.slice(0, Math.max(0, 10 - r.length)))
-            !["image/jpeg", "image/png", "image/webp"].includes(l.type) ||
-            l.size > 5242880
-              ? N(
-                  `\u0424\u0430\u0439\u043B ${l.name} \u043D\u0435 \u043F\u043E\u0434\u0445\u043E\u0434\u0438\u0442: JPEG, PNG \u0438\u043B\u0438 WebP \u0434\u043E 5 \u041C\u0411`,
-                )
-              : await k(
-                  "photo_uploaded",
-                  {
-                    sectionId: n,
-                    sha256: await Se(l),
-                    mime: l.type,
-                    size: l.size,
-                    originalName: l.name,
-                  },
-                  l,
-                );
-          ((u.target.value = ""), await _(e));
-        });
-    }
-    async function le() {
-      for (const e of a.operations)
-        ee(e.type) &&
-          ["retryable_error", "rejected", "conflict"].includes(e.status) &&
-          ((e.status = "queued"), await I("operations", e));
-      await C();
-    }
-    (i.querySelector("[data-sync-now]").addEventListener("click", le),
-      window.addEventListener("online", le),
-      window.addEventListener("offline", v),
-      Z(),
-      v(),
-      h.querySelector("[data-bulk-cancel]").addEventListener("click", () => {
-        (h.close(), (D = null));
-      }),
-      h.querySelector("[data-bulk-confirm]").addEventListener("click", () => {
-        z = z.then(async () => {
-          if (!E) return;
-          const e = D;
-          if ((h.close(), (D = null), e)) {
-            const t = crypto.randomUUID();
-            let u = null,
-              o = 0;
-            for (const n of B(e).items) {
-              const r = Number(n.dataset.checkItem);
-              a.checked.has(r) ||
-                (u = (
-                  await k(
-                    "item_completed",
-                    {
-                      sectionId: Number(e.dataset.checkSection),
-                      itemId: r,
-                      installerTabIds: X(),
-                    },
-                    void 0,
-                    !0,
-                    u,
-                    t,
-                    o++,
-                  )
-                ).clientOperationId);
-            }
-            ((q = q.then(C, C)), await q, await _(e));
+            state.textContent = "Показано актуальное состояние сервера.";
+            confirm.disabled = false;
+          } catch (error) {
+            review = null;
+            state.textContent =
+              error.message || "Не удалось загрузить изменения.";
+            retry.hidden = false;
           }
+        };
+        dialog
+          .querySelector("[data-review-cancel]")
+          .addEventListener("click", () => close(null));
+        retry.addEventListener("click", load);
+        confirm.addEventListener("click", () => {
+          if (review) close(review.baseRevision);
         });
-      }),
-      h.addEventListener("click", (e) => {
-        e.target === h && (h.close(), (D = null));
-      }),
-      h.addEventListener("cancel", () => {
-        D = null;
-      }));
-    for (const e of p.querySelectorAll("[data-installer-cancel]"))
-      e.addEventListener("click", T);
-    (p
+        document.body.append(dialog);
+        dialog.showModal();
+        load();
+      });
+    }
+    function activeOperations() {
+      return snapshot.operations.filter(
+        (x) => !["discarded", "superseded"].includes(x.status),
+      );
+    }
+    function sectionCompleted(sectionId) {
+      return (
+        Boolean(snapshot.projection.completedSections?.[String(sectionId)]) ||
+        activeOperations().some(
+          (operation) =>
+            operation.type === "section_completed" &&
+            Number(operation.sectionId) === sectionId &&
+            !["rejected", "conflict"].includes(operation.status),
+        )
+      );
+    }
+    function completedItems() {
+      const map = new Map(
+        Object.entries(snapshot.projection.items || {}).map(([id, value]) => [
+          Number(id),
+          { ...value, status: "accepted" },
+        ]),
+      );
+      for (const operation of activeOperations())
+        if (
+          ["item_completed", "item_installers_changed"].includes(
+            operation.type,
+          ) &&
+          operation.status !== "rejected" &&
+          operation.status !== "conflict"
+        )
+          map.set(Number(operation.itemId), operation);
+        else if (
+          operation.type === "completion_retracted" &&
+          operation.status !== "rejected" &&
+          operation.status !== "conflict"
+        )
+          map.delete(Number(operation.itemId));
+      return map;
+    }
+    function photos() {
+      const map = new Map(
+        (snapshot.projection.photos || []).map((x) => [
+          x.clientOperationId,
+          { ...x, status: "accepted" },
+        ]),
+      );
+      for (const operation of activeOperations())
+        if (
+          operation.type === "photo_uploaded" &&
+          operation.status !== "rejected" &&
+          operation.status !== "conflict"
+        ) {
+          const accepted = map.get(operation.clientOperationId);
+          map.set(
+            operation.clientOperationId,
+            accepted
+              ? { ...operation, ...accepted, status: "accepted" }
+              : operation,
+          );
+        } else if (
+          operation.type === "photo_revoked" &&
+          operation.status !== "rejected" &&
+          operation.status !== "conflict"
+        )
+          for (const [key, value] of map)
+            if (Number(value.id) === Number(operation.photoId)) map.delete(key);
+      return [...map.values()];
+    }
+    function render() {
+      const checked = completedItems(),
+        allPhotos = photos();
+      for (const section of sections) {
+        const sectionId = Number(section.dataset.checkSection),
+          items = [...section.querySelectorAll("[data-check-item]")],
+          sectionPhotos = allPhotos.filter(
+            (x) => Number(x.sectionId) === sectionId,
+          );
+        let weight = 0,
+          count = 0;
+        for (const row of items) {
+          const id = Number(row.dataset.checkItem),
+            operation = checked.get(id),
+            button = row.querySelector(".fm2-check-toggle");
+          row.classList.toggle("is-checked", Boolean(operation));
+          button.setAttribute("aria-checked", operation ? "true" : "false");
+          row.querySelector("[data-item-sync]").textContent = operation
+            ? operationStatus(operation)
+            : "Не отмечено";
+          if (operation) {
+            count++;
+            weight += Number(row.dataset.weight) || 0;
+          }
+        }
+        section.querySelector("[data-section-count]").textContent =
+          `${count} из ${items.length}`;
+        section.querySelector("[data-section-progress]").textContent =
+          `${weight} из ${section.dataset.sectionWeight}%`;
+        section.querySelector("[data-section-state]").textContent =
+          sectionCompleted(sectionId)
+            ? "Раздел завершён"
+            : count === items.length && !sectionPhotos.length
+              ? "Нужно фото"
+              : count === items.length
+                ? "Готов к завершению"
+                : count
+                  ? "В работе"
+                  : "Не начат";
+        const sectionReady = count === items.length && sectionPhotos.length > 0;
+        section.classList.toggle("is-complete", sectionReady);
+        section.classList.toggle(
+          "is-progressing",
+          count > 0 && count < items.length,
+        );
+        section.classList.toggle(
+          "needs-photo",
+          count === items.length && sectionPhotos.length === 0,
+        );
+        const bulk = section.querySelector("[data-check-all]");
+        bulk?.classList.toggle("is-checked", count === items.length);
+        if (bulk) {
+          bulk.disabled = !legacyEnabled || count === items.length;
+          bulk.setAttribute(
+            "aria-label",
+            count === items.length
+              ? "Все работы раздела отмечены"
+              : "Отметить все работы раздела",
+          );
+        }
+        const strip = section.querySelector("[data-photo-strip]");
+        const existingPhotos = new Map(
+          [...strip.querySelectorAll("[data-photo-key]")].map((figure) => [
+            figure.dataset.photoKey,
+            figure,
+          ]),
+        );
+        strip.replaceChildren();
+        if (!sectionPhotos.length) {
+          const empty = document.createElement("span");
+          empty.className = "fm2-photo-empty";
+          empty.textContent = "Фотографий пока нет";
+          strip.append(empty);
+        }
+        let photoIndex = 0;
+        for (const photo of sectionPhotos) {
+          photoIndex += 1;
+          const photoKey = String(photo.clientOperationId || photo.id);
+          const photoUrl =
+            photo.previewUrl || photo.thumbnailUrl || photo.viewUrl || "";
+          const photoSignature = `${photoUrl}|${photo.status}|${photo.id || ""}`;
+          const existing = existingPhotos.get(photoKey);
+          if (existing?.dataset.photoSignature === photoSignature) {
+            strip.append(existing);
+            continue;
+          }
+          const figure = document.createElement("figure");
+          figure.className = "fm2-photo-thumb";
+          figure.title = operationStatus(photo);
+          figure.dataset.photoKey = photoKey;
+          figure.dataset.photoSignature = photoSignature;
+          const link = document.createElement("a");
+          link.href = photo.viewUrl || photo.previewUrl || "#";
+          if (photo.viewUrl) {
+            link.target = "_blank";
+            link.rel = "noopener";
+          }
+          const img = document.createElement("img");
+          img.alt = photo.originalName || "Фото раздела";
+          img.src = photoUrl;
+          img.addEventListener("error", () => {
+            img.remove();
+            let error = figure.querySelector("[data-photo-error]");
+            if (!error) {
+              error = document.createElement("span");
+              error.dataset.photoError = "";
+              const errorCopy = document.createElement("span");
+              errorCopy.textContent = "Не удалось загрузить фото";
+              const retry = document.createElement("button");
+              retry.type = "button";
+              retry.textContent = "Повторить";
+              let sequence = 0;
+              retry.addEventListener("click", () => {
+                sequence++;
+                img.src = `${photo.thumbnailUrl}${photo.thumbnailUrl.includes("?") ? "&" : "?"}retry=${Date.now() + sequence}`;
+                link.prepend(img);
+                error.remove();
+              });
+              error.append(errorCopy, retry);
+              figure.prepend(error);
+            }
+          });
+          link.append(img);
+          figure.append(link);
+          const caption = document.createElement("figcaption");
+          caption.textContent = `Фото ${photoIndex}`;
+          figure.append(caption);
+          const serverPhotoId = Number(photo.id);
+          if (
+            photo.status === "accepted" &&
+            Number.isInteger(serverPhotoId) &&
+            serverPhotoId > 0 &&
+            root.dataset.photoRevokeEnabled === "true"
+          ) {
+            const revoke = document.createElement("button");
+            revoke.type = "button";
+            revoke.textContent = "×";
+            revoke.setAttribute("aria-label", `Отозвать фото ${photoIndex}`);
+            revoke.title = `Отозвать фото ${photoIndex}`;
+            revoke.addEventListener("click", async () => {
+              const reason = await askReason(
+                "Отозвать фото?",
+                "Фото останется в истории, но исчезнет из актуального чек-листа.",
+              );
+              if (reason)
+                await session.enqueue("photo_revoked", {
+                  sectionId,
+                  photoId: serverPhotoId,
+                  reason,
+                });
+            });
+            figure.append(revoke);
+          }
+          strip.append(figure);
+        }
+      }
+      const totalWeight = [...checked.keys()].reduce(
+          (sum, id) =>
+            sum +
+            Number(
+              root.querySelector(`[data-check-item="${id}"]`)?.dataset.weight ||
+                0,
+            ),
+          0,
+        ),
+        cap = Number(
+          root.querySelector("[data-total-progress]").dataset.progressCap,
+        );
+      root.querySelector("[data-total-progress]").textContent =
+        globalThis.FMonitorChecklistProgressCap(totalWeight, cap);
+      root.querySelector("[data-total-items]").textContent = checked.size;
+      root.querySelector("[data-photo-total]").textContent = allPhotos.length;
+      renderOperations();
+      renderConnection();
+    }
+    function renderConnection() {
+      const state = snapshot.connection.state,
+        copy =
+          {
+            online: "Синхронизировано",
+            offline: "Сохранение на устройстве",
+            sending: "Отправляется",
+            pending: "Сохранено на устройстве — ожидает отправки",
+            retryable: "Связь недоступна — данные сохранены",
+            auth_required: "Войдите снова. Данные сохранены",
+            access_denied: "Доступ отозван — данные сохранены",
+            uncertain: "Результат отправки не подтверждён",
+            storage_recovery: "Локальные данные требуют восстановления",
+            conflict: "Есть действие, требующее решения",
+          }[state] ||
+          snapshot.connection.message ||
+          "Сохранено на устройстве";
+      banner.dataset.state = state;
+      banner.querySelector("[data-sync-copy]").textContent = copy;
+      const retry = banner.querySelector("[data-sync-now]");
+      retry.hidden = ![
+        "retryable",
+        "auth_required",
+        "conflict",
+        "offline",
+      ].includes(state);
+      let storage = root.querySelector("[data-storage-warning]");
+      const nearlyFull =
+        Number(snapshot.storage?.quota) > 0 &&
+        Number(snapshot.storage?.usage) / Number(snapshot.storage?.quota) > 0.9;
+      const storageMessage = nearlyFull
+        ? "На устройстве заканчивается место. Отправьте сохранённые данные перед новыми фотографиями."
+        : snapshot.storage?.message || "";
+      if (storageMessage && !storage) {
+        storage = document.createElement("p");
+        storage.dataset.storageWarning = "";
+        storage.className = "fm2-storage-warning";
+        storage.setAttribute("role", "status");
+        root.querySelector(".fm2-check-topline")?.after(storage);
+      }
+      if (storage) {
+        storage.textContent = storageMessage;
+        storage.hidden = !storageMessage;
+      }
+    }
+    function scheduleCompletions() {
+      if (!session || !legacyEnabled) return;
+      const checked = completedItems(),
+        currentPhotos = photos();
+      for (const section of sections) {
+        const sectionId = Number(section.dataset.checkSection),
+          ids = [...section.querySelectorAll("[data-check-item]")].map((row) =>
+            Number(row.dataset.checkItem),
+          );
+        if (
+          ids.every((id) => checked.has(id)) &&
+          currentPhotos.some(
+            (photo) => Number(photo.sectionId) === sectionId,
+          ) &&
+          !sectionCompleted(sectionId) &&
+          !completingSections.has(sectionId)
+        ) {
+          completingSections.add(sectionId);
+          session
+            .enqueue("section_completed", { sectionId })
+            .catch((error) => notify(error.message, true))
+            .finally(() => completingSections.delete(sectionId));
+        }
+      }
+    }
+    function renderOperations() {
+      let panel = root.querySelector("[data-field-operations]");
+      if (!panel) {
+        panel = document.createElement("section");
+        panel.className = "fm2-field-operations";
+        panel.dataset.fieldOperations = "";
+        panel.setAttribute("aria-live", "polite");
+        root.querySelector(".fm2-check-content").prepend(panel);
+      }
+      panel.replaceChildren();
+      const routineDetails = document.createElement("details");
+      routineDetails.dataset.fieldQueueDetails = "";
+      const routineSummary = document.createElement("summary");
+      const routineRows = document.createElement("div");
+      routineDetails.append(routineSummary, routineRows);
+      let routineCount = 0;
+      for (const operation of activeOperations().filter(
+        (x) => !["accepted"].includes(x.status),
+      )) {
+        const row = document.createElement("article");
+        row.className = "fm2-field-operation";
+        row.dataset.fieldOperation = "";
+        row.dataset.operationId = operation.clientOperationId;
+        row.dataset.status = operation.status;
+        const text = document.createElement("p");
+        text.textContent =
+          operationIdentity(operation) +
+          " · " +
+          operationStatus(operation) +
+          (operation.message ? ` · ${operation.message}` : "");
+        row.append(text);
+        const actions = document.createElement("div");
+        if (["conflict", "rejected"].includes(operation.status)) {
+          const resolve = document.createElement("button");
+          resolve.type = "button";
+          resolve.className = "shlz-button shlz-button--secondary";
+          resolve.dataset.fieldResolve = "";
+          resolve.textContent = "Посмотреть изменения";
+          actions.append(resolve);
+        }
+        const exportButton = document.createElement("button");
+        exportButton.type = "button";
+        exportButton.className = "shlz-button";
+        exportButton.dataset.fieldExport = "";
+        exportButton.textContent =
+          operation.type === "photo_uploaded"
+            ? "Скачать фото"
+            : "Сохранить сведения";
+        actions.append(exportButton);
+        const mayDiscard =
+          ["rejected", "conflict"].includes(operation.status) ||
+          (operation.status === "queued" && !operation.attempted);
+        if (mayDiscard) {
+          const discard = document.createElement("button");
+          discard.type = "button";
+          discard.className = "shlz-button";
+          discard.dataset.fieldDiscard = "";
+          discard.textContent = "Убрать местное действие";
+          actions.append(discard);
+        }
+        row.append(actions);
+        if (["queued", "sending"].includes(operation.status)) {
+          routineCount += 1;
+          routineRows.append(row);
+        } else {
+          panel.append(row);
+        }
+      }
+      if (routineCount > 0) {
+        routineSummary.textContent = `${routineCount} ${routineCount === 1 ? "действие сохранено на устройстве" : "действий сохранено на устройстве"}`;
+        panel.append(routineDetails);
+      }
+    }
+    function sectionIdFor(item) {
+      return Number(item.closest("[data-check-section]").dataset.checkSection);
+    }
+    async function enqueueItem(row) {
+      if (!itemEnabled || busy) return;
+      busy = true;
+      try {
+        await sessionReady;
+        const itemId = Number(row.dataset.checkItem),
+          existing = completedItems().get(itemId),
+          sectionId = sectionIdFor(row);
+        if (existing) {
+          if (!legacyEnabled) return;
+          const reason = await askReason(
+            "Снять отметку?",
+            "Укажите причину исправления выполненной работы.",
+          );
+          if (!reason) return;
+          await session.enqueue("completion_retracted", {
+            sectionId,
+            itemId,
+            originalClientOperationId: existing.clientOperationId,
+            reason,
+          });
+        } else
+          await session.enqueue("item_completed", {
+            sectionId,
+            itemId,
+            installerTabIds: crew
+              .filter((x) => x.employmentStatus !== "dismissed")
+              .map((x) => String(x.tabId)),
+          });
+        notify("Действие сохранено на устройстве.");
+      } catch (error) {
+        notify(error.message, true);
+      } finally {
+        busy = false;
+      }
+    }
+    const bulkDialog = root.querySelector("[data-bulk-dialog]");
+    let bulkSection = null;
+    bulkDialog
+      ?.querySelector("[data-bulk-cancel]")
+      .addEventListener("click", () => {
+        bulkDialog.close();
+        bulkSection = null;
+      });
+    bulkDialog
+      ?.querySelector("[data-bulk-confirm]")
+      .addEventListener("click", async () => {
+        const section = bulkSection;
+        bulkDialog.close();
+        bulkSection = null;
+        if (!section) return;
+        try {
+          await sessionReady;
+          const sectionId = Number(section.dataset.checkSection);
+          const installerTabIds = crew
+            .filter((person) => person.employmentStatus !== "dismissed")
+            .map((person) => String(person.tabId));
+          const payloads = [...section.querySelectorAll("[data-check-item]")]
+            .filter(
+              (row) => !completedItems().has(Number(row.dataset.checkItem)),
+            )
+            .map((row) => ({
+              sectionId,
+              itemId: Number(row.dataset.checkItem),
+              installerTabIds,
+            }));
+          if (payloads.length)
+            await session.enqueueBatch("item_completed", payloads);
+          scheduleCompletions();
+          notify("Работы раздела сохранены на устройстве.");
+        } catch (error) {
+          notify(error.message, true);
+        }
+      });
+    for (const section of sections) {
+      const head = section.querySelector(".fm2-section-toggle");
+      head.addEventListener("click", () => {
+        const open = head.getAttribute("aria-expanded") === "true";
+        head.setAttribute("aria-expanded", String(!open));
+        section.classList.toggle("is-open", !open);
+      });
+      for (const row of section.querySelectorAll("[data-check-item]")) {
+        row
+          .querySelector(".fm2-check-toggle")
+          .addEventListener("click", () => enqueueItem(row));
+        row
+          .querySelector("[data-installer-edit]")
+          ?.addEventListener("click", () => openInstallers(row));
+      }
+      section
+        .querySelector("[data-check-all]")
+        ?.addEventListener("click", () => {
+          bulkSection = section;
+          bulkDialog.querySelector("[data-bulk-section-name]").textContent =
+            section
+              .querySelector(".fm2-section-title strong")
+              ?.textContent?.trim() || "";
+          bulkDialog.showModal();
+        });
+      for (const input of section.querySelectorAll("[data-photo-input]"))
+        input.addEventListener("change", async () => {
+          for (const file of input.files || [])
+            try {
+              await sessionReady;
+              const prepared =
+                await globalThis.FMonitorField.preparePhoto(file);
+              await session.enqueue(
+                "photo_uploaded",
+                {
+                  sectionId: Number(section.dataset.checkSection),
+                  mime: prepared.mime,
+                  size: prepared.size,
+                  sha256: prepared.sha256,
+                  originalName: prepared.name,
+                },
+                prepared.blob,
+              );
+              notify("Фото сохранено на устройстве.");
+            } catch (error) {
+              notify(error.message, true);
+            }
+          input.value = "";
+        });
+    }
+    const installerDialog = root.querySelector("[data-installer-dialog]");
+    let installerRow = null;
+    function openInstallers(row) {
+      const completed = completedItems().get(Number(row.dataset.checkItem));
+      if (!completed) return;
+      installerRow = row;
+      const selected = new Set(
+          (
+            completed.installerTabIds ||
+            completed.installers?.map((x) => x.tabId) ||
+            crew.map((x) => x.tabId)
+          ).map(String),
+        ),
+        options = installerDialog.querySelector("[data-installer-options]");
+      options.replaceChildren(
+        ...crew.map((person) => {
+          const label = document.createElement("label");
+          label.className = "shlz-choice";
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          input.className = "shlz-checkbox";
+          input.value = String(person.tabId);
+          input.checked = selected.has(String(person.tabId));
+          input.disabled =
+            person.employmentStatus === "dismissed" && !input.checked;
+          label.append(
+            input,
+            document.createTextNode(
+              person.fio || person.fullName || String(person.tabId),
+            ),
+          );
+          return label;
+        }),
+      );
+      installerDialog.showModal();
+    }
+    installerDialog
+      .querySelectorAll("[data-installer-cancel]")
+      .forEach((button) =>
+        button.addEventListener("click", () => installerDialog.close()),
+      );
+    installerDialog
       .querySelector("[data-installer-save]")
       .addEventListener("click", async () => {
-        if (!E || !U) return;
-        const e = [...p.querySelectorAll("input:checked")].map((r) => r.value);
-        if (!e.length)
-          return void (p.querySelector("[data-installer-error]").hidden = !1);
-        const t = U,
-          u = t.closest("[data-check-section]"),
-          o = Number(t.dataset.checkItem),
-          n = a.checked.has(o) ? "item_installers_changed" : "item_completed";
-        (T(),
-          await k(n, {
-            sectionId: Number(u.dataset.checkSection),
-            itemId: o,
-            installerTabIds: e,
-          }),
-          await _(u));
-      }),
-      p.addEventListener("click", (e) => {
-        e.target === p && T();
-      }),
-      p.addEventListener("cancel", (e) => {
-        (e.preventDefault(), T());
-      }),
-      i.querySelector("[data-open-gallery]").addEventListener("click", () => {
-        (ae(),
-          i.classList.add("is-gallery"),
-          (i.querySelector("[data-gallery]").hidden = !1),
-          i.querySelector("[data-close-gallery]").focus());
-      }),
-      i.querySelector("[data-close-gallery]").addEventListener("click", () => {
-        (i.classList.remove("is-gallery"),
-          (i.querySelector("[data-gallery]").hidden = !0),
-          i.querySelector("[data-open-gallery]").focus());
-      }));
+        const ids = [
+          ...installerDialog.querySelectorAll("input[type=checkbox]:checked"),
+        ].map((x) => x.value);
+        if (!ids.length) {
+          installerDialog.querySelector("[data-installer-error]").hidden =
+            false;
+          return;
+        }
+        try {
+          await session.enqueue("item_installers_changed", {
+            sectionId: sectionIdFor(installerRow),
+            itemId: Number(installerRow.dataset.checkItem),
+            installerTabIds: ids,
+          });
+          installerDialog.close();
+        } catch (error) {
+          notify(error.message, true);
+        }
+      });
+    banner.querySelector("[data-sync-now]").addEventListener("click", () => {
+      if (!session) {
+        location.reload();
+        return;
+      }
+      session.retry().catch((error) => notify(error.message, true));
+    });
+    root.querySelector("[data-open-gallery]").addEventListener("click", () => {
+      const gallery = root.querySelector("[data-gallery]"),
+        content = gallery.querySelector("[data-gallery-content]");
+      content.replaceChildren();
+      for (const photo of photos()) {
+        const link = document.createElement("a");
+        link.href = photo.viewUrl || photo.previewUrl || "#";
+        if (photo.viewUrl) {
+          link.target = "_blank";
+          link.rel = "noopener";
+        }
+        const img = document.createElement("img");
+        img.src = photo.previewUrl || photo.thumbnailUrl || photo.viewUrl || "";
+        img.alt = photo.originalName || "Фото чек-листа";
+        link.append(img);
+        content.append(link);
+      }
+      gallery.hidden = false;
+      root.querySelector(".fm2-check-layout").hidden = true;
+    });
+    root.querySelector("[data-close-gallery]").addEventListener("click", () => {
+      root.querySelector("[data-gallery]").hidden = true;
+      root.querySelector(".fm2-check-layout").hidden = false;
+    });
+    root.addEventListener("click", async (event) => {
+      const row = event.target.closest("[data-field-operation]");
+      if (!row) return;
+      const id = row.dataset.operationId;
+      try {
+        if (event.target.closest("[data-field-resolve]")) {
+          const reviewedRevision = await reviewAction(id);
+          if (reviewedRevision) await session.resolve(id, reviewedRevision);
+        }
+        if (
+          event.target.closest("[data-field-discard]") &&
+          (await confirmAction(
+            "Убрать местное действие?",
+            "Неотправленные данные этого действия будут удалены с устройства. Серверная история не изменится.",
+            "Убрать местное действие",
+          ))
+        )
+          await session.discard(id);
+        if (event.target.closest("[data-field-export]")) {
+          const file = await session.export(id),
+            link = document.createElement("a");
+          link.href = URL.createObjectURL(file.blob);
+          link.download = file.name;
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        }
+      } catch (error) {
+        notify(error.message, true);
+      }
+    });
+    (async () => {
+      if (globalThis.FMonitorFieldLifecycle?.ready)
+        await globalThis.FMonitorFieldLifecycle.ready;
+      const value = await globalThis.FMonitorField.open({
+        userId,
+        objectId,
+        projection: initial,
+        onChange: (value) => {
+          snapshot = value;
+          render();
+          scheduleCompletions();
+        },
+      });
+      session = value;
+      resolveSession(value);
+      render();
+      scheduleCompletions();
+      for (const control of mutatingControls)
+        if (control.dataset.fieldInitiallyDisabled !== "true")
+          control.disabled = false;
+      root.dataset.fieldReady = "true";
+    })().catch((error) => {
+      rejectSession(error);
+      root.dataset.fieldReady = "error";
+      banner.dataset.state = "error";
+      banner.querySelector("[data-sync-copy]").textContent =
+        error.message || "Не удалось загрузить сохранённые данные.";
+      banner.querySelector("[data-sync-now]").hidden = false;
+      notify(error.message, true);
+    });
+    addEventListener("pagehide", () => session?.close(), { once: true });
   })());

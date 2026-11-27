@@ -9,9 +9,9 @@ trait MariaDbYiiChecklistPhoto
     $sha=$o['sha256']??null;
     $name=$o['originalName']??null;
     $image=is_string($b)?@getimagesizefromstring($b):false;
-    if(!is_string($b)||!in_array($mime,['image/jpeg','image/png','image/webp'],true)||!is_array($image)||($image['mime']??null)!==$mime||!is_int($size)||$size<1||$size>5242880||strlen($b)!==$size||!is_string($sha)||!preg_match('/^[a-f0-9]{64}$/D',$sha)||!hash_equals($sha,hash('sha256',$b))||!is_string($name)||$name===''||mb_strlen($name)>255||preg_match('/[\x00-\x1f\x7f]/u',$name)===1)return['status'=>'rejected'];
+    if(!is_string($b)||!in_array($mime,['image/jpeg','image/png','image/webp'],true)||!is_array($image)||($image['mime']??null)!==$mime||!is_int($size)||$size<1||$size>5242880||strlen($b)!==$size||!is_string($sha)||!preg_match('/^[a-f0-9]{64}$/D',$sha)||!hash_equals($sha,hash('sha256',$b))||!is_string($name)||$name===''||mb_strlen($name)>255||preg_match('/[\x00-\x1f\x7f]/u',$name)===1)return['status'=>'rejected','reason'=>'photo_invalid'];
     if($this->one("SELECT 1 FROM {$this->t('fm2_checklist_photos')} WHERE installation_case_id=? AND section_id=? AND sha256=? AND revoked_at IS NULL",[$c,$s,$sha]))return['status'=>'duplicate','revision'=>$this->revision($c,false)];
-    if((int)$this->one("SELECT COUNT(*) n FROM {$this->t('fm2_checklist_photos')} WHERE installation_case_id=? AND section_id=? AND revoked_at IS NULL",[$c,$s])['n']>=10)return['status'=>'rejected'];
+    if((int)$this->one("SELECT COUNT(*) n FROM {$this->t('fm2_checklist_photos')} WHERE installation_case_id=? AND section_id=? AND revoked_at IS NULL",[$c,$s])['n']>=10)return['status'=>'rejected','reason'=>'photo_limit_reached'];
     $dir=$this->storageRoot.'/checklist';
     if(!is_dir($dir)&&!@mkdir($dir,0700,true)&&!is_dir($dir))throw new ChecklistInfrastructureUnavailable();
     $storage=$sha.'.bin';

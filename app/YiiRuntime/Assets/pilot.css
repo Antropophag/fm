@@ -2505,3 +2505,4 @@ body.shlz-scope .fm2-shell [data-otiz-v2-calculation] .shlz-segment__input{inlin
 .fm2-reclamation-error{box-sizing:border-box;max-inline-size:680px}
 .fm2-reclamation-error form{display:grid;gap:14px}
 .fm2-reclamation-error .shlz-field,.fm2-reclamation-error .shlz-field__control,.fm2-reclamation-error .shlz-input{box-sizing:border-box;inline-size:100%;min-inline-size:0;max-inline-size:100%}
+.fm2-offline-object[hidden],.fm2-shell[hidden],[data-control-queue][hidden],[data-offline-shell][hidden]{display:none!important}

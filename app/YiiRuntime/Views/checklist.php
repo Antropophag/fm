@@ -4,14 +4,14 @@ $sections=[1=>['Демонтаж старого оборудования',[[28,'
 $enabled=(bool)$access['opened']&&((bool)$access['roleAccess']||(bool)$access['itemComplete']);$legacy=(bool)$access['opened']&&(bool)$access['roleAccess'];$assigned=(bool)$access['opened']&&(bool)$access['assigned'];
 $technicalDocuments=$access['technicalDocuments']??['status'=>'unavailable','links'=>[]];$technicalDocument=$technicalDocuments['status']==='available'?($technicalDocuments['links'][0]??null):null;$orderNumber=$access['orderNumber']??null;
 ViewSupport::begin($this,'Чек-лист объекта № '.$id,$identity);?>
-<div class="fm2-check-page" data-checklist data-user-id="<?= (int)$identity->getId()?>" data-object-id="<?= $id?>" data-csrf="<?=Html::encode($csrf)?>" data-projection="<?=Html::encode(base64_encode(json_encode($projection,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR)))?>" data-item-completion-enabled="<?=$enabled?'true':'false'?>" data-legacy-operations-enabled="<?=$legacy?'true':'false'?>" data-assigned-correction-enabled="<?=$assigned?'true':'false'?>" data-photo-revoke-enabled="<?=$assigned&&$access['photoRevoke']?'true':'false'?>" data-enabled="<?=$enabled?'true':'false'?>">
+<div class="fm2-check-page" data-checklist data-field-ready="false" data-user-id="<?= (int)$identity->getId()?>" data-object-id="<?= $id?>" data-csrf="<?=Html::encode($csrf)?>" data-projection="<?=Html::encode(base64_encode(json_encode($projection,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR)))?>" data-item-completion-enabled="<?=$enabled?'true':'false'?>" data-legacy-operations-enabled="<?=$legacy?'true':'false'?>" data-assigned-correction-enabled="<?=$assigned?'true':'false'?>" data-photo-revoke-enabled="<?=$assigned&&$access['photoRevoke']?'true':'false'?>" data-enabled="<?=$enabled?'true':'false'?>">
 <header class="fm2-check-hero">
 <div class="fm2-check-topline">
 <a class="fm2-back-link" href="<?=$fromControl?'/pilot/construction-control':'/pilot/objects/'.$id?>">
 <?=$fromControl?'Стройконтроль':'Карточка объекта'?>
 </a>
 <div class="fm2-sync-banner" data-sync-banner role="status">
-<span data-sync-copy>Синхронизировано</span>
+<span data-sync-copy>Проверяем сохранённые изменения</span>
 <progress data-sync-progress max="100" value="0" hidden></progress>
 <button type="button" data-sync-now hidden>Повторить отправку</button>
 </div>
@@ -141,6 +141,9 @@ ViewSupport::begin($this,'Чек-лист объекта № '.$id,$identity);?>
 <div class="shlz-alert fm2-feedback-toast" role="status" data-toast hidden>
 </div>
 </div>
+<script src="/pilot/assets/<?=Html::encode(AssetVersion::file('field-offline-sync.js'))?>" defer></script>
+<script src="/pilot/assets/<?=Html::encode(AssetVersion::file('field-offline-photo.js'))?>" defer></script>
+<script src="/pilot/assets/<?=Html::encode(AssetVersion::file('field-offline.js'))?>" defer></script>
 <script src="/pilot/assets/<?=Html::encode(AssetVersion::file('checklist.js'))?>" defer>
 </script>
 <?php ViewSupport::end($this);
