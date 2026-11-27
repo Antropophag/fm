@@ -57,7 +57,9 @@
     }
     banner.dataset.state = "loading";
     banner.querySelector("[data-sync-copy]").textContent =
-      "Загружаем сохранённые данные…";
+      "Загрузка…";
+    banner.setAttribute("aria-label", "Загружаем сохранённые данные");
+    banner.title = "Загружаем сохранённые данные";
     const completingSections = new Set();
     function askReason(title, copy) {
       return new Promise((resolve) => {
@@ -149,6 +151,7 @@
       return label?.childNodes[0]?.textContent?.trim() || `Работа ${itemId}`;
     }
     function sectionTitle(sectionId) {
+      if (Number(sectionId) === 0) return "Фото объекта";
       return (
         root
           .querySelector(
@@ -281,6 +284,7 @@
       for (const operation of activeOperations())
         if (
           operation.type === "photo_uploaded" &&
+          operation.status !== "accepted" &&
           operation.status !== "rejected" &&
           operation.status !== "conflict"
         ) {
@@ -375,6 +379,102 @@
         }),
       );
     }
+    function renderPhotoStrip(container, sectionId, sectionPhotos) {
+      const strip = container.querySelector("[data-photo-strip]");
+      const existingPhotos = new Map(
+        [...strip.querySelectorAll("[data-photo-key]")].map((figure) => [
+          figure.dataset.photoKey,
+          figure,
+        ]),
+      );
+      strip.replaceChildren();
+      if (!sectionPhotos.length) {
+        const empty = document.createElement("span");
+        empty.className = "fm2-photo-empty";
+        empty.textContent = "Фотографий пока нет";
+        strip.append(empty);
+      }
+      let photoIndex = 0;
+      for (const photo of sectionPhotos) {
+        photoIndex += 1;
+        const photoKey = String(photo.clientOperationId || photo.id);
+        const photoUrl =
+          photo.previewUrl || photo.thumbnailUrl || photo.viewUrl || "";
+        const photoSignature = `${photoUrl}|${photo.status}|${photo.id || ""}|${Boolean(photo.attempted)}`;
+        const existing = existingPhotos.get(photoKey);
+        if (existing?.dataset.photoSignature === photoSignature) {
+          strip.append(existing);
+          continue;
+        }
+        const figure = document.createElement("figure");
+        figure.className = "fm2-photo-thumb";
+        figure.title = operationStatus(photo);
+        figure.dataset.photoKey = photoKey;
+        figure.dataset.photoSignature = photoSignature;
+        const link = document.createElement("a");
+        link.href = photo.viewUrl || photo.previewUrl || "#";
+        if (photo.viewUrl) {
+          link.target = "_blank";
+          link.rel = "noopener";
+        }
+        const img = document.createElement("img");
+        img.alt = photo.originalName || "Фото";
+        img.src = photoUrl;
+        img.addEventListener("error", () => {
+          img.remove();
+          let error = figure.querySelector("[data-photo-error]");
+          if (!error) {
+            error = document.createElement("span");
+            error.dataset.photoError = "";
+            const errorCopy = document.createElement("span");
+            errorCopy.textContent = "Не удалось загрузить фото";
+            const retry = document.createElement("button");
+            retry.type = "button";
+            retry.textContent = "Повторить";
+            let sequence = 0;
+            retry.addEventListener("click", () => {
+              sequence++;
+              img.src = `${photo.thumbnailUrl}${photo.thumbnailUrl.includes("?") ? "&" : "?"}retry=${Date.now() + sequence}`;
+              link.prepend(img);
+              error.remove();
+            });
+            error.append(errorCopy, retry);
+            figure.prepend(error);
+          }
+        });
+        link.append(img);
+        figure.append(link);
+        const caption = document.createElement("figcaption");
+        caption.textContent = `Фото ${photoIndex}`;
+        figure.append(caption);
+        if (photo.status === "queued" && !photo.attempted && photo.clientOperationId) {
+          const discard = document.createElement("button");
+          discard.type = "button";
+          discard.textContent = "×";
+          discard.dataset.fieldPhotoDiscard = "";
+          discard.dataset.operationId = photo.clientOperationId;
+          discard.setAttribute("aria-label", `Удалить фото ${photoIndex}`);
+          discard.title = `Удалить фото ${photoIndex}`;
+          figure.append(discard);
+        }
+        const serverPhotoId = Number(photo.id);
+        if (photo.status === "accepted" && Number.isInteger(serverPhotoId) && serverPhotoId > 0 && root.dataset.photoRevokeEnabled === "true") {
+          const revoke = document.createElement("button");
+          revoke.type = "button";
+          revoke.textContent = "×";
+          revoke.setAttribute("aria-label", `Отозвать фото ${photoIndex}`);
+          revoke.title = `Отозвать фото ${photoIndex}`;
+          revoke.addEventListener("click", async () => {
+            const reason = await askReason("Отозвать фото?", "Фото останется в истории, но исчезнет из актуального чек-листа.");
+            if (reason)
+              await session.enqueue("photo_revoked", { sectionId, photoId: serverPhotoId, reason });
+          });
+          figure.append(revoke);
+        }
+        strip.append(figure);
+      }
+      renderUnsavedPhotos(container, sectionId);
+    }
     function render() {
       const checked = completedItems(),
         allPhotos = photos();
@@ -435,103 +535,14 @@
               : "Отметить все работы раздела",
           );
         }
-        const strip = section.querySelector("[data-photo-strip]");
-        const existingPhotos = new Map(
-          [...strip.querySelectorAll("[data-photo-key]")].map((figure) => [
-            figure.dataset.photoKey,
-            figure,
-          ]),
-        );
-        strip.replaceChildren();
-        if (!sectionPhotos.length) {
-          const empty = document.createElement("span");
-          empty.className = "fm2-photo-empty";
-          empty.textContent = "Фотографий пока нет";
-          strip.append(empty);
-        }
-        let photoIndex = 0;
-        for (const photo of sectionPhotos) {
-          photoIndex += 1;
-          const photoKey = String(photo.clientOperationId || photo.id);
-          const photoUrl =
-            photo.previewUrl || photo.thumbnailUrl || photo.viewUrl || "";
-          const photoSignature = `${photoUrl}|${photo.status}|${photo.id || ""}`;
-          const existing = existingPhotos.get(photoKey);
-          if (existing?.dataset.photoSignature === photoSignature) {
-            strip.append(existing);
-            continue;
-          }
-          const figure = document.createElement("figure");
-          figure.className = "fm2-photo-thumb";
-          figure.title = operationStatus(photo);
-          figure.dataset.photoKey = photoKey;
-          figure.dataset.photoSignature = photoSignature;
-          const link = document.createElement("a");
-          link.href = photo.viewUrl || photo.previewUrl || "#";
-          if (photo.viewUrl) {
-            link.target = "_blank";
-            link.rel = "noopener";
-          }
-          const img = document.createElement("img");
-          img.alt = photo.originalName || "Фото раздела";
-          img.src = photoUrl;
-          img.addEventListener("error", () => {
-            img.remove();
-            let error = figure.querySelector("[data-photo-error]");
-            if (!error) {
-              error = document.createElement("span");
-              error.dataset.photoError = "";
-              const errorCopy = document.createElement("span");
-              errorCopy.textContent = "Не удалось загрузить фото";
-              const retry = document.createElement("button");
-              retry.type = "button";
-              retry.textContent = "Повторить";
-              let sequence = 0;
-              retry.addEventListener("click", () => {
-                sequence++;
-                img.src = `${photo.thumbnailUrl}${photo.thumbnailUrl.includes("?") ? "&" : "?"}retry=${Date.now() + sequence}`;
-                link.prepend(img);
-                error.remove();
-              });
-              error.append(errorCopy, retry);
-              figure.prepend(error);
-            }
-          });
-          link.append(img);
-          figure.append(link);
-          const caption = document.createElement("figcaption");
-          caption.textContent = `Фото ${photoIndex}`;
-          figure.append(caption);
-          const serverPhotoId = Number(photo.id);
-          if (
-            photo.status === "accepted" &&
-            Number.isInteger(serverPhotoId) &&
-            serverPhotoId > 0 &&
-            root.dataset.photoRevokeEnabled === "true"
-          ) {
-            const revoke = document.createElement("button");
-            revoke.type = "button";
-            revoke.textContent = "×";
-            revoke.setAttribute("aria-label", `Отозвать фото ${photoIndex}`);
-            revoke.title = `Отозвать фото ${photoIndex}`;
-            revoke.addEventListener("click", async () => {
-              const reason = await askReason(
-                "Отозвать фото?",
-                "Фото останется в истории, но исчезнет из актуального чек-листа.",
-              );
-              if (reason)
-                await session.enqueue("photo_revoked", {
-                  sectionId,
-                  photoId: serverPhotoId,
-                  reason,
-                });
-            });
-            figure.append(revoke);
-          }
-          strip.append(figure);
-        }
-        renderUnsavedPhotos(section, sectionId);
+        renderPhotoStrip(section, sectionId, sectionPhotos);
       }
+      const general = root.querySelector("[data-general-photos]");
+      renderPhotoStrip(
+        general,
+        0,
+        allPhotos.filter((photo) => Number(photo.sectionId) === 0),
+      );
       const totalWeight = [...checked.keys()].reduce(
           (sum, id) =>
             sum +
@@ -556,10 +567,24 @@
         copy =
           {
             online: "Синхронизировано",
-            offline: "Сохранение на устройстве",
+            offline: "Нет связи",
             sending: "Отправляется",
-            pending: "Сохранено на устройстве — ожидает отправки",
-            retryable: "Связь недоступна — данные сохранены",
+            pending: "Ожидает отправки",
+            retryable: "Нет связи",
+            auth_required: "Нужен вход",
+            access_denied: "Нет доступа",
+            uncertain: "Проверяем отправку",
+            storage_recovery: "Ошибка сохранения",
+            conflict: "Есть конфликт",
+          }[state] ||
+          "Ошибка синхронизации",
+        detail =
+          {
+            online: "Все изменения синхронизированы",
+            offline: "Нет связи. Данные сохраняются на устройстве",
+            sending: "Отправляем сохранённые изменения",
+            pending: "Изменения сохранены на устройстве и ожидают отправки",
+            retryable: "Нет связи. Данные сохранены и будут отправлены позже",
             auth_required: "Войдите снова. Данные сохранены",
             access_denied: "Доступ отозван — данные сохранены",
             uncertain: "Результат отправки не подтверждён",
@@ -567,18 +592,17 @@
               snapshot.connection.message ||
               "Локальные данные требуют восстановления",
             conflict: "Есть действие, требующее решения",
+            loading: "Загружаем сохранённые данные",
+            error:
+              snapshot.connection.message ||
+              "Не удалось синхронизировать сохранённые данные",
           }[state] ||
           snapshot.connection.message ||
-          "Сохранено на устройстве";
+          "Не удалось синхронизировать сохранённые данные";
       banner.dataset.state = state === "online" ? "ok" : state;
       banner.querySelector("[data-sync-copy]").textContent = copy;
-      const retry = banner.querySelector("[data-sync-now]");
-      retry.hidden = ![
-        "retryable",
-        "auth_required",
-        "conflict",
-        "offline",
-      ].includes(state);
+      banner.setAttribute("aria-label", detail);
+      banner.title = detail;
       let storage = root.querySelector("[data-storage-warning]");
       const nearlyFull =
         Number(snapshot.storage?.quota) > 0 &&
@@ -633,14 +657,9 @@
         root.querySelector(".fm2-check-content").prepend(panel);
       }
       panel.replaceChildren();
-      const routineDetails = document.createElement("details");
-      routineDetails.dataset.fieldQueueDetails = "";
-      const routineSummary = document.createElement("summary");
-      const routineRows = document.createElement("div");
-      routineDetails.append(routineSummary, routineRows);
-      let routineCount = 0;
+      const actionable = new Set(["conflict", "rejected", "auth_required", "access_denied", "storage_recovery"]);
       for (const operation of activeOperations().filter(
-        (x) => !["accepted"].includes(x.status),
+        (x) => x.storageError || actionable.has(x.status),
       )) {
         const row = document.createElement("article");
         row.className = "fm2-field-operation";
@@ -672,9 +691,7 @@
             ? "Скачать фото"
             : "Сохранить сведения";
         actions.append(exportButton);
-        const mayDiscard =
-          ["rejected", "conflict"].includes(operation.status) ||
-          (operation.status === "queued" && !operation.attempted);
+        const mayDiscard = ["rejected", "conflict"].includes(operation.status);
         if (mayDiscard) {
           const discard = document.createElement("button");
           discard.type = "button";
@@ -684,20 +701,36 @@
           actions.append(discard);
         }
         row.append(actions);
-        if (["queued", "sending"].includes(operation.status)) {
-          routineCount += 1;
-          routineRows.append(row);
-        } else {
-          panel.append(row);
-        }
+        panel.append(row);
       }
-      if (routineCount > 0) {
-        routineSummary.textContent = `${routineCount} ${routineCount === 1 ? "действие сохранено на устройстве" : "действий сохранено на устройстве"}`;
-        panel.append(routineDetails);
-      }
+      panel.hidden = panel.childElementCount === 0;
     }
     function sectionIdFor(item) {
       return Number(item.closest("[data-check-section]").dataset.checkSection);
+    }
+    function bindPhotoInputs(container, sectionId) {
+      for (const input of container.querySelectorAll("[data-photo-input]"))
+        input.addEventListener("change", async () => {
+          for (const file of input.files || [])
+            try {
+              await sessionReady;
+              const prepared = await globalThis.FMonitorField.preparePhoto(file);
+              await session.enqueue(
+                "photo_uploaded",
+                {
+                  sectionId,
+                  mime: prepared.mime,
+                  size: prepared.size,
+                  sha256: prepared.sha256,
+                  originalName: prepared.name,
+                },
+                prepared.blob,
+              );
+            } catch (error) {
+              notify(error.message, true);
+            }
+          input.value = "";
+        });
     }
     async function enqueueItem(row) {
       if (!itemEnabled || busy) return;
@@ -728,7 +761,6 @@
               .filter((x) => x.employmentStatus !== "dismissed")
               .map((x) => String(x.tabId)),
           });
-        notify("Действие сохранено на устройстве.");
       } catch (error) {
         notify(error.message, true);
       } finally {
@@ -768,7 +800,6 @@
           if (payloads.length)
             await session.enqueueBatch("item_completed", payloads);
           scheduleCompletions();
-          notify("Работы раздела сохранены на устройстве.");
         } catch (error) {
           notify(error.message, true);
         }
@@ -798,31 +829,9 @@
               ?.textContent?.trim() || "";
           bulkDialog.showModal();
         });
-      for (const input of section.querySelectorAll("[data-photo-input]"))
-        input.addEventListener("change", async () => {
-          for (const file of input.files || [])
-            try {
-              await sessionReady;
-              const prepared =
-                await globalThis.FMonitorField.preparePhoto(file);
-              await session.enqueue(
-                "photo_uploaded",
-                {
-                  sectionId: Number(section.dataset.checkSection),
-                  mime: prepared.mime,
-                  size: prepared.size,
-                  sha256: prepared.sha256,
-                  originalName: prepared.name,
-                },
-                prepared.blob,
-              );
-              notify("Фото сохранено на устройстве.");
-            } catch (error) {
-              notify(error.message, true);
-            }
-          input.value = "";
-        });
+      bindPhotoInputs(section, Number(section.dataset.checkSection));
     }
+    bindPhotoInputs(root.querySelector("[data-general-photos]"), 0);
     const installerDialog = root.querySelector("[data-installer-dialog]");
     let installerRow = null;
     function openInstallers(row) {
@@ -886,13 +895,6 @@
           notify(error.message, true);
         }
       });
-    banner.querySelector("[data-sync-now]").addEventListener("click", () => {
-      if (!session) {
-        location.reload();
-        return;
-      }
-      session.retry().catch((error) => notify(error.message, true));
-    });
     root.querySelector("[data-open-gallery]").addEventListener("click", () => {
       const gallery = root.querySelector("[data-gallery]"),
         content = gallery.querySelector("[data-gallery-content]");
@@ -912,10 +914,12 @@
       }
       gallery.hidden = false;
       root.querySelector(".fm2-check-layout").hidden = true;
+      root.querySelector("[data-general-photos]").hidden = true;
     });
     root.querySelector("[data-close-gallery]").addEventListener("click", () => {
       root.querySelector("[data-gallery]").hidden = true;
       root.querySelector(".fm2-check-layout").hidden = false;
+      root.querySelector("[data-general-photos]").hidden = false;
     });
     root.addEventListener("click", async (event) => {
       const card = event.target.closest("[data-unsaved-photo]");
@@ -947,7 +951,6 @@
         const activeSession = await sessionReady;
         if (event.target.closest("[data-unsaved-retry]")) {
           await activeSession.retryUnsavedPhoto(id);
-          notify("Фото сохранено на устройстве.");
         }
         if (
           event.target.closest("[data-unsaved-discard]") &&
@@ -963,6 +966,16 @@
       }
     });
     root.addEventListener("click", async (event) => {
+      const photoDiscard = event.target.closest("[data-field-photo-discard]");
+      if (photoDiscard) {
+        try {
+          if (await confirmAction("Удалить сохранённое фото?", "Неотправленное фото будет удалено с устройства. Серверная история не изменится.", "Удалить фото"))
+            await session.discard(photoDiscard.dataset.operationId);
+        } catch (error) {
+          notify(error.message, true);
+        }
+        return;
+      }
       const row = event.target.closest("[data-field-operation]");
       if (!row) return;
       const id = row.dataset.operationId;
@@ -1018,9 +1031,11 @@
       rejectSession(error);
       root.dataset.fieldReady = "error";
       banner.dataset.state = "error";
-      banner.querySelector("[data-sync-copy]").textContent =
-        error.message || "Не удалось загрузить сохранённые данные.";
-      banner.querySelector("[data-sync-now]").hidden = false;
+      banner.querySelector("[data-sync-copy]").textContent = "Ошибка синхронизации";
+      const detail =
+        error.message || "Не удалось загрузить сохранённые данные";
+      banner.setAttribute("aria-label", detail);
+      banner.title = detail;
       notify(error.message, true);
     });
     addEventListener("pagehide", () => session?.close(), { once: true });

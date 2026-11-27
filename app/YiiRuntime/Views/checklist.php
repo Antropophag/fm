@@ -11,9 +11,9 @@ ViewSupport::begin($this,'Чек-лист объекта № '.$id,$identity);?>
 <?=$fromControl?'Стройконтроль':'Карточка объекта'?>
 </a>
 <div class="fm2-sync-banner" data-sync-banner role="status">
-<span data-sync-copy>Проверяем сохранённые изменения</span>
+<span class="fm2-sync-dot" aria-hidden="true"></span>
+<span data-sync-copy>Загрузка…</span>
 <progress data-sync-progress max="100" value="0" hidden></progress>
-<button type="button" data-sync-now hidden>Повторить отправку</button>
 </div>
 </div>
 <div class="fm2-check-object">
@@ -110,8 +110,17 @@ ViewSupport::begin($this,'Чек-лист объекта № '.$id,$identity);?>
 </section>
 </div>
 </div>
-<button class="fm2-all-photos" type="button" data-open-gallery>Все фото <span data-photo-total>0</span>
-</button>
+<section class="fm2-general-photos" data-general-photos>
+<span class="fm2-general-photos__label">Фото объекта</span>
+<div class="fm2-general-photos__actions">
+<label class="shlz-button fm2-camera-action">Снять<input type="file" accept="image/*" capture="environment" data-photo-input aria-label="Снять фото объекта"<?=$legacy?'':' disabled'?>>
+</label>
+<label class="fm2-file-action">Выбрать<input type="file" accept="image/jpeg,image/png,image/webp" multiple data-photo-input aria-label="Выбрать фото объекта"<?=$legacy?'':' disabled'?>>
+</label>
+<button class="fm2-all-photos" type="button" data-open-gallery>Все фото <span data-photo-total>0</span></button>
+</div>
+<div class="fm2-photo-strip" data-photo-strip><span class="fm2-photo-empty">Фотографий пока нет</span></div>
+</section>
 <section class="fm2-gallery-page" data-gallery hidden>
 <button type="button" data-close-gallery>К чек-листу</button>
 <div data-gallery-content>

@@ -65,7 +65,7 @@ try {
     assertSameValue([4512,4514],array_map('intval',$secondMatches[1]),'activity ordering leaves exact tail rows including completed case');
     assertSameValue(true,str_contains($second['body'],'data-object-id="4514" data-engineer-id="73" data-completed="true"'),'completed row carries native filter marker');
     $completedStart=strpos($second['body'],'data-object-id="4514"');$completedEnd=$completedStart===false?false:strpos($second['body'],'</tr>',$completedStart);$completedRow=$completedStart===false||$completedEnd===false?'':substr($second['body'],$completedStart,$completedEnd-$completedStart);assertSameValue(false,str_contains($completedRow,'Готов к открытию'),'completed row is never presented as preopening ready');
-    foreach([$first,$second]as$page)assertSameValue(true,str_contains($page['body'],PHP_EOL.'52 объектов</span>'),'queue total includes completed rows');
+    foreach([[$first,50],[$second,2]]as[$page,$visible])assertSameValue(true,str_contains($page['body'],'data-list-summary>Показано '.$visible.' из 52</span>'),'queue footer total includes completed rows');
     assertSameValue(false,str_contains($second['body'],'data-object-id="4514" data-engineer-id="73" data-completed="true" hidden'),'server-included completed row is rendered, not hidden by the current page');
     assertSameValue(true,str_contains($second['body'],'name="completed" value="1" data-show-completed checked'),'server completed filter is reflected in checked control');
     assertSameValue(true,str_contains($first['body'],'class="shlz-pagination"')&&str_contains($first['body'],'aria-label="Страницы стройконтроля"')&&str_contains($first['body'],'<ul class="shlz-pagination__list">'),'INTENDED_RED shared construction-control pagination');
@@ -75,7 +75,7 @@ try {
     $repeat=$fixture->page('/pilot/construction-control?ownership=all&completed=1');
     preg_match_all('/data-object-id="(\d+)"/',$repeat['body'],$repeatMatches);
     assertSameValue($firstMatches[1],$repeatMatches[1],'identical GET repeats row composition');
-    assertSameValue(true,str_contains($repeat['body'],PHP_EOL.'52 объектов</span>'),'identical GET repeats total');
+    assertSameValue(true,str_contains($repeat['body'],'data-list-summary>Показано 50 из 52</span>'),'identical GET repeats total');
     assertSameValue(true,str_contains($repeat['body'],'ownership=all')&&str_contains($repeat['body'],'completed=1')&&str_contains($repeat['body'],'page=2'),'identical GET repeats filtered page boundary');
     assertSameValue($before,$http->facts(),'repeated queue GET preserves all facts');
     $head=$http->request('HEAD','/pilot/construction-control?ownership=all&completed=1&page=2',[],$fixture->cookies);
@@ -97,7 +97,7 @@ try {
     assertSameValue(200,$afterTransition['status'],'active queue after transition');
     assertSameValue(false,str_contains($afterTransition['body'],'data-object-id="4512"'),'transitioned case disappears after refresh');
     assertSameValue(50,preg_match_all('/data-control-row\b/',$afterTransition['body']),'filtered first page remains full');
-    assertSameValue(true,str_contains($afterTransition['body'],PHP_EOL.'51 объектов</span>'),'PTO-only transition updates completed-inclusive total');
+    assertSameValue(true,str_contains($afterTransition['body'],'data-list-summary>Показано 50 из 51</span>'),'PTO-only transition updates completed-inclusive total');
     assertSameValue(200,$fixture->page('/pilot/construction-control?ownership=all&completed=1&page=2')['status'],'completed-inclusive tail page remains');
     assertSameValue($transitioned,$http->facts(),'refresh preserves cases and append-only history');
 

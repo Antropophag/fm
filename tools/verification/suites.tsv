@@ -252,6 +252,7 @@ db	php	tests/Yii2/equipment_reclamation_001_test.php	integration
 db	php	tests/Yii2/legacy_control_engineer_reads_001_test.php	integration
 db	php	tests/Yii2/mikryukova_directory_001_test.php	integration
 db	php	tests/Yii2/mikryukova_feedback_http_001_test.php	integration
+db	php	tests/Yii2/object_general_photos_001_test.php	integration
 db	php	tests/Yii2/object_payment_hold_http_001_test.php	integration
 db	php	tests/Yii2/order_local_preview_001_test.php	integration
 db	php	tests/Yii2/order_review_corrections_001_test.php	integration
@@ -403,6 +404,8 @@ e2e	php	tests/Runtime/runtime_settlement_compatibility_001_test.php	e2e
 e2e	php	tests/Support/ObjectRegisterPagingBrowserFixture.php	e2e
 e2e	php	tests/Yii2/email_password_browser_001_test.php	e2e
 e2e	php	tests/Yii2/excel_publication_browser_001_test.php	e2e
+e2e	php	tests/Yii2/object_general_photos_browser_001_test.php	e2e
+e2e	php	tests/Yii2/offline_indicator_001_test.php	e2e
 e2e	php	tests/Yii2/production_performance_browser_001_test.php	e2e
 e2e	php	tests/Yii2/reliable_field_offline_browser_001_test.php	e2e
 e2e	php	tests/Yii2/yii2_address_register_browser_001_test.php	e2e
