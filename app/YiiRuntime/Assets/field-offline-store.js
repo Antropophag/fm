@@ -560,6 +560,25 @@
       const rows = (await request(operations.getAll())).filter((row) => row.scope === scope);
       const root = rows.find((row) => row.clientOperationId === clientOperationId);
       if (!root || (root.attempted && !["rejected", "conflict"].includes(root.status))) throw new Error("Отправленное действие нельзя удалить без разрешения конфликта");
+      if (root.type === "photo_uploaded" && root.sectionId === 0 && root.status === "queued" && !root.attempted) {
+        const descendants = new Set([clientOperationId]);
+        let found = true;
+        while (found) {
+          found = false;
+          for (const row of rows) if (descendants.has(row.localPredecessorId) && !descendants.has(row.clientOperationId)) {
+            descendants.add(row.clientOperationId); found = true;
+          }
+        }
+        for (const row of rows.filter((item) => descendants.has(item.clientOperationId))) {
+          if (row.attempted || row.wire) throw new Error("Зависимое действие уже отправлялось и требует отдельного решения");
+        }
+        for (const successor of rows.filter((row) => row.localPredecessorId === clientOperationId)) {
+          successor.localPredecessorId = root.localPredecessorId; operations.put(successor);
+        }
+        root.status = "discarded"; root.updatedAt = Date.now(); operations.put(root);
+        tx.objectStore("photoBlobs").delete(root.id);
+        return 1;
+      }
       const affected = new Set([clientOperationId]);
       let changed = true;
       while (changed) {
