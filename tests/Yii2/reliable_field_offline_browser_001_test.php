@@ -3,7 +3,7 @@ declare(strict_types=1);
 require dirname(__DIR__).'/bootstrap.php';require __DIR__.'/ReliableFieldOfflineFixture.php';
 $f=null;$process=null;
 try{
-    $f=new ReliableFieldOfflineFixture(dirname(__DIR__,2));$h=$f->inspection->http;$config=$h->artifacts.'/field-browser.json';$result=$h->artifacts.'/field-result.json';$log=$h->artifacts.'/field-browser.log';
+    $f=new ReliableFieldOfflineFixture(dirname(__DIR__,2));$h=$f->inspection->http;$h->db->query("UPDATE {$h->p}fm_maintable SET ordadr_address='ул. Берёзовая, д.12, корп.2',entrance='3' WHERE id IN(5051,5052)");$config=$h->artifacts.'/field-browser.json';$result=$h->artifacts.'/field-result.json';$log=$h->artifacts.'/field-browser.log';
     file_put_contents($config,json_encode(['origin'=>'http://127.0.0.1:'.$h->server['port'],'email'=>$h->emails[73],'otherEmail'=>$h->emails[95],'password'=>$h->password,'artifacts'=>$h->artifacts,'result'=>$result,'png'=>base64_encode(InspectionFixture::png(87)),'playwright'=>getenv('FMONITOR_TEST_PLAYWRIGHT_MODULE')?:dirname($h->root).'/shlz-ui/node_modules/playwright'],JSON_THROW_ON_ERROR));chmod($config,0600);
     $process=proc_open([getenv('FMONITOR_TEST_NODE_BINARY')?:'node',__DIR__.'/reliable_field_offline_browser.cjs',$config],[0=>['file','/dev/null','r'],1=>['file',$log,'w'],2=>['file',$log,'a']],$pipes,$h->root);
     if(!is_resource($process))throw new TestFailure('SETUP_FAILURE browser');$deadline=microtime(true)+360;

@@ -59,7 +59,12 @@ final readonly class MariaDbYiiCompletionRegister
         $p=$this->prefix;$l=$this->legacyPrefix;$leaf=static fn(string$root):string=>"LEFT JOIN `{$p}fm2_pilot_completion_fact_corrections` {$root}c ON {$root}c.root_fact_id={$root}.id AND {$root}c.version_no=(SELECT MAX(z.version_no) FROM `{$p}fm2_pilot_completion_fact_corrections` z WHERE z.root_fact_id={$root}.id)";
         $details="LEFT JOIN `{$p}fm2_pilot_completion_fact_corrections` dd ON dd.root_fact_id=d.id AND dd.details IS NOT NULL AND dd.version_no=(SELECT MAX(z.version_no) FROM `{$p}fm2_pilot_completion_fact_corrections` z WHERE z.root_fact_id=d.id AND z.details IS NOT NULL)";
         $fromSql=" FROM `{$p}fm2_installation_cases` c JOIN `{$l}fm_maintable` m ON m.id=c.legacy_installation_object_id LEFT JOIN `{$p}fm2_object_detail_edits` e ON e.object_id=c.legacy_installation_object_id LEFT JOIN `{$p}fm2_pilot_completion_facts` p ON p.installation_case_id=c.id AND p.fact_type='pto_act' ".$leaf('p')." LEFT JOIN `{$p}fm2_pilot_completion_facts` d ON d.installation_case_id=c.id AND d.fact_type='declaration' ".$leaf('d')." {$details} WHERE (c.opened_at IS NOT NULL OR c.actual_start_date IS NOT NULL OR p.id IS NOT NULL OR d.id IS NOT NULL)";$params=[];
-        if($query!==''){$fromSql.=' AND ('.$this->effective('address','m.ordadr_address')." LIKE :q ESCAPE '\\\\' OR ".$this->effective('regnumber','m.regnumber')." LIKE :q ESCAPE '\\\\' OR COALESCE(dd.details,d.details,'') LIKE :q ESCAPE '\\\\')";$params[':q']='%'.str_replace(['\\','%','_'],['\\\\','\\%','\\_'],$query).'%';}
+        if($query!==''){
+            $address=$this->effective('address','m.ordadr_address');$entrance=$this->effective('entrance','m.entrance');$registration=$this->effective('regnumber','m.regnumber');
+            $rows=$this->db->createCommand("SELECT c.legacy_installation_object_id object_id,{$address} address,{$entrance} entrance,{$registration} registration_number,COALESCE(dd.details,d.details,'') declaration_details{$fromSql} ORDER BY c.legacy_installation_object_id")->queryAll();
+            $ids=\FMonitor2\AddressRegister\Search::ids(array_map(static fn(array$r):array=>['id'=>(int)$r['object_id'],'address'=>(string)$r['address'],'entrance'=>(string)$r['entrance'],'extra'=>[(string)$r['registration_number'],(string)$r['declaration_details']]],$rows),$query);
+            $fromSql.=' AND c.legacy_installation_object_id IN('.($ids===[]?'0':implode(',',array_map('intval',$ids))).')';
+        }
         if($date!==''){$expression=$this->effectiveDate($date==='pto'?'p':'d');if($from!==''){$fromSql.=" AND {$expression}>=:from";$params[':from']=$from;}if($to!==''){$fromSql.=" AND {$expression}<=:to";$params[':to']=$to;}}
         return[$fromSql,$params];
     }

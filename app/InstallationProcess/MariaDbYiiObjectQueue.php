@@ -126,11 +126,7 @@ final readonly class MariaDbYiiObjectQueue
         }
         $source = "(m.category='native_candidate' OR (m.output_id IS NULL AND d.object_id=c.legacy_installation_object_id AND d.content_sha256=SHA2(d.payload_json,256)))";
         $where = "{$source} AND ({$filter})";
-        if ($q !== '') {
-            $value=static fn(string$field,string$column):string=>MariaDbEffectiveObjectDetails::sqlValue($field,'l.'.$column);$where .= " AND (CAST(c.legacy_installation_object_id AS CHAR) LIKE :q ESCAPE '\\\\' OR ".$value('regnumber','regnumber')." LIKE :q ESCAPE '\\\\' OR ".$value('zavnumber','zavnumber')." LIKE :q ESCAPE '\\\\' OR ".$value('address','ordadr_address')." LIKE :q ESCAPE '\\\\' OR ".$value('entrance','entrance')." LIKE :q ESCAPE '\\\\')";
-            $params[':q'] = '%' . str_replace(['\\','%','_'], ['\\\\','\\%','\\_'], $q) . '%';
-        }
-        $from = " FROM `{$p}fm2_installation_cases` c"
+        $baseFrom = " FROM `{$p}fm2_installation_cases` c"
             . " JOIN `{$l}fm_maintable` l ON l.id=c.legacy_installation_object_id"
             . " LEFT JOIN `{$p}fm2_migration_classification_provenance` m"
             . " ON m.output_kind='operational_case' AND m.output_id=c.id"
@@ -150,7 +146,14 @@ final readonly class MariaDbYiiObjectQueue
             . ' AND r.assignment_order_id=s.assignment_order_id AND r.composition_identity=s.composition_identity'
             . ' AND r.composition_sha256=s.composition_sha256'
             . " LEFT JOIN `{$p}fm2_assignment_order_original_revisions` v ON v.root_original_id=r.root_original_id"
-            . " AND v.revision_id=r.current_revision_id LEFT JOIN `{$p}fm2_deadline_certificate_roots` dr ON dr.installation_case_id=c.id LEFT JOIN `{$p}fm2_deadline_certificate_revisions` dc ON dc.id=dr.current_revision_id WHERE {$where}";
+            . " AND v.revision_id=r.current_revision_id LEFT JOIN `{$p}fm2_deadline_certificate_roots` dr ON dr.installation_case_id=c.id LEFT JOIN `{$p}fm2_deadline_certificate_revisions` dc ON dc.id=dr.current_revision_id";
+        if ($q !== '') {
+            $value=static fn(string$field,string$column):string=>MariaDbEffectiveObjectDetails::sqlValue($field,'l.'.$column);
+            $rows=$this->db->createCommand("SELECT c.legacy_installation_object_id object_id,".$value('address','ordadr_address')." address,".$value('entrance','entrance')." entrance,".$value('regnumber','regnumber')." regnumber,".$value('zavnumber','zavnumber')." zavnumber{$baseFrom} WHERE {$where} ORDER BY c.legacy_installation_object_id",$params)->queryAll();
+            $ids=\FMonitor2\AddressRegister\Search::ids(array_map(static fn(array$r):array=>['id'=>(int)$r['object_id'],'address'=>(string)$r['address'],'entrance'=>(string)$r['entrance'],'extra'=>[(string)$r['object_id'],(string)$r['regnumber'],(string)$r['zavnumber']]],$rows),$q);
+            $where.=' AND c.legacy_installation_object_id IN('.($ids===[]?'0':implode(',',array_map('intval',$ids))).')';
+        }
+        $from=$baseFrom." WHERE {$where}";
         return[$from,$params];
     }
     public static function stagePredicates(string $p): array
