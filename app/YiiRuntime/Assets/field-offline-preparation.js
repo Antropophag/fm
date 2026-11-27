@@ -6,7 +6,6 @@
   let userId = Number((queue || shell).dataset.userId);
   const Store = globalThis.FMonitorFieldStore;
   let preparing = false,
-    deferredInstall = null,
     currentRunToken = null,
     activeAttempt = null,
     completedAttempt = null,
@@ -90,19 +89,23 @@
     const root = document.querySelector("[data-offline-summary]");
     if (!root) return;
     root.dataset.state = state;
-    root.querySelector("[data-offline-copy]").textContent =
+    const count = document.querySelector("[data-offline-count]");
+    if (count) count.textContent = state === "ready"
+      ? `Доступно оффлайн: ${plural(total)}`
+      : state === "error"
+        ? "Подготовка не удалась"
+        : `Доступно оффлайн: ${completed} из ${total}`;
+    const detail =
       message ||
       (state === "ready"
         ? `Готово без сети: ${plural(total)}`
         : `Готовим для работы без сети: ${completed} из ${total}`);
-    const date = root.querySelector("[data-offline-updated]");
-    date.textContent = updatedAt
-      ? `Обновлено ${new Intl.DateTimeFormat("ru-RU", { dateStyle: "short", timeStyle: "short" }).format(new Date(updatedAt))}`
-      : "";
-    root.querySelector("[data-offline-retry]").hidden = ![
-      "partial",
-      "error",
-    ].includes(state);
+    const label = updatedAt
+      ? `${detail} Обновлено ${new Intl.DateTimeFormat("ru-RU", { dateStyle: "short", timeStyle: "short" }).format(new Date(updatedAt))}`
+      : detail;
+    root.setAttribute("aria-label", label);
+    root.title = label;
+    root.querySelector(".fm2-visually-hidden").textContent = label;
   }
   async function register() {
     if (!("serviceWorker" in navigator) || !isSecureContext)
@@ -482,26 +485,10 @@
       document.querySelector("[data-offline-login]").hidden = false;
     }
   }
-  document
-    .querySelector("[data-offline-retry]")
-    ?.addEventListener("click", prepare);
   window.addEventListener("pagehide", () => {
     cancelAttempt(activeAttempt);
     cancelAttempt(completedAttempt);
   });
-  window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    deferredInstall = event;
-    const button = document.querySelector("[data-offline-install]");
-    if (button) button.hidden = false;
-  });
-  document
-    .querySelector("[data-offline-install]")
-    ?.addEventListener("click", async () => {
-      if (!deferredInstall) return;
-      await deferredInstall.prompt();
-      deferredInstall = null;
-    });
   Store?.onActorChange?.((change) => {
     if (Number(change.activeUserId) !== userId || change.tombstoned) {
       (queue || shell).hidden = true;

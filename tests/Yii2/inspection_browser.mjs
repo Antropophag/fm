@@ -20,10 +20,9 @@ try {
  if(await page.locator('[data-check-section="1"] .fm2-section-toggle').getAttribute('aria-expanded')==='false')await page.locator('[data-check-section="1"] .fm2-section-toggle').click();
  let lost=false,acceptedId=null;
  await page.route('**/pilot/objects/4512/checklist/operations',async route=>{const data=route.request().postDataJSON();if(!lost&&data.type==='item_completed'){const answer=await route.fetch();const body=await answer.json();check(body.status==='accepted','first click accepted before response loss');lost=true;acceptedId=data.clientOperationId;await route.abort('connectionreset');}else await route.continue();});
- await page.locator('[data-check-item="28"] .fm2-check-toggle').click();
- await page.waitForFunction(()=>document.querySelector('[data-sync-now]')&&!document.querySelector('[data-sync-now]').hidden);
  const replay=page.waitForResponse(r=>r.url().endsWith('/checklist/operations')&&r.status()===200);
- await page.locator('[data-sync-now]').click();check((await (await replay).json()).status==='duplicate','retry same accepted operation');
+ await page.locator('[data-check-item="28"] .fm2-check-toggle').click();
+ check((await (await replay).json()).status==='duplicate','automatic retry preserves accepted operation');
  await page.unroute('**/pilot/objects/4512/checklist/operations');
  await page.reload();await page.waitForFunction(()=>document.querySelector('[data-check-item="28"] [role=checkbox]')?.getAttribute('aria-checked')==='true');
  await page.screenshot({path:c.artifacts+'/inspection-desktop.png',fullPage:true});
@@ -49,7 +48,7 @@ try {
    await page.locator(`[data-field-operation][data-operation-id="${currentOfflineId}"] [data-field-resolve]`).click();
    await page.locator('dialog[open]').getByRole('button',{name:'Применить заново',exact:true}).click();
    await pollLocal(s=>s.rows.some(r=>r.clientOperationId===currentOfflineId&&r.status==='superseded'),'explicit resolution preserves original');
-  }else await page.locator('[data-sync-now]').click();
+  } // transient failures retry automatically, without a UI action
  }
  await pollLocal(s=>s.rows.some(r=>r.clientOperationId===currentOfflineId&&r.status==='accepted'),'only explicit replacement and transient retry accepted');
  await page.unroute('**/pilot/objects/4512/checklist/operations');await page.reload();await page.waitForFunction(()=>document.querySelector('[data-check-item="29"] [role=checkbox]')?.getAttribute('aria-checked')==='true');

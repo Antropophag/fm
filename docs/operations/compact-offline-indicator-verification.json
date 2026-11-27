@@ -1,0 +1,47 @@
+{
+  "change": "compact-offline-indicator",
+  "planned_paths": [
+    "app/YiiRuntime/Views/construction-control.php",
+    "app/YiiRuntime/Assets/field-offline-preparation.js",
+    "app/YiiRuntime/Assets/field-offline.css",
+    "app/YiiRuntime/WebResponse.php",
+    "tests/Yii2/offline_indicator_001_test.php",
+    "tests/Support/offline_indicator_browser.cjs",
+    "app/YiiRuntime/Assets/checklist.js",
+    "tests/Yii2/reliable_field_offline_browser.cjs",
+    "app/YiiRuntime/Views/checklist.php",
+    "tests/Support/checklist_minimal_fixture.js"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "OFFLINE-INDICATOR-001",
+      "acceptance_id": "compact-status-native-install-and-checklist-minimal",
+      "spec_path": "docs/operations/compact-offline-indicator-20261127.md",
+      "seam": "Rendered construction-control status with actual preparation script; browser manifest CSP admission; CHECKLIST-MINIMAL-001 real Yii checklist, routine pending versus recovery states and status colors",
+      "tests": [
+        "tests/Yii2/offline_indicator_001_test.php"
+      ]
+    }
+  ],
+  "lifecycle": {
+    "intent": "COMPACT_MAINTENANCE",
+    "issue": "Owner feedback 2026-11-27",
+    "change_kind": "PRESENTATION",
+    "requirement_status": "CURRENT",
+    "semantic_change": "AGREED_ORDINARY_CHANGE",
+    "canonical_requirements": [
+      {
+        "path": "docs/operations/compact-offline-indicator-20261127.md"
+      }
+    ],
+    "executable_regression": "tests/Yii2/offline_indicator_001_test.php",
+    "sensitivity": {
+      "classification": "ORDINARY",
+      "boundaries": [
+        "presentation",
+        "same-origin-manifest"
+      ],
+      "rationale": "Bounded restoration of established native PWA install contract; same-origin manifest only, no rights/secrets or durable/replay changes. All remaining CSP directives unchanged; external manifests remain denied."
+    }
+  }
+}

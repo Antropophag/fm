@@ -20,7 +20,7 @@ trait MariaDbYiiChecklistMutation
     $time=(string)($o['deviceTime']??'');
     $base=$o['baseRevision']??null;
     $section=$o['sectionId']??null;
-    if(!$this->uuid($id)||!$this->uuid($device)||!$this->instant($time)||!is_int($base)||$base<0||!is_int($section)||!isset(self::ITEMS[$section]))return['status'=>'rejected'];
+    if(!$this->uuid($id)||!$this->uuid($device)||!$this->instant($time)||!is_int($base)||$base<0||!is_int($section)||(!isset(self::ITEMS[$section])&&!($section===0&&in_array($type,['photo_uploaded','photo_revoked'],true))))return['status'=>'rejected'];
             if($replay=$this->replay($id,$objectId,$actorId,$device,$type,$section,$o,$bytes))return$replay;$createdPhoto=null;
             $this->begin();
     try{$case=$this->case($objectId,true);
