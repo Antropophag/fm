@@ -287,6 +287,8 @@ db	php	tests/Yii2/yii2_documentary_http_001_test.php	integration
 db	php	tests/Yii2/yii2_erp_equipment_facts_001_test.php	integration
 db	php	tests/Yii2/yii2_erp_equipment_facts_operational_001_test.php	integration
 db	php	tests/Yii2/yii2_feedback_001_test.php	integration
+db	php	tests/Yii2/yii2_flexible_address_search_001_test.php	integration
+db	php	tests/Yii2/yii2_flexible_control_search_001_test.php	integration
 db	php	tests/Yii2/yii2_imports_workforce_001_test.php	integration
 db	php	tests/Yii2/yii2_inspection_boundaries_001_test.php	integration
 db	php	tests/Yii2/yii2_inspection_concurrency_001_test.php	integration
@@ -438,6 +440,7 @@ e2e	php	tests/Yii2/yii2_stand_restore_console_001_test.php	e2e
 e2e	php	tests/Yii2/yii2_stand_restore_reconcile_console_001_test.php	e2e
 e2e	php	tests/Yii2/yii2_user_access_browser_001_test.php	e2e
 unit	php	tests/AddressRegister/column_preferences_001_test.php	unit
+unit	php	tests/AddressSearch/flexible_address_search_001_test.php	unit
 unit	php	tests/Architecture/initial_owner_local_resume_route_001_test.php	unit
 unit	python3	tests/Architecture/yii2_clean_stand_runtime_closure_001_test.py	unit
 unit	python3	tests/Architecture/yii2_local_quickstart_boundary_001_test.py	unit

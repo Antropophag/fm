@@ -10,21 +10,16 @@ final readonly class MariaDbObjectRegisterQuery
     private function literal(string $text): string
     { return "'".$this->db->real_escape_string($text)."'"; }
 
-    public function search(array $query,string $registration,string $address): string
+    public function search(array $query,string $identity): string
     {
         if($query['q']==='')return '';
-        $needle=$this->literal(mb_strtolower($query['q'],'UTF-8'));
-        return " WHERE LOCATE({$needle} COLLATE utf8mb4_bin,LOWER(CONCAT(COALESCE({$registration},''),' ',COALESCE({$address},''))) COLLATE utf8mb4_bin)>0";
+        return ' WHERE '.$identity.' IN('.($query['matchingIds']===[]?'0':implode(',',array_map('intval',$query['matchingIds']))).')';
     }
 
     public function where(array $query): string
     {
         $parts=[];
-        if($query['q']!==''){
-            // LOCATE gives literal substring matching, including %, _ and backslashes.
-            $needle=$this->literal(mb_strtolower($query['q'],'UTF-8'));
-            $parts[]="LOCATE({$needle} COLLATE utf8mb4_bin,LOWER(CONCAT(COALESCE(regnumber,''),' ',COALESCE(address,''))) COLLATE utf8mb4_bin)>0";
-        }
+        if($query['q']!=='')$parts[]='object_id IN('.($query['matchingIds']===[]?'0':implode(',',array_map('intval',$query['matchingIds']))).')';
         if($query['state']!=='')$parts[]='state='.$this->literal($query['state']);
         return $parts===[]?'':' WHERE '.implode(' AND ',$parts);
     }
@@ -48,6 +43,8 @@ final readonly class MariaDbObjectRegisterQuery
         $stops=$this->integer('stops_json');$capacity=$this->integer('capacity_json');
         $trimPattern=$this->literal('^[\\x00\\x09\\x0a\\x0b\\x0d\\x20]+|[\\x00\\x09\\x0a\\x0b\\x0d\\x20]+$');
         $plusPattern=$this->literal('\\s*\\+\\s*');$spacePattern=$this->literal('\\s+');
+        $effective=static fn(string$field,string$column):string=>\FMonitor2\InstallationProcess\MariaDbEffectiveObjectDetails::sqlValue($field,'l.'.$column,'details');
+        $registration=$effective('regnumber','regnumber');$address=$effective('address','ordadr_address');$entrance=$effective('entrance','entrance');
         return "WITH
         premium_bands AS ({$bandSql}), shaft_rules AS ({$shaftSql}),
         latest AS (
@@ -62,7 +59,7 @@ final readonly class MariaDbObjectRegisterQuery
             SELECT snapshot_id,object_id,SUM(paid_cents+discipline_cents+deadline_cents) closed_cents
             FROM `{$p}fm2_pilot_otiz_payment_closures` GROUP BY snapshot_id,object_id
         ), raw_objects AS (
-            SELECT l.id object_id,l.regnumber,l.ordadr_address address,d.captured_at,
+            SELECT l.id object_id,{$registration} regnumber,{$address} address,{$entrance} entrance,d.captured_at,
                 JSON_EXTRACT(IF(JSON_VALID(d.payload_json),d.payload_json,'{}'),'$.fields.stops.raw') stops_json,
                 JSON_EXTRACT(IF(JSON_VALID(d.payload_json),d.payload_json,'{}'),'$.fields.weight.raw') capacity_json,
                 JSON_VALUE(IF(JSON_VALID(d.payload_json),d.payload_json,'{}'),'$.fields.lift_type.display') type_text,
@@ -76,13 +73,14 @@ final readonly class MariaDbObjectRegisterQuery
                 COALESCE(c.paid_cents,0) paid_cents,COALESCE(c.discipline_cents,0) discipline_cents,
                 COALESCE(c.deadline_cents,0) deadline_cents,COALESCE(sc.closed_cents,0) snapshot_closed_cents
             FROM `{$l}fm_maintable` l
+            LEFT JOIN `{$p}fm2_object_detail_edits` details ON details.object_id=l.id
             LEFT JOIN `{$p}fm2_pilot_object_details` d ON d.object_id=l.id
             LEFT JOIN latest so ON so.object_id=l.id AND so.position_no=1
             LEFT JOIN closures c ON c.object_id=l.id
             LEFT JOIN snapshot_closures sc ON sc.object_id=l.id AND sc.snapshot_id=so.snapshot_id
             {$rawPage}
         ), operands AS (
-            SELECT object_id,regnumber,address,captured_at,snapshot_id,report_date,current_progress_bp,progress_fact_date,
+            SELECT object_id,regnumber,address,entrance,captured_at,snapshot_id,report_date,current_progress_bp,progress_fact_date,
                 accrued_cents,pool_cents,kss_bp,calculation_state,has_calculation,trace_progress_cents,
                 paid_cents,discipline_cents,deadline_cents,snapshot_closed_cents,{$stops} stops,{$capacity} capacity,
                 CASE WHEN LOCATE('груз',LOWER(COALESCE(type_text,'')))>0 THEN 'cargo' ELSE 'passenger' END lift_type,

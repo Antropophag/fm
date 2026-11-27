@@ -455,10 +455,6 @@
           a.className = "fm2-offline-object";
           a.dataset.offlineObject = "";
           a.dataset.objectId = item.objectId;
-          a.dataset.search =
-            `${item.address} ${item.registrationNumber} ${item.entrance}`.toLocaleLowerCase(
-              "ru",
-            );
           a.href = item.checklistUrl;
           a.innerHTML = `<span class="fm2-offline-object__copy"><strong></strong><span></span></span><span class="fm2-offline-object__status"></span>`;
           a.querySelector("strong").textContent =
@@ -476,9 +472,13 @@
       document.querySelector("[data-offline-login]").hidden = true;
       const search = document.querySelector("[data-offline-search]");
       search.addEventListener("input", () => {
-        const q = search.value.trim().toLocaleLowerCase("ru");
-        for (const row of list.children)
-          row.hidden = q !== "" && !row.dataset.search.includes(q);
+        const ids = new Set(globalThis.FMonitorAddressSearch.ids(items.map((item) => ({
+          id: String(item.objectId),
+          address: String(item.address || ""),
+          entrance: item.entrance == null ? "" : String(item.entrance),
+          extra: [item.registrationNumber == null ? "" : String(item.registrationNumber)],
+        })), search.value));
+        for (const row of list.children) row.hidden = !ids.has(row.dataset.objectId);
       });
     } catch (error) {
       state.textContent = error.message;
