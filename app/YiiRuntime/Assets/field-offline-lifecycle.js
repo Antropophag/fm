@@ -72,6 +72,24 @@
     ]);
   }
 
+  async function settleSelectedWorker(worker) {
+    if (!worker?.state || worker.state === "activated") return;
+    if (worker.state === "redundant") throw updateRequired("Обновление FMonitor не активировалось. Закройте вкладки и снова откройте страницу.");
+    await Promise.race([
+      new Promise((resolve, reject) => {
+        const changed = () => {
+          if (worker.state === "activated" || worker.state === "redundant") {
+            worker.removeEventListener("statechange", changed);
+            worker.state === "activated" ? resolve() : reject(updateRequired("Обновление FMonitor не активировалось. Закройте вкладки и снова откройте страницу."));
+          }
+        };
+        worker.addEventListener("statechange", changed);
+        changed();
+      }),
+      new Promise((_, reject) => setTimeout(() => reject(updateRequired("Обновление FMonitor ещё активируется. Закройте вкладки и снова откройте страницу.")), 15000)),
+    ]);
+  }
+
   async function exactActorAgreement(worker, deviceId) {
     const [actor, checked] = await Promise.all([
       Store.actorState(deviceId),
@@ -126,6 +144,7 @@
     }
     const worker = registered.active || navigator.serviceWorker.controller;
     if (!worker) throw new Error("Не удалось запустить работу без сети.");
+    await settleSelectedWorker(worker);
     let runtime;
     try {
       runtime = await workerCall(worker, { type: "FIELD_RUNTIME_INFO" }, 3000);
@@ -160,11 +179,13 @@
           type: "FIELD_ESTABLISH_ACTOR",
           userId,
           epoch: actor.epoch,
+          generation: runtime.generation,
           url: location.href,
         });
         if (!established.ok) throw new Error("Не удалось подтвердить текущую сессию.");
       }
     }
+    await workerCall(worker, {type:"FIELD_CLIENT_GENERATION",userId,epoch:actor.epoch,generation:runtime.generation}).catch(()=>({ok:false}));
     if (registered.waiting) showUpdateNotice();
   }
 

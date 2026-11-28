@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import vm from 'node:vm';
+import vm from '../Support/worker_vm.mjs';
 // PRODUCTION-PERFORMANCE-001 A02/A12 and RELIABLE-FIELD-OFFLINE-001 A1/A8.
 // Exercise the shipped individual RPC protocol. Scope is one preparation attempt;
 // a later scope intentionally refreshes documents, including already-cached ones.
@@ -20,16 +20,16 @@ function fixture(){
   return new Response('<main data-checklist data-user-id="1"></main>',{headers:{'Content-Type':'text/html'}});
  };
  const caches={async open(name){if(!storage.has(name))storage.set(name,new Map());const m=storage.get(name);return{async match(k){return m.get(key(k))?.clone()},async put(k,v){m.set(key(k),v.clone())},async delete(k){return m.delete(key(k))},async keys(){return [...m.keys()].map(x=>new Request(x))},async addAll(paths){for(const p of paths){const r=await fetcher(p);if(!r.ok)throw Error('asset');m.set(key(p),r.clone());}}};},async keys(){return [...storage.keys()]},async delete(name){return storage.delete(name)}};
- const clients=['a','b'].map(id=>({id,url:'https://fmonitor.test/pilot/construction-control',postMessage:message=>notices.push(message)}));
+ const clients=['a','b'].map(id=>({id,type:'window',frameType:'top-level',url:'https://fmonitor.test/pilot/construction-control',postMessage:message=>notices.push(message)}));
  const self={location:new URL('https://fmonitor.test/pilot/assets/checklist-sw.js'),clients:{get:async id=>clients.find(x=>x.id===id),matchAll:async()=>clients,claim:async()=>{throw Error('unexpected claim')}},skipWaiting:async()=>{throw Error('unexpected skipWaiting')},addEventListener:(type,handler)=>listeners.set(type,handler)};
  vm.runInNewContext(source,{self,caches,fetch:fetcher,URL,Request,Response,Headers,AbortController,AbortSignal,DOMException,TextEncoder,crypto:globalThis.crypto,setTimeout,clearTimeout,console});
  const rpc=(data,client='a')=>{let work,reply;listeners.get('message')({data,source:clients.find(x=>x.id===client),ports:[{postMessage:value=>reply=value}],waitUntil:p=>work=p});const promise=Promise.resolve(work).then(()=>reply);jobs.push(promise);return promise;};
  const lifecycle=async type=>{let work;listeners.get(type)({waitUntil:p=>work=p});await work;};
  const warm=(id,scope='first',client='a')=>rpc({type:'CACHE_CHECKLIST',url:'https://fmonitor.test/pilot/objects/'+id+'/checklist',userId:1,epoch:0,generation:build,scope},client);
  const cancel=(scope,client='a')=>rpc({type:'CANCEL_CHECKLIST_WARMUPS',scope,userId:1,epoch:0,generation:build},client);
- const nav=path=>{const request=new Request('https://fmonitor.test'+path);Object.defineProperty(request,'mode',{value:'navigate'});let response;listeners.get('fetch')({request,respondWith:p=>response=p});jobs.push(Promise.resolve(response));return response;};
+ const nav=path=>{const request=new Request('https://fmonitor.test'+path);Object.defineProperty(request,'mode',{value:'navigate'});Object.defineProperty(request,'destination',{value:'document'});let response;listeners.get('fetch')({request,respondWith:p=>response=p});jobs.push(Promise.resolve(response));return response;};
  const drain=async()=>{for(let n=0;n<30;n++){gates.splice(0).forEach(x=>x.release());await tick();}await Promise.allSettled(jobs);};
- return{requests,assets,notices,storage,lifecycle,warm,cancel,rpc,nav,drain,gates,active:()=>active,max:()=>maxActive,async ready(){await lifecycle('install');await lifecycle('activate');const actor=await rpc({type:'FIELD_ESTABLISH_ACTOR',userId:1,epoch:0,url:'https://fmonitor.test/pilot/objects'});assert.equal(actor.ok,true,'fixture established authenticated actor');}};
+ return{requests,assets,notices,storage,lifecycle,warm,cancel,rpc,nav,drain,gates,active:()=>active,max:()=>maxActive,async ready(){await lifecycle('install');await lifecycle('activate');const actor=await rpc({type:'FIELD_ESTABLISH_ACTOR',userId:1,epoch:0,generation:build,url:'https://fmonitor.test/pilot/objects'});assert.equal(actor.ok,true,'fixture established authenticated actor');}};
 }
 const failures=[];
 async function test(name,run){const f=fixture();try{await f.ready();await run(f);console.log('PASS '+name);}catch(error){failures.push({name,message:error.message});console.error('FAIL '+name+': '+error.message);}finally{await f.drain();}}

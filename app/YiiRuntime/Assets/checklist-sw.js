@@ -1,4 +1,5 @@
 "use strict";
+importScripts("__FMONITOR_CACHE_MODULE__");
 
 const META_CACHE = "fmonitor2-field-meta";
 const GENERATION_KEY = "/pilot/__field-generation__";
@@ -39,6 +40,14 @@ const completedWarmups = new Map();
 let activeWarmups = 0;
 let foregroundNavigations = 0;
 let epoch = 0;
+const liveClientGenerations = new Map();
+globalThis.FMonitorFieldCacheTarget = (userId) => `fmonitor2-field-doc-${BUILD_GENERATION}-${userId}`;
+globalThis.FMonitorFieldCacheHash = responseHash;
+globalThis.FMonitorFieldCacheFence = async expected => {
+  const current=await identity();return Boolean(current&&!current.tombstone&&Number(current.userId)===Number(expected?.userId)&&Number(current.epoch)===Number(expected?.epoch)&&expected?.generation===BUILD_GENERATION&&(await activeGeneration())===BUILD_GENERATION);
+};
+globalThis.FMonitorFieldCachePromote=async response=>{const headers=new Headers(response.headers);headers.set("Content-Type","text/html; charset=UTF-8");return new Response(await compatibleHtml(await response.text()),{status:200,headers});};
+globalThis.FMonitorFieldOpenObjectIds=async()=>new Set((await self.clients.matchAll({includeUncontrolled:true})).map(client=>Number(new URL(client.url).pathname.match(/\/objects\/(\d+)\/checklist$/)?.[1])).filter(Number.isInteger));
 
 const checklistPath = (path) =>
   /^\/pilot\/(?:objects|construction-control\/objects)\/[1-9][0-9]*\/checklist$/.test(
@@ -64,6 +73,10 @@ self.addEventListener("message", (event) => {
     });
     return;
   }
+  if (["FIELD_SET_OWN_OBJECTS", "FIELD_CACHE_STATUS", "FIELD_CACHE_MAINTAIN", "FIELD_CLIENT_GENERATION"].includes(data.type)) {
+    event.waitUntil(managedCacheMessage(data, event.ports?.[0], event.source));
+    return;
+  }
   if (data.type === "FIELD_LOGOUT") {
     event.waitUntil(
       tombstone().then(() => event.ports?.[0]?.postMessage({ ok: true })),
@@ -71,7 +84,7 @@ self.addEventListener("message", (event) => {
     return;
   }
   if (data.type === "FIELD_ESTABLISH_ACTOR") {
-    event.waitUntil(establishActor(data, event.ports?.[0]));
+    event.waitUntil(establishActor(data, event.ports?.[0], event.source));
     return;
   }
   if (data.type === "FIELD_CHECK_ACTOR") {
@@ -91,7 +104,7 @@ self.addEventListener("message", (event) => {
     return;
   }
   if (data.type === "CHECK_CHECKLIST_CACHE") {
-    event.waitUntil(checkDocument(data, event.ports?.[0]));
+    event.waitUntil(checkDocument(data, event.ports?.[0],event.source));
     return;
   }
   if (data.type === "CACHE_CHECKLIST") {
@@ -165,6 +178,8 @@ async function installShell() {
     await cache.put(ASSET_MANIFEST, manifestResponse);
     if (!(await completeShellCache(cache, manifest)))
       throw new Error("Staged shell validation failed");
+    const targetName=`fmonitor2-field-shell-${BUILD_GENERATION}`,targetBytes=(await caches.keys()).includes(targetName)?await FMonitorFieldCache.cacheBytes(await caches.open(targetName)):0,growth=(await FMonitorFieldCache.cacheBytes(cache))-targetBytes;
+    if(!(await FMonitorFieldCache.capacity(Math.max(0,growth))).ok)throw new Error("Shell cache budget exhausted");
   } catch (error) {
     await caches.delete(stagingName);
     throw error;
@@ -173,6 +188,7 @@ async function installShell() {
 
 async function activateWorker() {
   await publishInstalledShell();
+  FMonitorFieldCache.invalidate();
   await notifyUpdate();
   await clearBuildStaging();
 }
@@ -207,7 +223,14 @@ async function publishInstalledShell() {
     const staging = await caches.open(name);
     const manifest = await cacheManifest(staging);
     if (!manifest || !(await completeShellCache(staging, manifest))) continue;
-    await promoteShellCache(staging, cacheName, manifest);
+    await FMonitorFieldCache.exclusive(async()=>{
+      FMonitorFieldCache.invalidate();
+      const targetBytes=(await caches.keys()).includes(cacheName)?await FMonitorFieldCache.cacheBytes(await caches.open(cacheName)):0,growth=(await FMonitorFieldCache.cacheBytes(staging))-targetBytes;
+      if(!(await FMonitorFieldCache.capacity(Math.max(0,growth))).ok)throw Error("Shell cache budget exhausted at publication");
+      await promoteShellCache(staging, cacheName, manifest);
+      FMonitorFieldCache.invalidate();
+      await FMonitorFieldCache.markMutation();
+    });
     return;
   }
   throw new Error("Complete staged shell unavailable");
@@ -257,6 +280,8 @@ async function promoteShellCache(staging, cacheName, manifest) {
       throw new Error("Published shell validation failed");
   } catch (error) {
     await caches.delete(cacheName);
+    FMonitorFieldCache.invalidate();
+    await FMonitorFieldCache.markMutation();
     throw error;
   }
 }
@@ -296,6 +321,76 @@ function safeChecklist(value) {
 async function activeGeneration() {
   const response = await (await caches.open(META_CACHE)).match(GENERATION_KEY);
   return response ? await response.text() : null;
+}
+
+async function validManagedMessage(data, source) {
+  let sourceUrl;
+  try { sourceUrl = new URL(source?.url || ""); } catch { return false; }
+  const current = await identity();
+  if(current)epoch=Math.max(epoch,Number(current.epoch)||0);
+  return sourceUrl.origin === self.location.origin && sourceUrl.pathname.startsWith("/pilot/") &&
+    Number.isInteger(Number(data.userId)) && Number(data.userId) > 0 &&
+    current && !current.tombstone && Number(current.userId) === Number(data.userId) &&
+    Number(current.epoch) === Number(data.epoch) && data.generation === BUILD_GENERATION &&
+    (await activeGeneration()) === BUILD_GENERATION;
+}
+
+async function managedCacheMessage(data, port, source) {
+  const validationData=data.type==="FIELD_CLIENT_GENERATION"?{...data,generation:BUILD_GENERATION}:data;
+  if (!(await validManagedMessage(validationData, source))) { port?.postMessage({ok:false}); return; }
+  const userId=Number(data.userId);
+  if(data.type==="FIELD_SET_OWN_OBJECTS"){
+    const items=Array.isArray(data.items)?data.items.filter(validCatalogueItem):[];
+    if(items.length!==data.items?.length||typeof data.setVersion!=="string"){port?.postMessage({ok:false});return;}
+    if(!(await FMonitorFieldCache.setOwn(userId,data.setVersion,items,{userId,epoch:Number(data.epoch),generation:BUILD_GENERATION}))){port?.postMessage({ok:false});return;}await maintainManagedCache(userId,Number(data.epoch));if(!(await validManagedMessage(validationData,source))){port?.postMessage({ok:false});return;}port?.postMessage({ok:true});return;
+  }
+  if(data.type==="FIELD_CLIENT_GENERATION"){
+    const names=await caches.keys(), generation=String(data.generation||"");
+    if(!source?.id||!names.includes(`fmonitor2-field-shell-${generation}`)){port?.postMessage({ok:false});return;}
+    liveClientGenerations.set(source.id,generation);await maintainManagedCache(userId,Number(data.epoch));if(!(await validManagedMessage(validationData,source))){port?.postMessage({ok:false});return;}port?.postMessage({ok:true});return;
+  }
+  if(data.type==="FIELD_CACHE_MAINTAIN")await maintainManagedCache(userId,Number(data.epoch));
+  const value=await FMonitorFieldCache.status(userId,{userId,epoch:Number(data.epoch),generation:BUILD_GENERATION});if(!(await validManagedMessage(validationData,source))){port?.postMessage({ok:false});return;}port?.postMessage({ok:true,...value});
+}
+
+function validCatalogueItem(item){
+  if(!item||!Number.isInteger(Number(item.objectId))||Number(item.objectId)<=0||Number(item.userId||0)<0)return false;
+  try{const url=new URL(item.checklistUrl,self.location.origin);return url.origin===self.location.origin&&checklistPath(url.pathname)&&url.pathname.match(/\/objects\/(\d+)\/checklist$/)?.[1]===String(Number(item.objectId));}catch{return false;}
+}
+
+async function maintainManagedCache(userId,actorEpoch){
+  return FMonitorFieldCache.exclusive(async()=>{
+    const expected={userId,epoch:actorEpoch,generation:BUILD_GENERATION};
+    if(!(await FMonitorFieldCacheFence(expected)))return {ok:false,limited:true};
+    const meta=await caches.open(META_CACHE),retained=await meta.match(GENERATION_HISTORY_KEY);let history=[];
+    try{history=retained?await retained.json():[];}catch{}
+    const previous=[...history].reverse().find(value=>value!==BUILD_GENERATION)||null;
+    const clients=await self.clients.matchAll({includeUncontrolled:true}),ids=new Set(clients.map(client=>client.id));
+    const openObjectIds=new Set(clients.map(client=>Number(new URL(client.url).pathname.match(/\/objects\/(\d+)\/checklist$/)?.[1])).filter(Number.isInteger));
+    for(const id of [...liveClientGenerations.keys()])if(!ids.has(id))liveClientGenerations.delete(id);
+    const unknownLive=clients.some(client=>!liveClientGenerations.has(client.id));
+    const result=await FMonitorFieldCache.maintain(userId,BUILD_GENERATION,previous,new Set(liveClientGenerations.values()),unknownLive,openObjectIds,expected,true);
+    if(unknownLive||result.limited||!(await FMonitorFieldCacheFence(expected)))return result;
+    const keep=[previous,BUILD_GENERATION,...liveClientGenerations.values()].filter(Boolean),allowed=new Set(keep),names=await caches.keys();
+    const foreignUsers=new Set(names.map(name=>Number(name.match(/^fmonitor2-field-doc-[a-f0-9]{64}-([1-9][0-9]*)$/)?.[1])).filter(id=>Number.isInteger(id)&&id!==userId));
+    for(const foreignUser of foreignUsers)if(!(await FMonitorFieldCache.consolidateUser(foreignUser,allowed,expected,true)))return {...result,limited:true};
+    const legacyUsers=new Set(names.map(name=>Number(name.match(/^fmonitor2-checklist-doc-.+-([1-9][0-9]*)$/)?.[1])).filter(Number.isInteger));
+    if([...legacyUsers].some(legacyUser=>legacyUser!==userId))return {...result,limited:true};
+    for(const legacyUser of legacyUsers)if(!(await FMonitorFieldCache.consolidateLegacyUser(legacyUser,openObjectIds,expected,true)))return {...result,limited:true};
+    for(const name of await caches.keys())if(name.startsWith("fmonitor2-checklist-shell-")){
+      if(!(await FMonitorFieldCacheFence(expected)))return {...result,limited:true};
+      await caches.delete(name);FMonitorFieldCache.invalidate();await FMonitorFieldCache.markMutation();
+    }
+    for(const name of await caches.keys()){
+      const generation=name.match(/^fmonitor2-field-shell-([a-f0-9]{64})$/)?.[1];
+      if(generation&&!allowed.has(generation)){
+        if(!(await FMonitorFieldCacheFence(expected)))return {...result,limited:true};
+        await caches.delete(name);FMonitorFieldCache.invalidate();await FMonitorFieldCache.markMutation();
+      }
+    }
+    if(await FMonitorFieldCacheFence(expected))await meta.put(GENERATION_HISTORY_KEY,new Response(JSON.stringify([previous,BUILD_GENERATION].filter(Boolean))));
+    return result;
+  });
 }
 
 async function shellCache() {
@@ -509,39 +604,65 @@ async function confirmActor(data, port) {
   port?.postMessage({ ok: true });
 }
 
-async function establishActor(data, port) {
+async function liveBootstrapSource(source, objectId) {
+  if (!(await liveActorSource(source))) return false;
+  let sourceUrl;
+  try { sourceUrl = new URL(source.url); } catch { return false; }
+  return checklistPath(sourceUrl.pathname) && Number(sourceUrl.pathname.match(/\/objects\/(\d+)\/checklist$/)?.[1]) === objectId;
+}
+
+async function liveActorSource(source) {
+  if (!source?.id || source.type !== "window" || !["top-level", "auxiliary"].includes(source.frameType)) return false;
+  let sourceUrl;
+  try { sourceUrl = new URL(source.url); } catch { return false; }
+  if(sourceUrl.origin!==self.location.origin||!sourceUrl.pathname.startsWith("/pilot/"))return false;
+  return (await self.clients.matchAll({includeUncontrolled:true})).some(client => client.id === source.id && client.url === source.url);
+}
+
+async function establishActor(data, port, source) {
   const current = await identity();
-  if (current?.tombstone || Number(data.epoch) < Number(current?.epoch || 0)) {
+  const userId=Number(data.userId),actorEpoch=Number(data.epoch);
+  if (!Number.isInteger(userId) || userId <= 0 || !Number.isInteger(actorEpoch) || actorEpoch < 0 || data.generation !== BUILD_GENERATION || current?.tombstone || actorEpoch < Number(current?.epoch || 0)) {
     port?.postMessage({ ok: false });
+    return;
+  }
+  if(current){
+    const exact=Number(current.userId)===userId&&Number(current.epoch)===actorEpoch;
+    port?.postMessage({ok:exact,cacheReady:false,...(exact?{}:{reasonCode:"ACTOR_MISMATCH"})});
     return;
   }
   try {
     const target = new URL(data.url || "", self.location.origin);
-    if (
-      target.origin !== self.location.origin ||
-      !target.pathname.startsWith("/pilot/")
-    )
-      throw new Error();
+    const objectId=Number(target.pathname.match(/\/objects\/(\d+)\/checklist$/)?.[1]);
+    if (target.origin !== self.location.origin || !target.pathname.startsWith("/pilot/") || !(await liveActorSource(source))) throw new Error("Invalid actor source");
+    const checklistBootstrap=checklistPath(target.pathname)&&Number.isInteger(objectId)&&await liveBootstrapSource(source,objectId);
     const response = await fetch(target.href, {
       credentials: "include",
       cache: "no-store",
       headers: { Accept: "text/html" },
       signal: AbortSignal.timeout ? AbortSignal.timeout(15000) : undefined,
     });
-    if (Number(await authenticated(response)) !== Number(data.userId))
-      throw new Error();
-    epoch = Math.max(epoch, Number(current?.epoch || 0), Number(data.epoch));
-    await writeIdentity({
-      userId: Number(data.userId),
-      epoch,
-      tombstone: false,
-    });
-    if (checklistPath(target.pathname)) {
-      await (
-        await documentCache(data.userId)
-      ).put(target.pathname, await cacheableResponse(response));
-    }
-    port?.postMessage({ ok: true });
+    const redirect=redirectKind(response,target);
+    if(redirect==="login"||Number(await authenticated(response))!==userId)throw Error("Bootstrap authentication failed");
+    if((await identity())!==null||(await activeGeneration())!==BUILD_GENERATION||!(await liveActorSource(source)))throw Error("Bootstrap context changed");
+    const metadata=checklistBootstrap&&redirect!=="unrecognized"?await offlineMetadata(response,target,userId):null;
+    if(checklistBootstrap&&(!metadata||metadata===false))throw Error("Bootstrap metadata invalid");
+    epoch=Math.max(epoch,actorEpoch);await writeIdentity({userId,epoch:actorEpoch,tombstone:false});
+    const after=await identity();if(after?.tombstone||Number(after?.userId)!==userId||Number(after?.epoch)!==actorEpoch||(await activeGeneration())!==BUILD_GENERATION)throw Error("Bootstrap context changed");
+    if(!checklistBootstrap){port?.postMessage({ok:true,cacheReady:false});return;}
+    const expected={userId,epoch:actorEpoch,generation:BUILD_GENERATION},proof={userId,objectId,source:"substitution",expiresAt:Date.now()+FMonitorFieldCache.TTL,confirmedAt:Date.now(),metadata};
+    const admitted=await FMonitorFieldCache.admit(userId,target.pathname,await cacheableResponse(response),expected,proof);
+    if(!admitted.ok){const actorStillValid=await FMonitorFieldCacheFence(expected);port?.postMessage({ok:actorStillValid&&admitted.reasonCode!=="CACHE_CONTEXT_STALE",cacheReady:false,reasonCode:admitted.reasonCode});return;}
+    let committed=false,outcome={ok:true,cacheReady:false,reasonCode:"CACHE_METADATA_FAILED"};
+    try{
+      if(!(await liveBootstrapSource(source,objectId))||!(await FMonitorFieldCacheFence(expected))){outcome={ok:false,cacheReady:false,reasonCode:"CACHE_CONTEXT_STALE"};}
+      else if(await FMonitorFieldCache.record(userId,metadata,true,expected)){
+        if(!(await liveBootstrapSource(source,objectId))||!(await FMonitorFieldCacheFence(expected)))outcome={ok:false,cacheReady:false,reasonCode:"CACHE_CONTEXT_STALE"};
+        else{await FMonitorFieldCache.commitWrite(admitted.writeId);committed=true;outcome={ok:true,cacheReady:true};}
+      }
+    }catch{}
+    finally{if(!committed)await FMonitorFieldCache.deleteIfWrite(userId,target.pathname,admitted.writeId);}
+    port?.postMessage(outcome);
   } catch {
     port?.postMessage({ ok: false });
   }
@@ -786,6 +907,7 @@ function dispatchWarmup(entry) {
       const result = {
         ok: false,
         message: error?.message || "Не удалось сохранить объект.",
+        reasonCode: error?.reasonCode,
       };
       for (const subscriber of entry.subscribers)
         finishWarmupSubscriber(subscriber, result);
@@ -813,33 +935,24 @@ async function refreshWarmup(entry) {
   if (!entryHasConsumers(entry)) throw new DOMException("Cancelled", "AbortError");
   if (!(await warmupContextValid(entry.userId, entry.epoch, entry.generation)))
     throw new Error("Сессия подготовки устарела.");
-  const cache = await documentCache(userId);
-  await cache.put(entry.url.pathname, await cacheableResponse(response));
-  if (
-    !entryHasConsumers(entry) ||
-    !(await warmupContextValid(entry.userId, entry.epoch, entry.generation))
-  ) {
-    await cache.delete(entry.url.pathname);
-    throw new Error("Сессия подготовки устарела.");
-  }
+  const own=await FMonitorFieldCache.ownItem(userId,Number(entry.url.pathname.match(/\/objects\/(\d+)\/checklist$/)?.[1])), expected={userId,epoch:entry.epoch,generation:entry.generation}, proof=own?{userId,objectId:Number(own.objectId),source:"own",expiresAt:null,confirmedAt:Date.now(),metadata:own}:null, admitted=await FMonitorFieldCache.admit(userId,entry.url.pathname,await cacheableResponse(response),expected,proof);
+  if(!admitted.ok){const error=new Error("Недостаточно места для сохранения объекта.");error.reasonCode=admitted.reasonCode;throw error;}
+  let committed=false;
+  try{
+    if(own&&!(await FMonitorFieldCache.record(userId,own,false,expected)))throw Error("Не удалось подтвердить объект.");
+    if(!entryHasConsumers(entry)||!(await warmupContextValid(entry.userId,entry.epoch,entry.generation)))throw Error("Сессия подготовки устарела.");
+    await FMonitorFieldCache.commitWrite(admitted.writeId);committed=true;
+  }finally{if(!committed)await FMonitorFieldCache.deleteIfWrite(userId,entry.url.pathname,admitted.writeId);}
   return { contentHash, generation: BUILD_GENERATION };
 }
 
-async function checkDocument(data, port) {
+async function checkDocument(data, port, source) {
   const url = safeChecklist(data.url);
-  const current = await identity();
-  let response = null;
-  if (
-    url &&
-    current &&
-    !current.tombstone &&
-    Number(current.userId) === Number(data.userId)
-  ) {
-    response = await (await documentCache(current.userId)).match(url.pathname);
-    if (!response)
-      response = await promotePreviousDocument(url.pathname, current.userId);
-  }
+  const valid=await validManagedMessage(data,source),objectId=Number(url?.pathname.match(/\/objects\/(\d+)\/checklist$/)?.[1]);
+  if(!valid||!url||!Number.isInteger(objectId)||!(await FMonitorFieldCache.cacheCheckAllowed(Number(data.userId),objectId))){port?.postMessage({ok:false,contentHash:null});return;}
+  const found=await FMonitorFieldCache.findObjectDocument(Number(data.userId),objectId,url.pathname),response=found?.response||null;
   const contentHash = response ? await responseHash(response) : null;
+  if(!(await validManagedMessage(data,source))){port?.postMessage({ok:false,contentHash:null});return;}
   port?.postMessage({
     ok:
       Boolean(response) &&
@@ -858,6 +971,23 @@ async function foregroundNavigate(request, url) {
   }
 }
 
+function redirectKind(response, requestedUrl) {
+  if (!response.redirected) return "none";
+  try {
+    const target = new URL(response.url);
+    if (target.origin !== self.location.origin) return "unrecognized";
+    if (["/pilot/login", "/pilot/otiz/login"].includes(target.pathname))
+      return "login";
+    const requestedId = requestedUrl.pathname.match(/\/objects\/(\d+)\/checklist$/)?.[1];
+    const targetId = target.pathname.match(/\/objects\/(\d+)\/checklist$/)?.[1];
+    return checklistPath(target.pathname) && requestedId === targetId
+      ? "checklist"
+      : "unrecognized";
+  } catch {
+    return "unrecognized";
+  }
+}
+
 async function navigate(request, url) {
   const startingIdentity = await identity();
   epoch = Math.max(epoch, Number(startingIdentity?.epoch || 0));
@@ -865,12 +995,18 @@ async function navigate(request, url) {
   const capturedGeneration = await activeGeneration();
   try {
     const response = await racedFetch(request, 3000);
+    const redirect = redirectKind(response, url);
     if (
       response.status === 401 ||
       response.status === 403 ||
-      response.redirected
-    )
+      redirect === "login"
+    ) {
+      const deniedId=Number(url.pathname.match(/\/objects\/(\d+)\/checklist$/)?.[1]);
+      const deniedFence=startingIdentity?{userId:Number(startingIdentity.userId),epoch:Number(startingIdentity.epoch),generation:capturedGeneration}:null;
+      if(deniedId&&deniedFence)try{await FMonitorFieldCache.revoke(deniedFence.userId,deniedId,deniedFence);}catch{}
       return response;
+    }
+    if (redirect === "unrecognized") return response;
     if (response.status < 500) {
       const userId = await authenticated(response);
       const current = await identity();
@@ -886,17 +1022,21 @@ async function navigate(request, url) {
         if (!current)
           await writeIdentity({ userId, epoch: captured, tombstone: false });
         if (captured === epoch && checklistPath(url.pathname)) {
-          const cache = await documentCache(userId);
-          await cache.put(url.pathname, await cacheableResponse(response));
-          const after = await identity();
-          if (
-            after?.tombstone ||
-            Number(after?.userId) !== userId ||
-            Number(after?.epoch) !== captured ||
-            captured !== epoch ||
-            (await activeGeneration()) !== BUILD_GENERATION
-          )
-            await cache.delete(url.pathname);
+          const metadata=await offlineMetadata(response,url,userId);
+          if(!metadata||metadata===false)return response;
+          const expected={userId,epoch:captured,generation:BUILD_GENERATION},own=await FMonitorFieldCache.ownItem(userId,metadata.objectId),proof={userId,objectId:Number(metadata.objectId),source:own?"own":"substitution",expiresAt:own?null:Date.now()+FMonitorFieldCache.TTL,confirmedAt:Date.now(),metadata};
+          const admitted=await FMonitorFieldCache.admit(userId,url.pathname,await cacheableResponse(response),expected,proof);
+          if(admitted.ok){
+            let committed=false;
+            try{
+              if(!(await FMonitorFieldCache.record(userId,metadata,true,expected)))throw Error("Cache metadata failed");
+              const after=await identity();
+              if(after?.tombstone||Number(after?.userId)!==userId||Number(after?.epoch)!==captured||captured!==epoch||(await activeGeneration())!==BUILD_GENERATION)throw Error("Cache context stale");
+              await FMonitorFieldCache.commitWrite(admitted.writeId);committed=true;
+              try{await maintainManagedCache(userId,captured);}catch{}
+            }catch{}
+            finally{if(!committed)await FMonitorFieldCache.deleteIfWrite(userId,url.pathname,admitted.writeId);}
+          }
         }
       }
       return response;
@@ -911,9 +1051,12 @@ async function navigate(request, url) {
         });
   }
   if (queuePath(url.pathname)) return offlineShell();
+  const objectId=Number(url.pathname.match(/\/objects\/(\d+)\/checklist$/)?.[1]), offlineFence={userId:Number(current.userId),epoch:Number(current.epoch),generation:BUILD_GENERATION}, access=await FMonitorFieldCache.access(current.userId,objectId,offlineFence);
+  if(access===false)return new Response("Этот чек-лист недоступен без подключения.",{status:503});
   const currentCache = await documentCache(current.userId);
   const cached = await currentCache.match(url.pathname);
   if (cached) return cached;
+  const alias=await FMonitorFieldCache.findObjectDocument(current.userId,objectId,url.pathname);if(alias)return (await promotePreviousDocument(alias.path,current.userId))||alias.response;
   const promoted = await promotePreviousDocument(url.pathname, current.userId);
   return (
     promoted ||
@@ -921,6 +1064,17 @@ async function navigate(request, url) {
       status: 503,
     })
   );
+}
+
+async function offlineMetadata(response,url,userId){
+  try{
+    const html=await response.clone().text(), match=html.match(/\sdata-offline-cache="([^"]+)"/);if(!match)return null;
+    const binary=atob(match[1]), bytes=Uint8Array.from(binary,x=>x.charCodeAt(0)), value=JSON.parse(new TextDecoder().decode(bytes));
+    if(Number(value.userId)!==Number(userId)||Number(value.objectId)!==Number(url.pathname.match(/\/objects\/(\d+)\/checklist$/)?.[1])||!validCatalogueItem(value))return false;
+    const canonical=new URL(value.checklistUrl,self.location.origin).pathname;
+    if(canonical!==url.pathname&&!checklistPath(canonical))return false;
+    return {...value,objectId:Number(value.objectId),userId:Number(value.userId),checklistUrl:url.pathname};
+  }catch{return false;}
 }
 
 async function promotePreviousDocument(path, userId) {
@@ -951,9 +1105,13 @@ async function promotePreviousDocument(path, userId) {
     const html = await compatibleHtml(await response.text());
     const promoted = new Response(html, {
       status: 200,
-      headers: { "Content-Type": "text/html; charset=UTF-8" },
+      headers: response.headers,
     });
-    await (await documentCache(userId)).put(path, promoted.clone());
+    const current=await identity(),expected={userId,epoch:Number(current?.epoch),generation:BUILD_GENERATION},admitted=await FMonitorFieldCache.admit(userId,path,promoted.clone(),expected,null);
+    if(!admitted.ok)return promoted;
+    let committed=false;
+    try{if(!(await FMonitorFieldCacheFence(expected)))throw Error("Promotion context stale");await FMonitorFieldCache.commitWrite(admitted.writeId);committed=true;}
+    finally{if(!committed)await FMonitorFieldCache.deleteIfWrite(userId,path,admitted.writeId);}
     return promoted;
   }
   return null;
@@ -984,17 +1142,20 @@ async function compatibleHtml(html) {
     "field-offline-sync.js",
     "field-offline-photo.js",
     "field-offline.js",
+    "checklist.js",
   ];
   const scripts = ordered
     .map((name) => byName.get(name))
     .filter(Boolean)
     .map((url) => `<script src="${url}" defer></script>`)
     .join("");
-  const checklist = byName.get("checklist.js");
-  let result = html.replace(
-    /<script[^>]+src="\/pilot\/assets\/checklist\.js(?:\?v=[^"]+)?"[^>]*><\/script>/,
-    `${scripts}<script src="${checklist}" defer></script>`,
-  );
+  const engineNames=ordered.map(name=>name.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|");
+  const engineTag=new RegExp(`<script\\b[^>]*\\bsrc\\s*=\\s*(["'])\\/pilot\\/assets\\/(?:${engineNames})(?:\\?[^"']*)?\\1[^>]*>\\s*<\\/script\\s*>`,"gi");
+  const marker="<!--FMONITOR_FIELD_ENGINE-->";let marked=false;
+  let result=html.replace(engineTag,()=>{if(marked)return "";marked=true;return marker;});
+  if(marked)result=result.replace(marker,scripts);
+  else if(/<\/body\s*>/i.test(result))result=result.replace(/<\/body\s*>/i,`${scripts}</body>`);
+  else result+=scripts;
   for (const [name, url] of byName) {
     const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     result = result.replace(

@@ -25,7 +25,7 @@ const results = [];
    const url=new URL(route.request().url());
    if(url.pathname==='/pilot/construction-control'||url.pathname.endsWith('/checklist')){
     // The real Yii-rendered page; lifecycle/store dependencies replaced at their public ports below.
-    let html=(url.pathname.endsWith('/checklist')?c.checklistHtml:c.html).replace(/<script\b[^>]*>[\s\S]*?<\/script>/g,'');
+    let html=(url.pathname.endsWith('/checklist')?(mode==='readonly'?c.readOnlyHtml:c.checklistHtml):c.html).replace(/<script\b[^>]*>[\s\S]*?<\/script>/g,'');
     if(external)html=html.replace('href="/pilot/assets/manifest.webmanifest"','href="https://external.invalid/app.webmanifest"');
     return route.fulfill({status:200,headers:{'content-type':'text/html','content-security-policy':c.policies[url.pathname.endsWith('/checklist')?'pilot/objects/4512/checklist':'pilot/construction-control']},body:html});
    }
@@ -39,11 +39,12 @@ const results = [];
   await context.addInitScript(({mode})=>{
    window.fixtureMode=mode;
    const worker={postMessage(message,ports){if(!ports?.[0])return;
+    if(['FIELD_SET_OWN_OBJECTS','FIELD_CACHE_MAINTAIN','FIELD_CACHE_STATUS','FIELD_CLIENT_GENERATION'].includes(message.type))return ports[0].postMessage({ok:true,items:[],budgetBytes:104857600,reserveBytes:209715200,cacheBytes:0,storageVerified:true});
     if(message.type==='FIELD_RUNTIME_INFO')return ports[0].postMessage({protocol:3,generation:'a'.repeat(64)});
     if(message.type==='CACHE_CHECKLIST'){
      if(window.fixtureMode==='preparing')return;
-     const failed=window.fixtureMode==='partial'&&message.url.includes('/2/');
-     return ports[0].postMessage({ok:!failed,contentHash:'a'.repeat(64),generation:'a'.repeat(64),message:'Не удалось сохранить объект.'});
+     const failed=['partial','budget'].includes(window.fixtureMode)&&message.url.includes('/2/');
+     return ports[0].postMessage({ok:!failed,contentHash:'a'.repeat(64),generation:'a'.repeat(64),reasonCode:window.fixtureMode==='budget'?'CACHE_BUDGET_EXHAUSTED':undefined,message:window.fixtureMode==='budget'?'Недостаточно места для сохранения объекта.':'Не удалось сохранить объект.'});
     }
    }};
    const registration={active:worker};
@@ -54,6 +55,9 @@ const results = [];
   const page=await context.newPage();await page.goto(origin+(checklist?'/pilot/objects/4512/checklist':'/pilot/construction-control'));
   return {context,page};
  }
+ await check('R1 insufficient capacity retains exact prepared count and explains the cause',async()=>{
+  const {context,page}=await contextFor('budget');try{await page.addScriptTag({url:origin+'/pilot/assets/field-offline-preparation.js'});await page.locator('[data-offline-summary][data-state="partial"]').waitFor();assert.equal(await page.locator('[data-offline-count]').innerText(),'Доступно оффлайн: 1 из 2');const summary=page.locator('[data-offline-summary]');assert.match(await summary.getAttribute('aria-label'),/недостаточно места/i,'INTENDED_RED capacity refusal reason must reach accessible summary');assert.match(await summary.getAttribute('title'),/недостаточно места/i);}finally{await context.close();}
+ });
  await check('Chromium parses actual manifest and icons; cross-origin manifest is blocked',async()=>{
   for(const external of [false,true]){
    const {context,page}=await contextFor('ready',external);
@@ -95,6 +99,30 @@ const results = [];
    assert.deepEqual(errors,[]);
   }finally{await context.close();}
  });
+ await check('OFFLINE-CONSTRUCTION-CHECKLIST-UI A3 closeout information without action',async()=>{
+  const {context,page}=await contextFor('ready',false,true);
+  try{assert.match(await page.locator('.fm2-check-closeout').innerText(),/Последние 15% закрываются актом ПТО и декларацией/);assert.equal(await page.locator('.fm2-check-closeout a, .fm2-check-closeout button').count(),0,'INTENDED_RED closeout action removed');}finally{await context.close();}
+ });
+ await check('OFFLINE-CONSTRUCTION-CHECKLIST-UI A4 general-photo text centered',async()=>{
+  const {context,page}=await contextFor('ready',false,true);
+  try{for(const width of [320,390,800,1366]){
+   await page.setViewportSize({width,height:900});await page.locator('[data-general-photos]').scrollIntoViewIfNeeded();
+   const boxes=await page.locator('.fm2-general-photos__actions label').evaluateAll(nodes=>nodes.map(e=>{const text=[...e.childNodes].find(n=>n.nodeType===Node.TEXT_NODE&&n.textContent.trim())||e.querySelector('span');const range=document.createRange();range.selectNodeContents(text);const t=range.getBoundingClientRect(),b=e.getBoundingClientRect();return {label:e.textContent.trim(),delta:t.y+t.height/2-b.y-b.height/2,height:b.height};}));
+   await page.screenshot({path:path.join(c.artifacts,'general-labels-'+width+'.png')});
+   const aligned=await page.locator('.fm2-general-photos__actions').evaluate(e=>{const controls=[...e.children].map(c=>c.getBoundingClientRect());const gallery=e.querySelector('[data-open-gallery]'),range=document.createRange();range.selectNodeContents(gallery.firstChild);const text=range.getBoundingClientRect(),badge=gallery.querySelector('span').getBoundingClientRect();return {top:Math.max(...controls.map(x=>x.top))-Math.min(...controls.map(x=>x.top)),height:Math.max(...controls.map(x=>x.height))-Math.min(...controls.map(x=>x.height)),badge:Math.abs(text.y+text.height/2-badge.y-badge.height/2)};});assert(aligned.top<=1&&aligned.height<=1&&aligned.badge<=3,'aligned actions and inline gallery count '+JSON.stringify(aligned));
+   assert(boxes.every(x=>Math.abs(x.delta)<=3&&x.height>=(width<=680?44:40)),'INTENDED_RED label center '+width+' '+JSON.stringify(boxes));
+   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'no photo overflow');
+  }assert.equal(await page.getByLabel('Снять фото объекта',{exact:true}).count(),1);assert.equal(await page.getByLabel('Выбрать фото объекта',{exact:true}).count(),1);assert.equal(await page.locator('[data-general-photos] input[capture=environment]').count(),1);}finally{await context.close();}
+ });
+ await check('A3 general and section file inputs preserve focus, capture, multiple and enabled state',async()=>{
+  const {context,page}=await contextFor('ready',false,true);try{
+   const general=page.locator('[data-general-photos]'),section=page.locator('[data-check-section="1"]');assert.equal(await section.locator('[data-photo-input]').count(),2);assert.equal(await section.locator('input[capture=environment]').count(),1);assert.equal(await section.locator('input[multiple]').count(),1);
+   await page.addScriptTag({url:origin+'/pilot/assets/checklist.js'});await page.locator('[data-checklist][data-field-ready="true"]').waitFor();
+   for(const input of await general.locator('[data-photo-input]').all()){assert.equal(await input.isDisabled(),false);await input.focus();assert.equal(await input.evaluate(e=>document.activeElement===e),true,'file input keyboard-focusable');}
+   const picker=general.getByLabel('Выбрать фото объекта',{exact:true});await picker.evaluate(e=>{e.addEventListener('change',()=>{window.photoInputChangeCount=e.files.length;},{capture:true});});await picker.setInputFiles({name:'fixture.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64')});assert.equal(await page.evaluate(()=>window.photoInputChangeCount),1,'native picker still delivers files');
+  }finally{await context.close();}
+ });
+ await check('A3 read-only checklist keeps general and section photo inputs disabled',async()=>{const {context,page}=await contextFor('readonly',false,true);try{for(const input of await page.locator('[data-photo-input]').all())assert.equal(await input.isDisabled(),true);}finally{await context.close();}});
  await check('CHECKLIST-MINIMAL routine queue absent; sync colors; recovery actions preserved',async()=>{
   const {context,page}=await contextFor('ready',false,true);
   try {
