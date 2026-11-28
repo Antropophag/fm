@@ -648,6 +648,7 @@ unit	php	tests/Verification/yii2_worktree_autoload_001_test.php	governance
 unit	php	tests/WeeklyFkrReport/weekly_report_001_test.php	integration
 unit	php	tests/WeeklyFkrReport/weekly_schedule_001_test.php	integration
 unit	node	tests/Yii2/checklist_service_worker_navigation_001_test.mjs	unit
+unit	node	tests/Yii2/field_cache_retention_001_test.mjs	unit
 unit	php	tests/Yii2/order_local_preview_metadata_001_test.php	unit
 unit	node	tests/Yii2/production_performance_sw_001_test.mjs	unit
 unit	node	tests/Yii2/production_performance_upload_001_test.mjs	unit

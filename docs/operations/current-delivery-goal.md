@@ -1,3 +1,15 @@
+# Текущая цель — managed field offline cache и UI
+
+Owner28.11.2026 включил в тот же проход budget100МиБ/резерв200МиБ, все свои автоматически,7дней подмены (явно подтверждено), safe cleanup без потери pending. Контракт FIELD-CACHE-RETENTION-001; change `manage-field-offline-cache`. Root specs/tests; отдельный sol/low executor; независимые planner-required Gates3/final. Три UI-исправления прежнего поручения сохраняются. Только bounded local checks, full suite один exact-source CI. Merge/deploy не запрошены.
+
+---
+
+# Текущая цель — offline construction-control UI correction
+
+Поручение28.11.2026: проверить без сети привычный стройконтроль, убрать кнопку документарного закрытия при сохранении15% пояснения, выровнять текст общих фото. Scope/authorship/acceptance: [delivery record](offline-construction-checklist-ui-20261128.md). Выделенный worktree `fmonitor-2-offline-construction-checklist-ui`; root tests/spec, sol/low executor, independent final review. Локально bounded checks; полный suite только CI. Merge/home deploy этим поручением не запрошены. Предыдущая цель сохранена ниже.
+
+---
+
 # Текущая цель — flexible address search
 
 Поручение владельца 2026-11-27: подобрать готовое решение и интегрировать свободный поиск адреса во всех действующих разделах, включая подъезд. `игорная 10 1 1` означает дом 10, корпус 1, подъезд 1. Scope: поиск и его проекции; без изменения адресных фактов, финансовых расчётов, прав или финансовой логики. Владелец дополнительно поручил автономно довести PR до merge в main и обновить домашний стенд; ориентироваться на качественный общий поиск и best practices, а не подгонять правила под примеры.

@@ -1,0 +1,44 @@
+{
+  "change": "offline-construction-checklist-ui",
+  "planned_paths": [
+    "app/YiiRuntime/Views/field-offline.php",
+    "app/YiiRuntime/Views/checklist.php",
+    "app/YiiRuntime/Assets/field-offline-preparation.js",
+    "app/YiiRuntime/Assets/field-offline.css",
+    "tests/Yii2/offline_indicator_001_test.php",
+    "tests/Support/offline_indicator_browser.cjs",
+    "tests/Support/offline_construction_browser.cjs",
+    "docs/operations/offline-construction-checklist-ui-20261128.md"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "OFFLINE-CONSTRUCTION-CHECKLIST-UI-001",
+      "acceptance_id": "A1-A4",
+      "spec_path": "docs/operations/offline-construction-checklist-ui-20261128.md",
+      "seam": "Real Yii-rendered pages and Chromium service-worker offline navigation, local search/privacy and photo-label geometry",
+      "tests": [
+        "tests/Yii2/offline_indicator_001_test.php"
+      ]
+    }
+  ],
+  "lifecycle": {
+    "intent": "COMPACT_MAINTENANCE",
+    "issue": "Owner feedback 2026-11-28",
+    "change_kind": "PRESENTATION",
+    "requirement_status": "CURRENT",
+    "semantic_change": "AGREED_ORDINARY_CHANGE",
+    "canonical_requirements": [
+      {
+        "path": "docs/operations/offline-construction-checklist-ui-20261128.md"
+      }
+    ],
+    "executable_regression": "tests/Yii2/offline_indicator_001_test.php",
+    "sensitivity": {
+      "classification": "ORDINARY",
+      "boundaries": [
+        "presentation"
+      ],
+      "rationale": "Presentation-only use of existing prepared own-object records. No changes to durable storage, actor fence, worker admission, queues, permissions, or domain state."
+    }
+  }
+}

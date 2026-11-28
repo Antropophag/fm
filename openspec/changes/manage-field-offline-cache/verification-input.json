@@ -1,0 +1,45 @@
+{
+  "change": "manage-field-offline-cache",
+  "planned_paths": [
+    "app/YiiRuntime/Views/field-offline.php",
+    "app/YiiRuntime/Views/checklist.php",
+    "app/YiiRuntime/Assets/field-offline-preparation.js",
+    "app/YiiRuntime/Assets/field-offline.css",
+    "tests/Yii2/offline_indicator_001_test.php",
+    "tests/Support/offline_indicator_browser.cjs",
+    "tests/Support/offline_construction_browser.cjs",
+    "docs/operations/offline-construction-checklist-ui-20261128.md",
+    "app/YiiRuntime/Assets/checklist-sw.js",
+    "app/YiiRuntime/Assets/field-offline-cache.js",
+    "app/YiiRuntime/Assets/field-offline-lifecycle.js",
+    "app/YiiRuntime/Assets/checklist.js",
+    "app/YiiRuntime/Controllers/PilotAssetController.php",
+    "specs/FIELD-CACHE-RETENTION-001.md",
+    "openspec/changes/manage-field-offline-cache",
+    "tests/Yii2/field_cache_retention_001_test.mjs",
+    "tests/Support/worker_vm.mjs",
+    "tests/Yii2/reliable_field_offline_worker_001_test.mjs",
+    "tests/Yii2/checklist_service_worker_navigation_001_test.mjs",
+    "tests/Support/field_cache_browser.cjs",
+    "tools/verification/suites.tsv",
+    "config/yii/assets.php",
+    "tests/Yii2/inspection_browser.mjs",
+    "tests/Yii2/reliable_field_offline_browser.cjs"
+  ],
+  "acceptances": [
+    {
+      "spec_id": "FIELD-CACHE-RETENTION-001",
+      "acceptance_id": "R1-R7",
+      "spec_path": "specs/FIELD-CACHE-RETENTION-001.md",
+      "seam": "Worker fetch/message/lifecycle and actual browser CacheStorage/IndexedDB; measured quota, deadline and safe cleanup",
+      "tests": [
+        "tests/Yii2/field_cache_retention_001_test.mjs",
+        "tests/Yii2/offline_indicator_001_test.php"
+      ],
+      "gate3_expected": {
+        "tests/Yii2/field_cache_retention_001_test.mjs": "INTENDED_RED",
+        "tests/Yii2/offline_indicator_001_test.php": "GREEN"
+      }
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import vm from 'node:vm';
+import vm from '../Support/worker_vm.mjs';
 import {readFileSync} from 'node:fs';
 
 // YII2-INSPECTION-JOURNEY-001 A7: the offline worker owns checklist
@@ -70,7 +70,7 @@ offline = true;
 const navigation = async path => {
   let response;
   listeners.get('fetch')({
-    request: {url: `https://pilot.test${path}`, method: 'GET', mode: 'navigate'},
+    request: {url: `https://pilot.test${path}`, method: 'GET', mode: 'navigate', destination: 'document'},
     respondWith(value) { response = value; },
   });
   return {controlled: response !== undefined, response: response === undefined ? undefined : await response};

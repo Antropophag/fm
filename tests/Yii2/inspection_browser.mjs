@@ -16,7 +16,11 @@ try {
  await login(c.email);
  const response=await page.goto(c.origin+'/pilot/objects/4512/checklist');check(response.status()===200,'INTENDED_RED Yii browser checklist');
  check(!response.headers()['content-security-policy'].includes('unsafe-inline'),'CSP no unsafe-inline');
- await page.waitForFunction(()=>document.querySelector('[data-checklist]')?.dataset.userId==='73'&&document.querySelector('[data-checklist]')?.dataset.fieldReady==='true');
+ try{await page.waitForFunction(()=>document.querySelector('[data-checklist]')?.dataset.userId==='73'&&document.querySelector('[data-checklist]')?.dataset.fieldReady==='true');}catch(error){
+  const diagnostic=await page.evaluate(async()=>({ready:document.querySelector('[data-checklist]')?.dataset.fieldReady,banner:document.querySelector('.fm2-sync-banner')?.textContent,identityNotice:document.querySelector('[data-field-identity-alert]')?.textContent,lifecycle:await Promise.race([globalThis.FMonitorFieldLifecycle?.ready?.then(()=>({ok:true}),e=>({error:e.message})),new Promise(r=>setTimeout(()=>r({pending:true}),500))]),registrations:await Promise.all((await navigator.serviceWorker.getRegistrations()).map(async r=>({scope:r.scope,installing:r.installing?.state,waiting:r.waiting?.state,active:r.active?.state}))),caches:await caches.keys(),storage:await navigator.storage.estimate(),locks:await navigator.locks?.query()})).catch(e=>({diagnosticError:e.message}));
+  throw new Error('Checklist readiness failed: '+JSON.stringify({diagnostic,pageErrors:errors,assetErrors,timeline})+'; '+error.message);
+ }
+
  if(await page.locator('[data-check-section="1"] .fm2-section-toggle').getAttribute('aria-expanded')==='false')await page.locator('[data-check-section="1"] .fm2-section-toggle').click();
  let lost=false,acceptedId=null;
  await page.route('**/pilot/objects/4512/checklist/operations',async route=>{const data=route.request().postDataJSON();if(!lost&&data.type==='item_completed'){const answer=await route.fetch();const body=await answer.json();check(body.status==='accepted','first click accepted before response loss');lost=true;acceptedId=data.clientOperationId;await route.abort('connectionreset');}else await route.continue();});

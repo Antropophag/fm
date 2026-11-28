@@ -16,7 +16,7 @@ final class PilotAssetController extends PilotController
         $root = dirname(__DIR__) . '/Assets';
         $shellAssets=null;$shellGeneration=null;
         if(in_array($path,['field-shell.json','checklist-sw.js'],true)){
-            $shellFiles=['shlz.css','pilot.css','preopening.css','field-offline.css','sidebar-bootstrap.js','navigation.js','shlz-behaviors.js','preloader.js','preopening.js','template-offer.js','inspection-schedule.js','field-offline-store.js','field-offline-sync.js','field-offline-photo.js','field-offline.js','fuse.min.js','field-offline-address-search.js','field-offline-preparation.js','field-offline-lifecycle.js','checklist.js','control-queue.js'];
+            $shellFiles=['shlz.css','pilot.css','preopening.css','field-offline.css','sidebar-bootstrap.js','navigation.js','shlz-behaviors.js','preloader.js','preopening.js','template-offer.js','inspection-schedule.js','field-offline-store.js','field-offline-cache.js','field-offline-sync.js','field-offline-photo.js','field-offline.js','fuse.min.js','field-offline-address-search.js','field-offline-preparation.js','field-offline-lifecycle.js','checklist.js','control-queue.js'];
             $shellAssets=array_map(static fn(string$file):string=>'/pilot/assets/'.AssetVersion::file($file),$shellFiles);
             $shellGeneration=hash('sha256',json_encode($shellAssets,JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));
         }
@@ -25,7 +25,7 @@ final class PilotAssetController extends PilotController
             $response=Yii::$app->response;$response->format=Response::FORMAT_JSON;$response->data=['generation'=>$shellGeneration,'assets'=>$shellAssets];$response->headers->set('Cache-Control','no-store');return$response;
         }
         $map = [];
-        foreach (['sidebar-bootstrap.js','navigation.js','calendar.js','preloader.js','users.js','object-queue.js','inspection-schedule.js','preopening.js','template-offer.js','field-offline-store.js','field-offline-sync.js','field-offline-photo.js','field-offline.js','field-offline-address-search.js','field-offline-preparation.js','field-offline-lifecycle.js','checklist.js','control-queue.js','otiz.js','address-register.js'] as $file) {
+        foreach (['sidebar-bootstrap.js','navigation.js','calendar.js','preloader.js','users.js','object-queue.js','inspection-schedule.js','preopening.js','template-offer.js','field-offline-store.js','field-offline-cache.js','field-offline-sync.js','field-offline-photo.js','field-offline.js','field-offline-address-search.js','field-offline-preparation.js','field-offline-lifecycle.js','checklist.js','control-queue.js','otiz.js','address-register.js'] as $file) {
             $map[$file] = [$root . '/' . $file,'text/javascript; charset=UTF-8',3600];
         }$map['fuse.min.js']=[dirname(__DIR__,3).'/public/third-party/fuse/fuse.min.js','text/javascript; charset=UTF-8',31536000];$shlzRoot=(string)(getenv('FMONITOR_SHLZ_UI_ROOT')?:dirname(__DIR__,4).'/shlz-ui');
         $map['shlz-behaviors.js']=[$shlzRoot.'/packages/behaviors/dist/browser.js','text/javascript; charset=UTF-8',3600];
@@ -47,7 +47,7 @@ final class PilotAssetController extends PilotController
         }$bytes = file_get_contents($entry[0]);
         if (!is_string($bytes)) {
             throw new \RuntimeException();
-        }if($path==='checklist-sw.js'){if(!is_string($shellGeneration))throw new \RuntimeException('Shell generation unavailable.');$bytes=str_replace('__FMONITOR_WORKER_GENERATION__',$shellGeneration,$bytes);}if(str_ends_with($path,'.js'))$bytes=preg_replace_callback("~((?:from\\s*|import\\s*)['\"])/pilot/assets/([A-Za-z0-9.-]+\\.js)(['\"])~",static fn(array$m):string=>$m[1].'/pilot/assets/'.AssetVersion::file($m[2]).$m[3],$bytes)??$bytes;
+        }if($path==='checklist-sw.js'){if(!is_string($shellGeneration))throw new \RuntimeException('Shell generation unavailable.');$bytes=str_replace(['__FMONITOR_WORKER_GENERATION__','__FMONITOR_CACHE_MODULE__'],[$shellGeneration,'/pilot/assets/'.AssetVersion::file('field-offline-cache.js')],$bytes);}if(str_ends_with($path,'.js'))$bytes=preg_replace_callback("~((?:from\\s*|import\\s*)['\"])/pilot/assets/([A-Za-z0-9.-]+\\.js)(['\"])~",static fn(array$m):string=>$m[1].'/pilot/assets/'.AssetVersion::file($m[2]).$m[3],$bytes)??$bytes;
         $requested=Yii::$app->request->get('v');$expected=null;if(preg_match('/\\.(?:css|js)$/D',$path)===1){$versioned=AssetVersion::file($path);$expected=substr($versioned,strpos($versioned,'?v=')+3);}
         $immutable=($expected!==null&&is_string($requested)&&hash_equals($expected,$requested))||($expected===null&&$entry[2]===31536000);
         $r = Yii::$app->response;

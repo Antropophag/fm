@@ -170,9 +170,13 @@
         );
       channel.port1.onmessage = (e) => {
         clearTimeout(timer);
-        e.data?.ok
-          ? resolve(e.data)
-          : reject(Error(e.data?.message || "Не удалось сохранить объект."));
+        if (e.data?.ok) {
+          resolve(e.data);
+          return;
+        }
+        const error = Error(e.data?.message || "Не удалось сохранить объект.");
+        error.reasonCode = e.data?.reasonCode;
+        reject(error);
       };
       worker.postMessage(
         {
@@ -189,7 +193,7 @@
       );
     });
   }
-  function cachePresent(worker, item) {
+  function cachePresent(worker, item, identity, generation) {
     return new Promise((resolve) => {
       const channel = new MessageChannel(),
         timer = setTimeout(() => resolve(false), 3000);
@@ -202,6 +206,8 @@
           type: "CHECK_CHECKLIST_CACHE",
           url: new URL(item.checklistUrl, location.origin).href,
           userId,
+          epoch: identity.state.epoch,
+          generation,
           contentHash: item.contentHash,
         },
         [channel.port2],
@@ -252,6 +258,11 @@
       };
       activeAttempt = descriptor;
       const generation = descriptor.generation;
+      const ownAccepted = await workerCall(workerTarget, {
+        type: "FIELD_SET_OWN_OBJECTS", userId, epoch: identity.state.epoch,
+        generation, setVersion: manifest.setVersion, items: manifest.items,
+      });
+      if (!ownAccepted?.ok) throw Error("Не удалось подтвердить набор своих объектов.");
       const previousItems = new Map(
         (previous?.items || []).map((item) => [Number(item.objectId), item]),
       );
@@ -269,7 +280,7 @@
       await Promise.all(
         items.map(async (item) => {
           if (item.state !== "verifying") return;
-          const present = await cachePresent(workerTarget, item);
+          const present = await cachePresent(workerTarget, item, identity, generation);
           if (!isCurrent(runToken, descriptor)) return;
           if (present) {
             item.state = "refreshing";
@@ -345,7 +356,11 @@
             if (!isCurrent(runToken, descriptor)) return;
             item.state = done.has(item.objectId) ? "stale" : "error";
             item.error = error.message;
-            errors.push({ objectId: item.objectId, message: error.message });
+            errors.push({
+              objectId: item.objectId,
+              message: error.message,
+              reasonCode: error.reasonCode,
+            });
           }
           summary("preparing", done.size, manifest.total);
           await Store.putPreparationFenced(
@@ -399,7 +414,9 @@
         done.size,
         manifest.total,
         errors.length
-          ? `Подготовлено ${done.size} из ${manifest.total}. Не удалось сохранить часть объектов.`
+          ? errors.some((error) => error.reasonCode === "CACHE_BUDGET_EXHAUSTED")
+            ? `Подготовлено ${done.size} из ${manifest.total}. Недостаточно места для сохранения остальных объектов.`
+            : `Подготовлено ${done.size} из ${manifest.total}. Не удалось сохранить часть объектов.`
           : "",
         updatedAt,
       );
@@ -428,20 +445,41 @@
     })();
     return pendingPreparation;
   }
+  function cacheStatusCopy(managed, count) {
+    const messages = [];
+    if (managed.storageVerified === false)
+      messages.push("резерв хранилища не подтверждён");
+    if (managed.limited) messages.push("очистка временно ограничена");
+    const reason = managed.reasonCode || managed.reason;
+    if (reason === "CACHE_BUDGET_EXHAUSTED")
+      messages.push("недостаточно места для новых объектов");
+    else if (reason && !managed.limited)
+      messages.push("состояние хранилища требует подключения");
+    const available = count
+      ? `Доступно без сети: ${plural(count)}`
+      : "Сначала подключитесь и подготовьте объекты";
+    return `${available}${messages.length ? `. ${messages.join("; ")}.` : "."}`;
+  }
+  function sourceCopy(item) {
+    const parts = [item.source === "own" ? "Свой объект" : "Подмена"];
+    if (item.protected) parts.push("Есть несинхронизированные изменения");
+    else if (item.source !== "own" && Number.isFinite(Number(item.expiresAt)))
+      parts.push(
+        `до ${new Intl.DateTimeFormat("ru-RU").format(new Date(Number(item.expiresAt)))}`,
+      );
+    return parts.join(" · ");
+  }
   async function renderShell() {
     const state = document.querySelector("[data-offline-state]"),
       list = document.querySelector("[data-offline-list]");
     try {
       const identity = await actor(),
-        record = await Store.getPreparation(
-          `${userId}:${identity.deviceInstallationId}`,
-        ),
         registration = await navigator.serviceWorker.ready,
         worker = registration.active || navigator.serviceWorker.controller,
         workerActor = worker ? await workerIdentity(worker) : null,
-        items = (record?.items || []).filter((x) =>
-          ["ready", "stale", "refreshing"].includes(x.state),
-        );
+        runtime = worker ? await runtimeInfo(worker) : null,
+        managed = worker && runtime ? await workerCall(worker, {type:"FIELD_CACHE_STATUS",userId,epoch:identity.state.epoch,generation:runtime.generation}) : null,
+        items = managed?.ok ? managed.items : [];
       if (
         !workerActor ||
         workerActor.tombstone ||
@@ -451,35 +489,51 @@
         throw Error("Войдите снова, чтобы открыть сохранённые объекты.");
       list.replaceChildren(
         ...items.map((item) => {
-          const a = document.createElement("a");
-          a.className = "fm2-offline-object";
-          a.dataset.offlineObject = "";
-          a.dataset.objectId = item.objectId;
-          a.href = item.checklistUrl;
-          a.innerHTML = `<span class="fm2-offline-object__copy"><strong></strong><span></span></span><span class="fm2-offline-object__status"></span>`;
-          a.querySelector("strong").textContent =
+          const row = document.createElement("tr");
+          row.className = "fm2-control-row"; row.dataset.offlineObject=""; row.dataset.controlRow="";
+          row.dataset.objectId=String(item.objectId); row.dataset.completed=item.completed?"true":"false";
+          row.innerHTML = `<td class="fm2-object-cell"><a class="fm2-control-link" rel="nofollow"><span class="fm2-control-address"></span><span class="fm2-control-reg"></span></a><small data-offline-source></small></td><td data-offline-activity></td><td class="fm2-shipment-cell" aria-label="Данные о поставке доступны после подключения" title="Требуется подключение"><span>Нет сохранённых данных</span></td><td>Нет сохранённых данных</td><td class="fm2-row-action"><a class="fm2-control-checklist-rail" aria-label="Открыть чек-лист"><img src="/pilot/assets/shlz-icons/chevron-right-duo.svg" alt=""></a></td>`;
+          row.querySelector(".fm2-control-address").textContent =
             item.address + (item.entrance ? `, подъезд ${item.entrance}` : "");
-          a.querySelector(".fm2-offline-object__copy span").textContent =
+          row.querySelector(".fm2-control-reg").textContent =
             `Рег. № ${item.registrationNumber}`;
-          a.querySelector(".fm2-offline-object__status").textContent =
-            item.completed ? "Завершён · только просмотр" : "Открыть чек-лист";
-          return a;
+          row.querySelector("[data-offline-activity]").textContent = item.completed
+            ? "Завершён · только просмотр"
+            : "Нет сохранённых данных";
+          const label=row.querySelector("[data-offline-source]");
+          label.textContent=sourceCopy(item);
+          for(const link of row.querySelectorAll("a"))link.href=item.checklistUrl;
+          row.dataset.search=[item.address,item.entrance,item.registrationNumber].join(" ");
+          return row;
         }),
       );
-      state.textContent = items.length
-        ? `Доступно без сети: ${plural(items.length)}`
-        : "Сначала подключитесь и подготовьте объекты.";
+      state.textContent = cacheStatusCopy(managed, items.length);
       document.querySelector("[data-offline-login]").hidden = true;
       const search = document.querySelector("[data-offline-search]");
-      search.addEventListener("input", () => {
+      const completed=document.querySelector("[data-show-completed]"), summary=document.querySelector("[data-list-summary]"), empty=document.querySelector("[data-control-empty]");
+      const params = new URLSearchParams(location.search);
+      search.value = params.get("query") || "";
+      if (completed) completed.checked = params.get("completed") === "1";
+      const apply=() => {
         const ids = new Set(globalThis.FMonitorAddressSearch.ids(items.map((item) => ({
           id: String(item.objectId),
           address: String(item.address || ""),
           entrance: item.entrance == null ? "" : String(item.entrance),
           extra: [item.registrationNumber == null ? "" : String(item.registrationNumber)],
         })), search.value));
-        for (const row of list.children) row.hidden = !ids.has(row.dataset.objectId);
-      });
+        let shown=0;for (const row of list.children){row.hidden=!ids.has(row.dataset.objectId)||(!completed?.checked&&row.dataset.completed==="true");if(!row.hidden)shown++;}
+        if(summary)summary.textContent=`Показано ${shown} из ${items.length}`;
+        if(empty){
+          empty.hidden=shown!==0;
+          const title=empty.querySelector("strong"),copy=empty.querySelector("span");
+          const hasQuery=search.value.trim()!=="";
+          const completedHidden=items.length>0&&!hasQuery&&!completed?.checked&&items.every((item)=>item.completed);
+          if(title)title.textContent=completedHidden?"Завершённые объекты скрыты":hasQuery?"Объекты не найдены":"Сохранённых объектов пока нет";
+          if(copy)copy.textContent=completedHidden?"Включите показ завершённых объектов или сбросьте фильтры.":hasQuery?"Измените запрос или сбросьте фильтры.":"Подключитесь к сети, чтобы подготовить объекты для работы без сети.";
+        }
+      };
+      search.addEventListener("input",apply);completed?.addEventListener("change",apply);
+      document.querySelector("[data-clear-filters]")?.addEventListener("click",()=>{search.value="";if(completed)completed.checked=false;apply();search.focus();});apply();
     } catch (error) {
       state.textContent = error.message;
       document.querySelector("[data-offline-login]").hidden = false;
